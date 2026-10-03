@@ -1,9 +1,6 @@
 services:
   komari:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: komari-retro:latest
+    image: ghcr.io/0xdabiaoge/komari-retro:latest
     container_name: komari-docker
     restart: always
     ports:

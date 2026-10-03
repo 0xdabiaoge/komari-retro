@@ -4,7 +4,10 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata curl && rm -rf /var/lib/apt/lists/*
 
-COPY komari /app/komari
+ARG TARGETARCH=amd64
+ARG BINARY_NAME=komari-linux-${TARGETARCH}
+
+COPY ${BINARY_NAME} /app/komari
 RUN chmod +x /app/komari
 
 ENV GIN_MODE=release

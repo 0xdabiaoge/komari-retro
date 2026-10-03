@@ -102,8 +102,9 @@ sudo ./install-komari.sh
 
 ---
 
-### 3. Docker 部署
+### 3. Docker 与 Docker Compose 部署
 
+#### 方式 A：Docker 命令直接运行
 ```bash
 # 创建数据存储目录
 mkdir -p ./data
@@ -115,6 +116,15 @@ docker run -d \
   --name komari \
   --restart unless-stopped \
   ghcr.io/0xdabiaoge/komari-retro:latest
+```
+
+#### 方式 B：Docker Compose 启动与更新
+```bash
+# 启动服务
+docker compose up -d
+
+# 后续拉取手动构建的最新镜像并无缝更新
+docker compose pull && docker compose up -d
 ```
 
 ---
@@ -168,6 +178,22 @@ go build -ldflags "-s -w" -o komari .
 cd komari-agent
 go build -ldflags "-s -w" -o komari-agent .
 ```
+
+---
+
+## 🚀 自动化构建与镜像发布 (CI / CD)
+
+本项目将 GitHub Actions 工作流精简为两套核心流程（支持全中文交互）：
+
+1. **发布版本与跨平台产物到 Releases (`release.yml`)**
+   - **触发时机**：当涉及改动并完成版本号提升打 Tag（如 `v1.2.6`）推送至 GitHub、或在 GitHub 发布 Release、或手动调度触发。
+   - **构建内容**：一次性构建前端静态资产，并利用 Zig 交叉编译 7 个系统平台架构（Linux amd64/arm64/386/riscv64、Windows amd64/arm64/386）的服务端与客户端探针，自动打包并挂载至 GitHub Releases。
+
+2. **手动构建并推送 Docker 镜像 (`docker-publish.yml`)**
+   - **触发时机**：纯手动按需触发（在仓库 **Actions** 页面选择该工作流并点击 **Run workflow**）。
+   - **参数输入**：支持自定义镜像标签（默认 `latest`，可指定如 `v1.2.5`）以及是否同时关联 `latest` 标签。
+   - **构建内容**：自动完成前端及 Linux 多架构静态二进制编译，打包多架构镜像并推送至 `ghcr.io/0xdabiaoge/komari-retro`。
+   - **更新应用**：使用 Docker / Docker Compose 部署的机器执行 `docker compose pull && docker compose up -d` 即可无缝拉取最新镜像。
 
 ---
 
