@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/komari-monitor/komari/database"
 	"github.com/komari-monitor/komari/database/models"
@@ -19,8 +20,99 @@ import (
 func init() {
 	reg("getMessageSenderProvider", adminGetMessageSender, "Get message sender provider config or templates")
 	reg("setMessageSenderProvider", adminSetMessageSender, "Set message sender provider config")
+	reg("listNotificationChannels", adminListNotificationChannels, "List all registered notification channels")
+	reg("getNotificationChannelConfiguration", adminGetNotificationChannelConfiguration, "Get configuration for a notification channel")
+	reg("setNotificationChannelConfiguration", adminSetNotificationChannelConfiguration, "Set configuration for a notification channel")
 	reg("getOidcProvider", adminGetOidc, "Get OIDC provider config or templates")
 	reg("setOidcProvider", adminSetOidc, "Set OIDC provider config")
+}
+
+func adminListNotificationChannels(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	configs := msfactory.GetSenderConfigs()
+	channels := make([]map[string]any, 0, len(configs))
+	for name, items := range configs {
+		displayName := name
+		if name == "telegram" {
+			displayName = "Telegram"
+		}
+		channels = append(channels, map[string]any{
+			"id": name,
+			"configuration": map[string]any{
+				"name": displayName,
+				"data": items,
+			},
+		})
+	}
+	return channels, nil
+}
+
+func adminGetNotificationChannelConfiguration(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	var params struct {
+		ID string `json:"id"`
+	}
+	req.BindParams(&params)
+	if params.ID == "" {
+		params.ID = "telegram"
+	}
+	configs := msfactory.GetSenderConfigs()
+	items, exists := configs[params.ID]
+	if !exists {
+		return nil, rpc.MakeError(rpc.NotFound, "Channel not found: "+params.ID, nil)
+	}
+
+	displayName := params.ID
+	if params.ID == "telegram" {
+		displayName = "Telegram"
+	}
+
+	res := map[string]any{
+		"configuration": map[string]any{
+			"name": displayName,
+			"data": items,
+		},
+		"data": map[string]any{},
+	}
+
+	saved, err := database.GetMessageSenderConfigByName(params.ID)
+	if err == nil && saved != nil && saved.Addition != "" {
+		var dataMap map[string]any
+		if err := json.Unmarshal([]byte(saved.Addition), &dataMap); err == nil {
+			res["data"] = dataMap
+		}
+	}
+	return res, nil
+}
+
+func adminSetNotificationChannelConfiguration(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	var params struct {
+		ID   string         `json:"id"`
+		Data map[string]any `json:"data"`
+	}
+	if err := req.BindParams(&params); err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid params: "+err.Error(), nil)
+	}
+	if params.ID == "" {
+		params.ID = "telegram"
+	}
+	if _, exists := msfactory.GetConstructor(params.ID); !exists {
+		return nil, rpc.MakeError(rpc.NotFound, "Provider not found: "+params.ID, nil)
+	}
+	bytes, err := json.Marshal(params.Data)
+	if err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Failed to marshal data: "+err.Error(), nil)
+	}
+	senderConfig := models.MessageSenderProvider{
+		Name:     params.ID,
+		Addition: string(bytes),
+	}
+	if err := database.SaveMessageSenderConfig(&senderConfig); err != nil {
+		return nil, rpc.MakeError(rpc.InternalError, "Failed to save message sender config: "+err.Error(), nil)
+	}
+	method, _ := config.GetAs[string](config.NotificationMethodKey, "none")
+	if method == params.ID {
+		_ = messageSender.LoadProvider(params.ID, senderConfig.Addition)
+	}
+	return map[string]any{"message": "Configuration saved successfully"}, nil
 }
 
 func adminGetMessageSender(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

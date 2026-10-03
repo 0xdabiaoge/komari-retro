@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/komari-monitor/komari/cmd/flags"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -22,6 +23,7 @@ import (
 	"github.com/komari-monitor/komari/utils/geoip"
 	"github.com/komari-monitor/komari/utils/messageSender"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
+	"os"
 )
 
 // admin.system.go
@@ -38,6 +40,41 @@ func init() {
 	reg("exec", adminExec, "Execute a command on clients")
 	reg("testSendMessage", adminTestSendMessage, "Send a test notification")
 	reg("testGeoip", adminTestGeoip, "Test GeoIP lookup")
+	reg("getDatabaseSize", adminGetDatabaseSize, "Get database size")
+	reg("listMetricDefinitions", publicListMetricDefinitions, "List metric definitions")
+	reg("getMetricMigrationStatus", adminGetMetricMigrationStatus, "Get metric migration status")
+	reg("startMetricMigration", adminNoOp, "Start metric migration")
+	reg("cancelMetricMigration", adminNoOp, "Cancel metric migration")
+	reg("updateMetricDefinition", adminNoOp, "Update metric definition")
+	reg("listPlugins", adminListPlugins, "List installed plugins")
+	reg("deletePlugin", adminNoOp, "Delete plugin")
+	reg("setPluginEnabled", adminNoOp, "Set plugin enabled")
+	reg("getPluginConfiguration", adminNoOp, "Get plugin configuration")
+	reg("setPluginConfiguration", adminNoOp, "Set plugin configuration")
+	reg("getPluginLogs", adminNoOp, "Get plugin logs")
+}
+
+func adminGetDatabaseSize(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	var mainSize int64 = 0
+	if fi, err := os.Stat(flags.DatabaseFile); err == nil {
+		mainSize = fi.Size()
+	}
+	return map[string]any{
+		"main":       map[string]any{"size": mainSize},
+		"monitoring": map[string]any{"size": 0},
+	}, nil
+}
+
+func adminGetMetricMigrationStatus(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	return map[string]any{"status": "idle"}, nil
+}
+
+func adminListPlugins(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	return []any{}, nil
+}
+
+func adminNoOp(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	return nil, nil
 }
 
 func adminGetLogs(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

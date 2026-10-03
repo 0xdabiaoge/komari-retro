@@ -3,6 +3,7 @@ package item
 import "reflect"
 
 type Item struct {
+	Key      string `json:"key"`
 	Name     string `json:"name"`
 	Required bool   `json:"required"`
 	Type     string `json:"type"`
@@ -26,8 +27,10 @@ func Parse(v any) []Item {
 		if !contains(allowTypes, typ) {
 			typ = field.Type.Name()
 		}
+		jsonTag := field.Tag.Get("json")
 		item := Item{
-			Name:     field.Tag.Get("json"),
+			Key:      jsonTag,
+			Name:     jsonTag,
 			Required: field.Tag.Get("required") == "true",
 			Type:     typ,
 			Options:  field.Tag.Get("options"),

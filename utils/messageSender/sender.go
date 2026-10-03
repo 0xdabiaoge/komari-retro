@@ -55,18 +55,27 @@ func Initialize() {
 	NotificationMethod, _ := config.GetAs[string](config.NotificationMethodKey, "none")
 
 	if NotificationMethod == "" || NotificationMethod == "none" {
-		LoadProvider("empty", "{}")
+		mu.Lock()
+		if currentProvider != nil {
+			currentProvider.Destroy()
+			currentProvider = nil
+		}
+		mu.Unlock()
 		return
 	}
 
 	// 尝试从数据库加载配置
 	senderConfig, err := database.GetMessageSenderConfigByName(NotificationMethod)
 	if err != nil {
-		// 如果没有找到配置，使用empty provider
-		LoadProvider("empty", "{}")
+		mu.Lock()
+		if currentProvider != nil {
+			currentProvider.Destroy()
+			currentProvider = nil
+		}
+		mu.Unlock()
 		return
 	}
-	LoadProvider(NotificationMethod, senderConfig.Addition)
+	_ = LoadProvider(NotificationMethod, senderConfig.Addition)
 }
 
 func SendTextMessage(message string, title string) error {

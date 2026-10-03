@@ -1,0 +1,6 @@
+.git
+komari-web/node_modules
+komari-web/.vite
+data
+*.log
+tmp

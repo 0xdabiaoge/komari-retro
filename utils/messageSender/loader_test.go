@@ -17,7 +17,7 @@ func Test(t *testing.T) {
 		t.Error("No sender configs found")
 		return
 	}
-	LoadProvider("email", `{"host":"smtp.example.com","port":587,"username":"user","password":"pass"}`)
+	LoadProvider("telegram", `{"bot_token":"123456:ABC-DEF","chat_id":"12345678"}`)
 	cp := CurrentProvider
 	if cp() == nil {
 		t.Error("Current provider is nil")

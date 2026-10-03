@@ -1,19 +1,59 @@
-name: Attach Release Binaries
+name: Release Binaries and Assets
 
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.2.5)'
+        required: false
+        default: 'v1.2.5'
 
 permissions:
   contents: write
-  packages: write
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build frontend
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: |
+          cd komari-web
+          npm install
+          npm run build
+          cd ..
+          mkdir -p web/public/defaultTheme/dist
+          rm -rf web/public/defaultTheme/dist/*
+          cp -r komari-web/dist/* web/public/defaultTheme/dist/
+          cp -f komari-web/komari-theme.json web/public/defaultTheme/
+          if [ -f komari-web/preview.png ]; then cp -f komari-web/preview.png web/public/defaultTheme/; fi
+          if [ -f komari-web/perview.png ]; then cp -f komari-web/perview.png web/public/defaultTheme/; fi
+          # Compatibility: ensure both filenames exist if only one is present
+          if [ -f web/public/defaultTheme/preview.png ] && [ ! -f web/public/defaultTheme/perview.png ]; then cp -f web/public/defaultTheme/preview.png web/public/defaultTheme/perview.png; fi
+          if [ -f web/public/defaultTheme/perview.png ] && [ ! -f web/public/defaultTheme/preview.png ]; then cp -f web/public/defaultTheme/perview.png web/public/defaultTheme/preview.png; fi
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-assets
+          path: web/public/defaultTheme/
+
   build-and-attach-binaries:
+    needs: build-frontend
     runs-on: ubuntu-latest
 
     strategy:
@@ -61,26 +101,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: "23"
-
-      - name: Build frontend
-        run: |
-          cd komari-web
-          npm install
-          npm run build
-          cd ..
-          mkdir -p web/public/defaultTheme/dist
-          rm -rf web/public/defaultTheme/dist/*
-          cp -r komari-web/dist/* web/public/defaultTheme/dist/
-          cp -f komari-web/komari-theme.json web/public/defaultTheme/
-          if [ -f komari-web/preview.png ]; then cp -f komari-web/preview.png web/public/defaultTheme/; fi
-          if [ -f komari-web/perview.png ]; then cp -f komari-web/perview.png web/public/defaultTheme/; fi
-          # Compatibility: ensure both filenames exist if only one is present
-          if [ -f web/public/defaultTheme/preview.png ] && [ ! -f web/public/defaultTheme/perview.png ]; then cp -f web/public/defaultTheme/preview.png web/public/defaultTheme/perview.png; fi
-          if [ -f web/public/defaultTheme/perview.png ] && [ ! -f web/public/defaultTheme/preview.png ]; then cp -f web/public/defaultTheme/perview.png web/public/defaultTheme/preview.png; fi
+          name: frontend-assets
+          path: web/public/defaultTheme/
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -89,13 +114,22 @@ jobs:
 
       - name: Install Zig cross-compiler toolchain
         run: |
-          sudo apt-get update # Update apt package lists
-          sudo apt-get install -y build-essential curl
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl zip
           wget https://ziglang.org/download/0.14.1/zig-x86_64-linux-0.14.1.tar.xz
           sudo tar -C /usr/local -Jxf zig-x86_64-linux-0.14.1.tar.xz
           echo "PATH=$PATH:/usr/local/zig-x86_64-linux-0.14.1" >> $GITHUB_ENV
 
-      - name: Build binary
+      - name: Resolve Release Tag
+        run: |
+          RAW_TAG="${{ github.event.release.tag_name || github.ref_name || inputs.tag_name }}"
+          TAG="${RAW_TAG#refs/tags/}"
+          if [ -z "$TAG" ] || [ "$TAG" = "main" ]; then
+            TAG="v1.2.5"
+          fi
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Build and package binaries
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -104,31 +138,36 @@ jobs:
           GIN_MODE: release
         run: |
           BINARY_NAME=komari-${{ matrix.goos }}-${{ matrix.goarch }}
+          AGENT_NAME=komari-agent-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.binary_extension }}" != "" ]; then
             BINARY_NAME=${BINARY_NAME}${{ matrix.binary_extension }}
+            AGENT_NAME=${AGENT_NAME}${{ matrix.binary_extension }}
           fi
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION_HASH="${{ github.sha }}" # Use commit SHA for hash
+
+          VERSION="$RELEASE_TAG"
+          VERSION_HASH="${{ github.sha }}"
           go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${VERSION} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}" -o $BINARY_NAME
 
           # Build agent binary
-          AGENT_NAME=komari-agent-${{ matrix.goos }}-${{ matrix.goarch }}
-          if [ "${{ matrix.binary_extension }}" != "" ]; then
-            AGENT_NAME=${AGENT_NAME}${{ matrix.binary_extension }}
-          fi
           (cd komari-agent && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o ../$AGENT_NAME)
 
-      - name: Upload binary to release
+          # Package archives
+          mkdir -p dist
+          cp "$BINARY_NAME" "dist/$BINARY_NAME"
+          cp "$AGENT_NAME" "dist/$AGENT_NAME"
+
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -j "dist/komari-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "$BINARY_NAME"
+            zip -j "dist/komari-agent-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "$AGENT_NAME"
+          else
+            tar -czvf "dist/komari-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "$BINARY_NAME"
+            tar -czvf "dist/komari-agent-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "$AGENT_NAME"
+          fi
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Define the binary name for upload
-          BINARY_NAME=komari-${{ matrix.goos }}-${{ matrix.goarch }}
-          AGENT_NAME=komari-agent-${{ matrix.goos }}-${{ matrix.goarch }}
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME=${BINARY_NAME}.exe
-            AGENT_NAME=${AGENT_NAME}.exe
-          fi
-          # Upload the binaries as release assets using GitHub CLI
-          gh release upload ${{ github.event.release.tag_name }} $BINARY_NAME $AGENT_NAME --repo ${{ github.repository }}
-        shell: bash

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/komari-monitor/komari/utils/messageSender/factory"
 )
@@ -42,19 +44,33 @@ func (t *TelegramSender) SendTextMessage(message, title string) error {
 		return errors.New("message is empty")
 	}
 
-	endpoint := t.Addition.Endpoint + t.Addition.BotToken + "/sendMessage"
+	if strings.TrimSpace(t.Addition.BotToken) == "" || strings.TrimSpace(t.Addition.ChatID) == "" {
+		return errors.New("bot_token and chat_id are required")
+	}
+
+	endpoint := strings.TrimSpace(t.Addition.Endpoint)
+	if endpoint == "" {
+		endpoint = "https://api.telegram.org/bot"
+	}
+	if !strings.HasSuffix(endpoint, "/") {
+		endpoint += "/"
+	}
+	apiURL := endpoint + strings.TrimSpace(t.Addition.BotToken) + "/sendMessage"
 
 	data := url.Values{}
-	data.Set("chat_id", t.Addition.ChatID)
+	data.Set("chat_id", strings.TrimSpace(t.Addition.ChatID))
 	data.Set("text", fullMessage)
 	data.Set("parse_mode", "HTML")
 
 	// Add message_thread_id if provided
 	if t.Addition.MessageThreadID != "" {
-		data.Set("message_thread_id", t.Addition.MessageThreadID)
+		data.Set("message_thread_id", strings.TrimSpace(t.Addition.MessageThreadID))
 	}
 
-	resp, err := http.PostForm(endpoint, data)
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+	resp, err := client.PostForm(apiURL, data)
 	if err != nil {
 		return fmt.Errorf("failed to send message: %v", err)
 	}

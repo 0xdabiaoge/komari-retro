@@ -23,7 +23,6 @@ log_step() {
     echo -e "${YELLOW}$1${NC}"
 }
 
-
 # Global variables
 INSTALL_DIR="/opt/komari"
 DATA_DIR="/opt/komari"
@@ -85,9 +84,9 @@ detect_arch() {
 # Check if Komari is already installed
 is_installed() {
     if [ -f "$BINARY_PATH" ]; then
-        return 0 # 0 means true in bash exit codes
+        return 0
     else
-        return 1 # 1 means false
+        return 1
     fi
 }
 
@@ -113,6 +112,158 @@ install_dependencies() {
     fi
 }
 
+# Nginx reverse proxy configuration
+setup_nginx_proxy() {
+    local target_port="${1:-$LISTEN_PORT}"
+    if [ -z "$target_port" ]; then
+        target_port="$DEFAULT_PORT"
+    fi
+
+    log_step "=== 配置 Nginx 反向代理 ==="
+
+    if ! command -v nginx >/dev/null 2>&1; then
+        read -p "未检测到 Nginx，是否现在安装？[Y/n]: " inst_ng
+        if [[ ! "$inst_ng" =~ ^[Nn]$ ]]; then
+            log_step "安装 Nginx 及 OpenSSL..."
+            if command -v apt >/dev/null 2>&1; then
+                apt update && apt install -y nginx openssl
+            elif command -v yum >/dev/null 2>&1; then
+                yum install -y nginx openssl
+            elif command -v apk >/dev/null 2>&1; then
+                apk add nginx openssl
+            else
+                log_error "未识别支持的包管理器，请手动安装 Nginx。"
+                return 1
+            fi
+        else
+            log_error "已取消 Nginx 安装。"
+            return 1
+        fi
+    fi
+
+    local default_domain="kmro.1687.de5.net"
+    read -p "请输入要绑定的域名 [默认: $default_domain]: " input_domain
+    local domain="${input_domain:-$default_domain}"
+
+    read -p "请输入后端目标端口 [默认: $target_port]: " input_proxy_port
+    local proxy_port="${input_proxy_port:-$target_port}"
+
+    # 创建证书目录并生成自签名证书 (供 Cloudflare Full SSL / HTTPS 使用)
+    mkdir -p /etc/nginx/ssl
+    if [ ! -f /etc/nginx/ssl/komari.crt ]; then
+        log_info "生成自签名证书 (供 Cloudflare Full SSL / HTTPS 使用)..."
+        openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+            -keyout /etc/nginx/ssl/komari.key \
+            -out /etc/nginx/ssl/komari.crt \
+            -subj "/CN=${domain}" >/dev/null 2>&1
+    fi
+
+    # 确定配置保存目录
+    local conf_dir="/etc/nginx/conf.d"
+    mkdir -p "$conf_dir"
+    local conf_file="${conf_dir}/komari_${domain}.conf"
+
+    cat > "$conf_file" << EOF
+server {
+    listen 80;
+    listen 443 ssl http2;
+    server_name ${domain};
+
+    ssl_certificate /etc/nginx/ssl/komari.crt;
+    ssl_certificate_key /etc/nginx/ssl/komari.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # 获取 Cloudflare 真实访问者 IP
+    set_real_ip_from 0.0.0.0/0;
+    real_ip_header CF-Connecting-IP;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:${proxy_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
+EOF
+
+    # 检查并重载 nginx
+    if nginx -t >/dev/null 2>&1; then
+        systemctl enable nginx >/dev/null 2>&1
+        systemctl restart nginx
+        log_success "Nginx 反向代理配置成功！"
+        log_info "  访问地址: http://${domain} 或 https://${domain}"
+        log_info "  反代目标: http://127.0.0.1:${proxy_port}"
+        log_info "  配置文件: ${conf_file}"
+    else
+        log_error "Nginx 配置语法测试失败，请检查: nginx -t"
+        return 1
+    fi
+}
+
+# Cloudflare Tunnel setup
+setup_cf_tunnel() {
+    local target_port="${1:-$LISTEN_PORT}"
+    if [ -z "$target_port" ]; then
+        target_port="$DEFAULT_PORT"
+    fi
+
+    log_step "=== 配置 Cloudflare Tunnel 隧道 ==="
+
+    if ! command -v cloudflared >/dev/null 2>&1; then
+        log_step "正在下载并安装 cloudflared..."
+        local arch=$(detect_arch)
+        local cf_arch="amd64"
+        case "$arch" in
+            amd64) cf_arch="amd64" ;;
+            arm64) cf_arch="arm64" ;;
+            386) cf_arch="386" ;;
+            *) cf_arch="amd64" ;;
+        esac
+        local cf_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${cf_arch}"
+        if ! curl -fsSL -o /usr/local/bin/cloudflared "$cf_url"; then
+            log_error "下载 cloudflared 失败，请检查网络"
+            return 1
+        fi
+        chmod +x /usr/local/bin/cloudflared
+        log_success "cloudflared 安装完成: /usr/local/bin/cloudflared"
+    fi
+
+    read -p "请输入 Cloudflare Tunnel Token (在 Cloudflare Zero Trust 获取): " token
+
+    if [ -z "$token" ]; then
+        log_error "Token 不能为空"
+        return 1
+    fi
+
+    log_step "正在安装并启动 cloudflared 服务..."
+    cloudflared service uninstall >/dev/null 2>&1 || true
+
+    if cloudflared service install "$token"; then
+        systemctl daemon-reload
+        systemctl enable --now cloudflared
+        sleep 2
+        if systemctl is-active --quiet cloudflared; then
+            log_success "Cloudflare Tunnel 服务启动成功！"
+            log_info "  状态查看: systemctl status cloudflared"
+        else
+            log_error "Cloudflare Tunnel 服务启动失败，请检查: journalctl -u cloudflared -f"
+            return 1
+        fi
+    else
+        log_error "cloudflared service install 执行失败"
+        return 1
+    fi
+}
+
 # Binary installation
 install_binary() {
     log_step "开始二进制安装..."
@@ -121,7 +272,6 @@ install_binary() {
         log_info "Komari 已安装。要升级，请使用升级选项。"
         return
     fi
-
 
     # 监听端口输入，校验范围 1-65535
     while true; do
@@ -151,16 +301,26 @@ install_binary() {
     local file_name="komari-linux-${arch}"
     local download_url="https://github.com/0xdabiaoge/komari-retro/releases/latest/download/${file_name}"
 
-    log_step "下载 Komari 二进制文件..."
-    log_info "URL: $download_url"
+    log_step "获取 Komari 二进制文件..."
+    log_info "下载 URL: $download_url"
 
-    if ! curl -L -o "$BINARY_PATH" "$download_url"; then
-        log_error "下载失败"
-        return 1
+    if ! curl -f -L -o "$BINARY_PATH" "$download_url"; then
+        log_step "从 GitHub Releases 下载失败，检查本地可用文件..."
+        if [ -f "./komari" ]; then
+            log_info "检测到当前目录存在 ./komari，使用本地文件..."
+            cp "./komari" "$BINARY_PATH"
+        elif [ -f "/root/komari-workspace/komari" ]; then
+            log_info "检测到 /root/komari-workspace/komari，使用本地文件..."
+            cp "/root/komari-workspace/komari" "$BINARY_PATH"
+        else
+            log_error "下载失败且未发现本地二进制文件。"
+            log_info "提示: GitHub Releases 产物生成后可直接下载，或将编译好的 komari 放在当前目录重试。"
+            return 1
+        fi
     fi
 
     chmod +x "$BINARY_PATH"
-    log_success "Komari 二进制文件安装完成: $BINARY_PATH"
+    log_success "Komari 二进制文件准备就绪: $BINARY_PATH"
 
     if ! check_systemd; then
         log_step "警告：未检测到 systemd，跳过服务创建。"
@@ -187,6 +347,18 @@ install_binary() {
             log_error "未能获取初始密码，请检查日志"
         fi
         show_access_info "$password" "$LISTEN_PORT"
+
+        echo
+        read -p "是否需要配置 Nginx 反向代理？[y/N]: " setup_ng
+        if [[ "$setup_ng" =~ ^[Yy]$ ]]; then
+            setup_nginx_proxy "$LISTEN_PORT"
+        fi
+
+        echo
+        read -p "是否需要配置 Cloudflare Tunnel 隧道？[y/N]: " setup_cf
+        if [[ "$setup_cf" =~ ^[Yy]$ ]]; then
+            setup_cf_tunnel "$LISTEN_PORT"
+        fi
     else
         log_error "Komari 服务启动失败"
         log_info "查看日志: journalctl -u ${SERVICE_NAME} -f"
@@ -224,7 +396,7 @@ show_access_info() {
     local password=$1
     local port=${2:-$DEFAULT_PORT}
     echo
-    log_success "安装完成！"
+    log_success "Komari 核心安装完成！"
     echo
     log_info "访问信息："
     log_info "  URL: http://$(hostname -I | awk '{print $1}'):${port}"
@@ -265,7 +437,7 @@ upgrade_komari() {
     local download_url="https://github.com/0xdabiaoge/komari-retro/releases/latest/download/${file_name}"
 
     log_step "下载最新版本..."
-    if ! curl -L -o "$BINARY_PATH" "$download_url"; then
+    if ! curl -f -L -o "$BINARY_PATH" "$download_url"; then
         log_error "下载失败，正在从备份恢复"
         mv "${BINARY_PATH}.backup."* "$BINARY_PATH"
         systemctl start ${SERVICE_NAME}.service
@@ -293,7 +465,7 @@ uninstall_komari() {
         return 0
     fi
 
-    read -p "这将删除 Komari。您确定吗？(Y/n): " confirm
+    read -p "这将删除 Komari 服务与二进制。您确定吗？(Y/n): " confirm
     if [[ $confirm =~ ^[Nn]$ ]]; then
         log_info "卸载已取消"
         return 0
@@ -310,8 +482,7 @@ uninstall_komari() {
 
     log_step "删除二进制文件..."
     rm -f "$BINARY_PATH"
-    # 尝试在目录为空时删除该目录
-    rmdir "$INSTALL_DIR" 2>/dev/null || log_info "数据目录 $INSTALL_DIR 不为空，未删除"
+    rmdir "$INSTALL_DIR" 2>/dev/null || log_info "数据目录 $INSTALL_DIR 不为空，已保留"
     log_success "Komari 二进制文件已删除"
 
     log_success "Komari 卸载完成"
@@ -380,7 +551,6 @@ stop_service() {
     log_success "服务已停止"
 }
 
-
 # Main menu
 main_menu() {
     show_banner
@@ -388,14 +558,16 @@ main_menu() {
     echo "  1) 安装 Komari"
     echo "  2) 升级 Komari"
     echo "  3) 卸载 Komari"
-    echo "  4) 查看状态"
-    echo "  5) 查看日志"
-    echo "  6) 重启服务"
-    echo "  7) 停止服务"
-    echo "  8) 退出"
+    echo "  4) 查看服务状态"
+    echo "  5) 查看服务日志"
+    echo "  6) 重启 Komari 服务"
+    echo "  7) 停止 Komari 服务"
+    echo "  8) 配置 Nginx 反向代理"
+    echo "  9) 配置 Cloudflare Tunnel 隧道"
+    echo "  10) 退出"
     echo
 
-    read -p "输入选项 [1-8]: " choice
+    read -p "输入选项 [1-10]: " choice
 
     case $choice in
         1) install_binary ;;
@@ -405,7 +577,9 @@ main_menu() {
         5) show_logs ;;
         6) restart_service ;;
         7) stop_service ;;
-        8) exit 0 ;;
+        8) setup_nginx_proxy ;;
+        9) setup_cf_tunnel ;;
+        10) exit 0 ;;
         *) log_error "无效选项" ;;
     esac
 }

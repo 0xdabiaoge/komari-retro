@@ -138,10 +138,15 @@ func registerAdminRoutes(r *gin.Engine) {
 		task.GET("/client/:uuid", jsonRpc.Bind("admin:getTasksByClientId", jsonRpc.WithPath("uuid")))
 	}
 
+	// database
+	g.GET("/database/size", admin.GetDatabaseSize)
+
 	// settings
 	settings := g.Group("/settings")
 	{
+		settings.GET("", jsonRpc.Bind("admin:getSettings"))
 		settings.GET("/", jsonRpc.Bind("admin:getSettings"))
+		settings.POST("", jsonRpc.Bind("admin:editSettings"))
 		settings.POST("/", jsonRpc.Bind("admin:editSettings"))
 		settings.GET("/xtermjs", jsonRpc.Bind("admin:getXtermjsSettings"))
 		settings.POST("/xtermjs", jsonRpc.Bind("admin:setXtermjsSettings", jsonRpc.WithMessage("settings saved")))
@@ -149,6 +154,9 @@ func registerAdminRoutes(r *gin.Engine) {
 		settings.GET("/oidc", jsonRpc.Bind("admin:getOidcProvider", jsonRpc.WithQuery("provider")))
 		settings.POST("/message-sender", jsonRpc.Bind("admin:setMessageSenderProvider"))
 		settings.GET("/message-sender", jsonRpc.Bind("admin:getMessageSenderProvider", jsonRpc.WithQuery("provider")))
+		settings.GET("/notification-channels", jsonRpc.Bind("admin:listNotificationChannels"))
+		settings.GET("/notification-channel", jsonRpc.Bind("admin:getNotificationChannelConfiguration", jsonRpc.WithQuery("id")))
+		settings.POST("/notification-channel", jsonRpc.Bind("admin:setNotificationChannelConfiguration"))
 		settings.GET("/cloudflared", jsonRpc.Bind("admin:getCloudflaredStatus"))
 		settings.POST("/cloudflared/start", jsonRpc.Bind("admin:startCloudflared"))
 		settings.POST("/cloudflared/stop", jsonRpc.Bind("admin:stopCloudflared"))
@@ -209,6 +217,7 @@ func registerAdminRoutes(r *gin.Engine) {
 		notificationGroup.POST("/offline/disable", jsonRpc.Bind("admin:disableOfflineNotification"))
 		loadAlert := notificationGroup.Group("/load")
 		{
+			loadAlert.GET("", jsonRpc.Bind("admin:getAllLoadNotifications"))
 			loadAlert.GET("/", jsonRpc.Bind("admin:getAllLoadNotifications"))
 			loadAlert.POST("/add", jsonRpc.Bind("admin:addLoadNotification"))
 			loadAlert.POST("/delete", jsonRpc.Bind("admin:deleteLoadNotification"))
@@ -216,6 +225,7 @@ func registerAdminRoutes(r *gin.Engine) {
 		}
 		trafficReport := notificationGroup.Group("/traffic-report")
 		{
+			trafficReport.GET("", jsonRpc.Bind("admin:listTrafficReportNotifications"))
 			trafficReport.GET("/", jsonRpc.Bind("admin:listTrafficReportNotifications"))
 			trafficReport.POST("/edit", jsonRpc.Bind("admin:editTrafficReportNotifications"))
 			trafficReport.POST("/enable", jsonRpc.Bind("admin:enableTrafficReportNotifications"))
@@ -226,6 +236,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	// ping tasks
 	pingTask := g.Group("/ping")
 	{
+		pingTask.GET("", jsonRpc.Bind("admin:getAllPingTasks"))
 		pingTask.GET("/", jsonRpc.Bind("admin:getAllPingTasks"))
 		pingTask.POST("/add", jsonRpc.Bind("admin:addPingTask"))
 		pingTask.POST("/delete", jsonRpc.Bind("admin:deletePingTask"))

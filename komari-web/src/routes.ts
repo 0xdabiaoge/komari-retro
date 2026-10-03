@@ -94,33 +94,38 @@ export const routes: RouteObject[] = [
       },
       {
         path: "plugins",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/plugins"))
-        ),
+        element: React.createElement(Navigate, {
+          to: "/admin/dashboard",
+          replace: true,
+        }),
       },
       {
         path: "plugins/config",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/plugin_config"))
-        ),
+        element: React.createElement(Navigate, {
+          to: "/admin/dashboard",
+          replace: true,
+        }),
       },
       {
         path: "plugin-page",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/plugin_page"))
-        ),
+        element: React.createElement(Navigate, {
+          to: "/admin/dashboard",
+          replace: true,
+        }),
       },
       {
         path: "market/themes",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/market/themes"))
-        ),
+        element: React.createElement(Navigate, {
+          to: "/admin/dashboard",
+          replace: true,
+        }),
       },
       {
         path: "market/plugins",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/market/plugins"))
-        ),
+        element: React.createElement(Navigate, {
+          to: "/admin/dashboard",
+          replace: true,
+        }),
       },
       {
         path: "sessions",
@@ -187,9 +192,10 @@ export const routes: RouteObject[] = [
           },
           {
             path: "metrics",
-            element: React.createElement(
-              lazy(() => import("./pages/admin/settings/metrics"))
-            ),
+            element: React.createElement(Navigate, {
+              to: "/admin/settings/site",
+              replace: true,
+            }),
           },
         ],
       },
@@ -247,7 +253,10 @@ export const routes: RouteObject[] = [
       },
       {
         path: "pprof",
-        element: React.createElement(lazy(() => import("./pages/admin/pprof"))),
+        element: React.createElement(Navigate, {
+          to: "/admin/dashboard",
+          replace: true,
+        }),
       },
       {
         path: "exec",

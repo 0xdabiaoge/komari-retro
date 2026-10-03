@@ -63,41 +63,7 @@
     {
       "labelKey": "theme.menu",
       "path": "/admin/themes",
-      "icon": "Palette",
-      "children": [
-        {
-          "labelKey": "theme.title",
-          "path": "/admin/themes",
-          "icon": "Palette"
-        },
-        {
-          "labelKey": "market.themes",
-          "path": "/admin/market/themes",
-          "icon": "Store"
-        }
-      ]
-    },
-    {
-      "labelKey": "plugin.title",
-      "path": "/admin/plugins",
-      "icon": "Blocks",
-      "children": [
-        {
-          "labelKey": "plugin.manage",
-          "path": "/admin/plugins",
-          "icon": "Blocks"
-        },
-        {
-          "labelKey": "plugin.market",
-          "path": "/admin/market/plugins",
-          "icon": "Store"
-        },
-        {
-          "labelKey": "plugin.config",
-          "path": "/admin/plugins/config",
-          "icon": "Settings2"
-        }
-      ]
+      "icon": "Palette"
     },
     {
       "labelKey": "system.title",
@@ -120,19 +86,9 @@
           "icon": "CircleArrowRight"
         },
         {
-          "labelKey": "settings.metrics.title",
-          "path": "/admin/settings/metrics",
-          "icon": "Database"
-        },
-        {
           "labelKey": "logs.title",
           "path": "/admin/logs",
           "icon": "FileText"
-        },
-        {
-          "labelKey": "pprof.title",
-          "path": "/admin/pprof",
-          "icon": "Activity"
         }
       ]
     },

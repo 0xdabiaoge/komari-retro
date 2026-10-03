@@ -208,3 +208,20 @@ func DownloadBackup(c *gin.Context) {
 		return
 	}
 }
+
+// GetDatabaseSize 返回数据库文件大小
+func GetDatabaseSize(c *gin.Context) {
+	var mainSize int64 = 0
+	if fi, err := os.Stat(flags.DatabaseFile); err == nil {
+		mainSize = fi.Size()
+	}
+	api.RespondSuccess(c, gin.H{
+		"main": gin.H{
+			"size": mainSize,
+		},
+		"monitoring": gin.H{
+			"size": 0,
+		},
+	})
+}
+

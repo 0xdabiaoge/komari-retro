@@ -30,6 +30,9 @@ func init() {
 	regPublic("getRecordsByUUID", publicGetRecordsByUUID, "Get load records for a client")
 	regPublic("getPingRecords", publicGetPingRecords, "Get ping records")
 	regPublic("getPublicPingTasks", publicGetPublicPingTasks, "List public ping tasks")
+	regPublic("queryMetrics", publicQueryMetrics, "Query metric series for dashboard and charts")
+	regPublic("getPingMetricStats", publicGetPingMetricStats, "Get ping metric statistics")
+	regPublic("listMetricDefinitions", publicListMetricDefinitions, "List metric definitions")
 }
 
 func regPublic(name string, h rpc.Handler, summary string) {
@@ -450,3 +453,210 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	response.Count = len(response.Records)
 	return response, nil
 }
+
+type MetricPointItem struct {
+	Time  string   `json:"time"`
+	Value *float64 `json:"value"`
+}
+
+type MetricSeriesItem struct {
+	MetricKey string            `json:"metric_key"`
+	EntityID  string            `json:"entity_id"`
+	Count     int               `json:"count"`
+	Points    []MetricPointItem `json:"points"`
+}
+
+func publicListMetricDefinitions(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	return []any{}, nil
+}
+
+func publicGetPingMetricStats(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	var params struct {
+		Hours int `json:"hours"`
+	}
+	req.BindParams(&params)
+	if params.Hours <= 0 {
+		params.Hours = 24
+	}
+	endTime := time.Now()
+	startTime := endTime.Add(-time.Duration(params.Hours) * time.Hour)
+
+	pingTasks, _ := tasks.GetAllPingTasks()
+	cinfo, _ := clients.GetAllClientBasicInfo()
+
+	type pingMetricStat struct {
+		EntityID string   `json:"entity_id"`
+		TaskID   string   `json:"task_id"`
+		Name     string   `json:"name"`
+		Total    int      `json:"total"`
+		Valid    int      `json:"valid"`
+		Loss     float64  `json:"loss"`
+		Avg      *float64 `json:"avg"`
+		Min      *float64 `json:"min"`
+		Max      *float64 `json:"max"`
+		Latest   *float64 `json:"latest"`
+	}
+
+	stats := make([]pingMetricStat, 0)
+	for _, c := range cinfo {
+		nodeStats := getPingStatsForNode(c.UUID, pingTasks)
+		for taskIDStr, st := range nodeStats {
+			avgVal := float64(st.Avg)
+			minVal := float64(st.Min)
+			maxVal := float64(st.Max)
+			latestVal := float64(st.Latest)
+			stats = append(stats, pingMetricStat{
+				EntityID: c.UUID,
+				TaskID:   taskIDStr,
+				Name:     st.Name,
+				Total:    100,
+				Valid:    int(100 - st.Loss),
+				Loss:     st.Loss,
+				Avg:      &avgVal,
+				Min:      &minVal,
+				Max:      &maxVal,
+				Latest:   &latestVal,
+			})
+		}
+	}
+
+	return map[string]any{
+		"start": startTime.Format(time.RFC3339),
+		"end":   endTime.Format(time.RFC3339),
+		"stats": stats,
+		"count": len(stats),
+	}, nil
+}
+
+func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	var params struct {
+		MetricKeys []string `json:"metric_keys"`
+		Start      string   `json:"start"`
+		End        string   `json:"end"`
+	}
+	req.BindParams(&params)
+
+	var startTime, endTime time.Time
+	if params.End != "" {
+		if t, err := time.Parse(time.RFC3339, params.End); err == nil {
+			endTime = t
+		}
+	}
+	if endTime.IsZero() {
+		endTime = time.Now()
+	}
+
+	if params.Start != "" {
+		if t, err := time.Parse(time.RFC3339, params.Start); err == nil {
+			startTime = t
+		}
+	}
+	if startTime.IsZero() {
+		startTime = endTime.Add(-24 * time.Hour)
+	}
+
+	recs, err := getLoadRecordsCombined("", startTime, endTime)
+	if err != nil {
+		recs = []models.Record{}
+	}
+
+	isLogin := isLoginFromCtx(ctx)
+	if !isLogin {
+		cinfo, _ := clients.GetAllClientBasicInfo()
+		hidden := map[string]bool{}
+		for _, c := range cinfo {
+			if c.Hidden {
+				hidden[c.UUID] = true
+			}
+		}
+		filtered := make([]models.Record, 0, len(recs))
+		for _, r := range recs {
+			if !hidden[r.Client] {
+				filtered = append(filtered, r)
+			}
+		}
+		recs = filtered
+	}
+
+	// Group records by client
+	clientRecords := make(map[string][]models.Record)
+	for _, r := range recs {
+		clientRecords[r.Client] = append(clientRecords[r.Client], r)
+	}
+
+	keys := params.MetricKeys
+	if len(keys) == 0 {
+		keys = []string{"net.in", "net.out", "cpu.usage", "memory.used"}
+	}
+
+	seriesList := make([]MetricSeriesItem, 0)
+	totalCount := 0
+
+	for clientUUID, recordsList := range clientRecords {
+		for _, key := range keys {
+			pts := make([]MetricPointItem, 0, len(recordsList))
+			for _, r := range recordsList {
+				var val float64
+				switch key {
+				case "cpu.usage":
+					val = float64(r.Cpu)
+				case "memory.used":
+					val = float64(r.Ram)
+				case "memory.total":
+					val = float64(r.RamTotal)
+				case "net.in":
+					val = float64(r.NetIn)
+				case "net.out":
+					val = float64(r.NetOut)
+				case "net.total.up":
+					val = float64(r.NetTotalUp)
+				case "net.total.down":
+					val = float64(r.NetTotalDown)
+				case "traffic.up":
+					val = float64(r.TrafficUp)
+				case "traffic.down":
+					val = float64(r.TrafficDown)
+				default:
+					continue
+				}
+				vCopy := val
+				pts = append(pts, MetricPointItem{
+					Time:  r.Time.ToTime().Format(time.RFC3339),
+					Value: &vCopy,
+				})
+			}
+
+			// Downsample if more than 120 points
+			if len(pts) > 120 {
+				step := len(pts) / 100
+				if step < 1 {
+					step = 1
+				}
+				downsampled := make([]MetricPointItem, 0, 105)
+				for i := 0; i < len(pts); i += step {
+					downsampled = append(downsampled, pts[i])
+				}
+				if len(downsampled) > 0 && downsampled[len(downsampled)-1].Time != pts[len(pts)-1].Time {
+					downsampled = append(downsampled, pts[len(pts)-1])
+				}
+				pts = downsampled
+			}
+
+			totalCount += len(pts)
+			seriesList = append(seriesList, MetricSeriesItem{
+				MetricKey: key,
+				EntityID:  clientUUID,
+				Count:     len(pts),
+				Points:    pts,
+			})
+		}
+	}
+
+	return map[string]any{
+		"start":  startTime.Format(time.RFC3339),
+		"end":    endTime.Format(time.RFC3339),
+		"series": seriesList,
+		"count":  totalCount,
+	}, nil
+}
+
