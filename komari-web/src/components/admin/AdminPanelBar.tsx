@@ -10,7 +10,7 @@ import {
   IconButton,
   Text,
 } from "@radix-ui/themes";
-import { AnimatePresence, motion } from "framer-motion"; // 引入 Framer Motion
+import { AnimatePresence, motion, type Variants } from "framer-motion"; // 引入 Framer Motion
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation /*useNavigate*/ } from "react-router-dom";
@@ -372,12 +372,12 @@ const AdminPanelBar = ({ content, onboardingReady = false }: AdminPanelBarProps)
   }, [location.pathname, extraMenuItems, mergedBaseMenuItems, onboarding.menu]);
 
   // 侧边栏动画变体
-  const sidebarVariants = {
+  const sidebarVariants: Variants = {
     open: {
       width: isMobile ? "100vw" : "240px",
       opacity: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 300,
         damping: 30,
       },
@@ -386,7 +386,7 @@ const AdminPanelBar = ({ content, onboardingReady = false }: AdminPanelBarProps)
       width: 0,
       opacity: isMobile ? 0 : 1, // 移动端完全透明
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 300,
         damping: 30,
       },
