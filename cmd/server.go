@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -204,14 +205,39 @@ func DoScheduledWork() {
 	notifier.InitTrafficReportSchedule()
 }
 
+func getRecordRetentionDays() int {
+	valStr := GetEnv("KOMARI_RECORD_RETENTION_DAYS", "30")
+	days, err := strconv.Atoi(valStr)
+	if err != nil || days <= 0 {
+		return 30
+	}
+	return days
+}
+
 func cleanupScheduledData() {
 	cfg, _ := config.GetManyAs[config.Settings]()
-	records.DeleteRecordBefore(time.Now().Add(-time.Hour * time.Duration(cfg.RecordPreserveTime)))
+	// 1. 清理短期原始监控数据（默认按设置，如 24 小时）
+	records.DeleteRawRecordBefore(time.Now().Add(-time.Hour * time.Duration(cfg.RecordPreserveTime)))
 	records.CompactRecord()
+
+	// 2. 清理长期聚合监控数据与 ping 数据（默认保留 30 天，或按 KOMARI_RECORD_RETENTION_DAYS 配置）
+	retentionDays := getRecordRetentionDays()
+	longTermCutoff := time.Now().AddDate(0, 0, -retentionDays)
+	records.DeleteLongTermRecordsBefore(longTermCutoff)
+
 	tasks.ClearTaskResultsByTimeBefore(time.Now().Add(-time.Hour * time.Duration(cfg.RecordPreserveTime)))
-	tasks.DeletePingRecordsBefore(time.Now().Add(-time.Hour * time.Duration(cfg.PingRecordPreserveTime)))
+
+	pingPreserveHours := cfg.PingRecordPreserveTime
+	if pingPreserveHours <= 0 {
+		pingPreserveHours = retentionDays * 24
+	}
+	tasks.DeletePingRecordsBefore(time.Now().Add(-time.Hour * time.Duration(pingPreserveHours)))
+
 	auditlog.RemoveOldLogs()
 	accounts.RemoveExpiredSessions()
+
+	// 3. 执行数据库优化整理，释放空间防止膨胀
+	records.OptimizeDatabase()
 }
 
 func minuteScheduledWork() {

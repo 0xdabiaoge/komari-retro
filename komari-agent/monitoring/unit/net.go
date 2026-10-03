@@ -114,18 +114,23 @@ func countProcNetFile(path string) (int, error) {
 var (
 	// 预定义常见的回环和虚拟接口名称
 	loopbackNames = map[string]struct{}{
-		"br":      {},
-		"cni":     {},
-		"docker":  {},
-		"podman":  {},
-		"flannel": {},
-		"lo":      {},
-		"veth":    {}, // Docker
-		"virbr":   {}, // KVM
-		"vmbr":    {}, // Proxmox
-		"tap":     {},
-		"fwbr":    {},
-		"fwpr":    {},
+		"br":        {},
+		"cni":       {},
+		"docker":    {},
+		"podman":    {},
+		"flannel":   {},
+		"lo":        {},
+		"veth":      {}, // Docker
+		"virbr":     {}, // KVM
+		"vmbr":      {}, // Proxmox
+		"tap":       {},
+		"fwbr":      {},
+		"fwpr":      {},
+		"cali":      {}, // Calico
+		"kube":      {}, // Kubernetes
+		"dummy":     {}, // Linux dummy interface
+		"tun":       {}, // VPN/TUN
+		"tailscale": {}, // Tailscale
 	}
 )
 

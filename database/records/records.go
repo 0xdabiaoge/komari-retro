@@ -81,12 +81,25 @@ func GetLatestRecord(uuid string) (Record []models.Record, err error) {
 	return
 }
 
-func DeleteRecordBefore(before time.Time) error {
+func DeleteRawRecordBefore(before time.Time) error {
 	db := dbcore.GetDBInstance()
-	db.Table("records_long_term").Where("time < ?", before).Delete(&models.Record{})
-	db.Table("gpu_records_long_term").Where("time < ?", before).Delete(&models.GPURecord{})
 	db.Where("time < ?", before).Delete(&models.GPURecord{})
 	return db.Where("time < ?", before).Delete(&models.Record{}).Error
+}
+
+func DeleteLongTermRecordsBefore(before time.Time) error {
+	db := dbcore.GetDBInstance()
+	db.Table("records_long_term").Where("time < ?", before).Delete(&models.Record{})
+	return db.Table("gpu_records_long_term").Where("time < ?", before).Delete(&models.GPURecord{}).Error
+}
+
+func DeleteRecordBefore(before time.Time) error {
+	return DeleteRawRecordBefore(before)
+}
+
+func OptimizeDatabase() {
+	db := dbcore.GetDBInstance()
+	db.Exec("PRAGMA optimize")
 }
 
 func GetRecordsByClientAndTime(uuid string, start, end time.Time) ([]models.Record, error) {

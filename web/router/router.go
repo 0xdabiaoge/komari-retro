@@ -5,6 +5,7 @@ import (
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/komari-monitor/komari/web/api/admin"
 	"github.com/komari-monitor/komari/web/api/client"
+	"github.com/komari-monitor/komari/web/api/filetransfer"
 	public_api "github.com/komari-monitor/komari/web/api/public"
 	"github.com/komari-monitor/komari/web/api/terminal"
 	"github.com/komari-monitor/komari/web/public"
@@ -54,6 +55,9 @@ func registerPublicRoutes(r *gin.Engine) {
 	// JSON-RPC 直连入口。
 	r.GET("/api/rpc2", jsonRpc.OnRpcRequest)
 	r.POST("/api/rpc2", jsonRpc.OnRpcRequest)
+
+	// Office Online / 外部预览下载端点（基于短期签名令牌）
+	r.GET("/api/preview/client/:uuid/file/download", filetransfer.HandlePreviewDownload)
 }
 
 // registerAgentRoutes agent（客户端）上报与拉取路由。
@@ -70,6 +74,8 @@ func registerAgentRoutes(r *gin.Engine) {
 		tokenAuthorized.GET("/v2/rpc", client.WebSocketV2RPC)
 		tokenAuthorized.POST("/v2/rpc", client.UploadV2RPC)
 		tokenAuthorized.GET("/terminal", terminal.EstablishConnection)
+		// 文件管理二进制传输流
+		tokenAuthorized.POST("/transfer/:id", filetransfer.HandleFileTransfer)
 
 		// JSON 接口 -> RPC2 (client: 命名空间)。
 		tokenAuthorized.POST("/task/result", jsonRpc.Bind("client:taskResult", jsonRpc.WithRaw()))
@@ -160,6 +166,10 @@ func registerAdminRoutes(r *gin.Engine) {
 		clientGroup.GET("/:uuid/token", jsonRpc.Bind("admin:getClientToken", jsonRpc.WithPath("uuid"), jsonRpc.WithFlat()))
 		clientGroup.POST("/order", jsonRpc.Bind("admin:orderClients"))
 		clientGroup.GET("/:uuid/terminal", api.RequireSensitive2FA(), terminal.RequestTerminal)
+		// 文件管理器端点
+		clientGroup.GET("/:uuid/file/download", filetransfer.HandleFileDownload)
+		clientGroup.GET("/:uuid/file/preview-token", filetransfer.HandleFilePreviewToken)
+		clientGroup.POST("/:uuid/file/upload", filetransfer.HandleFileUpload)
 	}
 
 	// records

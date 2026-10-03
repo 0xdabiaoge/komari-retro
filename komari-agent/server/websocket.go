@@ -78,7 +78,18 @@ func EstablishWebSocketConnection(onRestartRequired func()) {
 						log.Println("Failed to connect to WebSocket:", err)
 					}
 					retry++
-					time.Sleep(time.Duration(flags.ReconnectInterval) * time.Second)
+					backoff := time.Duration(flags.ReconnectInterval) * time.Second
+					if retry > 1 {
+						multiplier := 1 << (retry - 1)
+						if multiplier > 6 {
+							multiplier = 6
+						}
+						backoff = time.Duration(flags.ReconnectInterval*multiplier) * time.Second
+						if backoff > 30*time.Second {
+							backoff = 30 * time.Second
+						}
+					}
+					time.Sleep(backoff)
 				}
 
 				if retry > flags.MaxRetries {

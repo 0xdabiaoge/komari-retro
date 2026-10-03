@@ -94,6 +94,13 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 		return v2.Success(req.ID, gin.H{
 			"events": agent_runtime.WaitV2Events(uuid, params.AckEventIDs, timeout),
 		})
+	case v2.MethodAgentFileResult:
+		var result v2.FileResult
+		if err := bindV2Params(req.Params, &result); err != nil {
+			return v2.Error(req.ID, -32602, "invalid file result params", err.Error())
+		}
+		agent_runtime.HandleFileResult(result)
+		return v2.Success(req.ID, gin.H{"status": "success"})
 	default:
 		return v2.Error(req.ID, -32601, "method not found", req.Method)
 	}

@@ -7,8 +7,11 @@ import (
 	_ "github.com/komari-monitor/komari/utils/messageSender/javascript"
 	_ "github.com/komari-monitor/komari/utils/messageSender/serverchan3"
 	_ "github.com/komari-monitor/komari/utils/messageSender/serverchanturbo"
+	_ "github.com/komari-monitor/komari/utils/messageSender/discord"
+	_ "github.com/komari-monitor/komari/utils/messageSender/feishu"
 	_ "github.com/komari-monitor/komari/utils/messageSender/telegram"
 	_ "github.com/komari-monitor/komari/utils/messageSender/webhook"
+	_ "github.com/komari-monitor/komari/utils/messageSender/wecom"
 )
 
 func All() {
