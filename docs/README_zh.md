@@ -1,39 +1,69 @@
-# Komari
+# Komari Retro
 
-![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2Fkomari-monitor%2Fkomari&label=&icon=github&color=%23a370f7&message=&style=flat&tz=UTC)
+<div align="center">
 
-![komari](https://socialify.git.ci/komari-monitor/komari/image?description=1&font=Inter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2Fkomari-monitor%2Fkomari-web%2Fd54ce1288df41ead08aa19f8700186e68028a889%2Fpublic%2Ffavicon.png&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Auto)
+**轻量、高效、自托管的独立服务器监控运维套件**
 
-Komari 是一款轻量级的自托管服务器监控工具，旨在提供简单、高效的服务器性能监控解决方案。它支持通过 Web 界面查看服务器状态，并通过轻量级 Agent 收集数据。
+[![GitHub Release](https://img.shields.io/github/v/release/0xdabiaoge/komari-retro?color=blue&style=flat-square)](https://github.com/0xdabiaoge/komari-retro/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](../LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
+[![React Version](https://img.shields.io/badge/React-19.x-61DAFB.svg?style=flat-square&logo=react)](https://react.dev)
 
-> [!WARNING]
-> Komari 是一款自托管的监控/控制程序，仅应部署在你拥有或已获得授权管理的系统上。请勿将 Komari 武器化，或在未获授权的情况下部署、访问、持久化、执行命令及从事其他滥用行为。关于现实中的滥用风险，可参考 Huntress 的分析：[Komari C2 agent abuse](https://www.huntress.com/blog/komari-c2-agent-abuse)。
-> 用户需要自行承担部署和使用 Komari 的责任。开发者不对未经授权或滥用行为及其后果承担责任。
-> 在 Windows 端开启远程控制后，客户端会在每次用户登录时通过 Windows 通知提醒用户 Komari 是一款远程控制软件。
+[简体中文](./README_zh.md) | [返回根目录](../README.md) | [GitHub 仓库](https://github.com/0xdabiaoge/komari-retro)
 
-[文档](https://komari-document.pages.dev/) | [文档(镜像站 By Geekertao)](https://www.komari.wiki) | [Telegram 群组](https://t.me/komari_monitor)
+</div>
 
-## 特性
+---
 
-- **轻量高效**：低资源占用，适合各种规模的服务器。
-- **自托管**：完全掌控数据隐私，部署简单。
-- **Web 界面**：直观的监控仪表盘，易于使用。
+## 📖 项目简介
 
-## 快速开始
+**Komari Retro** 是由 [@0xdabiaoge](https://github.com/0xdabiaoge) 维护的 Komari 独立定制分支。
 
-### 0. 容器云一键部署
+本项目脱离原项目的频繁滚动更新，旨在打造一个**结构完整、自成一体、长期稳定、自主可控**的现代化服务器监控与管理面板，采用 Monorepo 架构将主控服务端、监控探针、管理前端以及完整开发文档聚合为一体，开箱即用。
 
-- 雨云云应用 - CNY 4.5/月
+---
 
-[![](https://rainyun-apps.cn-nb1.rains3.com/materials/deploy-on-rainyun-cn.svg)](https://app.rainyun.com/apps/rca/store/6780/NzYxNzAz_)
+## 📌 版本基准
 
-- 1Panel 应用商店
+本项目各核心组件所基于的原版代码版本如下：
 
-已上架1Panel应用商店，应用商店-实用工具-Komari 即可安装
+| 组件名称 | 目录位置 | 基于上游版本 | 技术栈与特性 |
+| :--- | :--- | :--- | :--- |
+| **Komari Server (服务端)** | 根目录 `/` | **v1.2.5** | Go 1.24 / Gin / GORM / SQLite & MySQL / JSON-RPC 2.0 / WebSocket v2 / 静态资源内嵌 |
+| **Komari Agent (客户端探针)** | `/komari-agent` | **最新稳定版 (v1.1.x+)** | Go 1.24 / gopsutil / 支持多网卡、GPU 监控、自定义 DNS、Web SSH 远程终端、自动重连 |
+| **Komari Web (前端仪表盘)** | `/komari-web` | **最新版 (React 19)** | React 19 / TypeScript / Vite 6 / Radix UI / Monaco Editor / PWA 支持 / 多语言适配 |
+| **Komari Document (官方文档)** | `/komari-document` | **最新版** | VitePress 1.6+ / 完整中英双语部署与开发接口文档 |
 
-### 1. 使用一键安装脚本
+---
 
-适用于使用了 systemd 的发行版（Ubuntu、Debian...）。
+## 🗂️ 项目结构
+
+本项目采用 Monorepo 单体仓库管理：
+
+```text
+komari-retro/
+├── cmd/                        # 服务端命令行指令 (server, chpasswd, disable-2fa 等)
+├── database/                   # 数据库持久化层与模型定义 (SQLite / MySQL)
+├── pkg/                        # 核心通用依赖与 RPC 路由中间件
+├── protocol/                   # 探针通信协议定义
+├── utils/                      # 工具函数库与 GeoIP 解析
+├── web/                        # Web 路由、API 接口及静态资源嵌入逻辑
+│   └── public/defaultTheme/    # 预编译的前端静态资源 (支持无 Node 环境一键构建 Go 二进制)
+├── komari-agent/               # 独立探针客户端源码 (支持 Linux / Windows / macOS / Docker)
+├── komari-web/                 # 现代化 React 19 仪表盘前端源码
+├── komari-document/            # VitePress 架构的完整使用与二次开发文档
+├── install-komari.sh           # 服务端一键自动化部署脚本
+├── Dockerfile                  # 容器化打包文件
+└── main.go                     # 主程序入口
+```
+
+---
+
+## 🚀 快速开始
+
+### 1. 服务端一键脚本安装 (推荐)
+
+适用于支持 `systemd` 的 Linux 发行版（Debian / Ubuntu / CentOS 等）：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/0xdabiaoge/komari-retro/main/install-komari.sh -o install-komari.sh
@@ -41,103 +71,102 @@ chmod +x install-komari.sh
 sudo ./install-komari.sh
 ```
 
-### 2. Docker 部署
+脚本将引导您完成端口设置与服务初始化，默认监听端口为 `25774`。
 
-1. 创建数据目录：
-   ```bash
-   mkdir -p ./data
-   ```
-2. 运行 Docker 容器：
-   ```bash
-   docker run -d \
-     -p 25774:25774 \
-     -v $(pwd)/data:/app/data \
-     --name komari \
-     ghcr.io/komari-monitor/komari:latest
-   ```
-3. 查看默认账号和密码：
-   ```bash
-   docker logs komari
-   ```
-4. 在浏览器中访问 `http://<your_server_ip>:25774`。
+---
 
-> [!NOTE]
-> 你也可以通过环境变量 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 自定义初始用户名和密码。
+### 2. 二进制直接运行
 
-### 3. 二进制文件部署
-
-1. 访问 Komari 的 [GitHub Release 页面](https://github.com/0xdabiaoge/komari-retro/releases) 下载适用于你操作系统的最新二进制文件。
-2. 运行 Komari：
+1. 前往本项目的 [GitHub Releases](https://github.com/0xdabiaoge/komari-retro/releases) 下载对应系统架构的可执行文件。
+2. 赋予执行权限并启动：
    ```bash
+   chmod +x komari
    ./komari server -l 0.0.0.0:25774
    ```
-3. 在浏览器中访问 `http://<your_server_ip>:25774`，默认监听 `25774` 端口。
-4. 默认账号和密码可在启动日志中查看，或通过环境变量 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 设置。
-
-> [!NOTE]
-> 确保二进制文件具有可执行权限（`chmod +x komari`）。数据将保存在运行目录下的 `data` 文件夹中。
-
-### 手工构建
-
-#### 依赖
-
-- Go 1.18+ 和 Node.js 20+（手工构建）
-
-1. 构建前端静态文件：
+3. 浏览器访问：`http://<服务器IP>:25774`。
+4. 初始管理员账号为 `admin`，初始密码可在启动日志中获取，或使用命令行直接重置：
    ```bash
-   cd komari-web
-   npm install
-   npm run build
-   cd ..
+   ./komari chpasswd -p <你的新密码>
    ```
-2. 构建后端：
-   ```bash
-   go build -o komari
-   ```
-3. 运行：
-   ```bash
-   ./komari server -l 0.0.0.0:25774
-   ```
-   默认监听 `25774` 端口，访问 `http://localhost:25774`。
 
-## 前端开发指南
+---
 
-[Komari 主题开发指南 | Komari](https://komari-document.pages.dev/dev/theme.html)
+### 3. Docker 部署
 
-[在 Crowdin 上翻译 Komari](https://crowdin.com/project/komari/invite?h=cd051bf172c9a9f7f1360e87ffb521692507706)
+```bash
+# 创建数据存储目录
+mkdir -p ./data
 
-## 客户端 Agent 开发指南
+# 启动容器
+docker run -d \
+  -p 25774:25774 \
+  -v $(pwd)/data:/app/data \
+  --name komari \
+  --restart unless-stopped \
+  ghcr.io/0xdabiaoge/komari-retro:latest
+```
 
-[Komari Agent 信息上报与事件处理文档](https://komari-document.pages.dev/dev/agent.html)
+---
 
-## 贡献
+### 4. 客户端探针安装 (Agent)
 
-欢迎提交 Issue 或 Pull Request！
+在被监控的服务器上执行一键安装：
 
-## 鸣谢
+**Linux 一键安装：**
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xdabiaoge/komari-retro/main/komari-agent/install.sh | sudo sh -s -- -e "http://<你的面板地址>:25774" -t "<节点Token>"
+```
 
-### 破碎工坊云
+**Windows PowerShell 安装：**
+```powershell
+Invoke-Expression (Invoke-RestMethod "https://raw.githubusercontent.com/0xdabiaoge/komari-retro/main/komari-agent/install.ps1") -Endpoint "http://<你的面板地址>:25774" -Token "<节点Token>"
+```
 
-[破碎工坊云 - 专业云计算服务平台，提供高效、稳定、安全的高防服务器与CDN解决方案](https://www.crash.work/)
+---
 
-### DreamCloud
+## 🛠️ 本地从源码构建
 
-[DreamCloud - 极高性价比解锁直连亚太高防](https://as211392.com/)
+环境要求：
+- **Go**: 1.24 及以上
+- **Node.js**: 20 及以上 (仅前端需要重新打包时)
+- **pnpm**: 9+ 或 12+
 
-### 🚀 由 SharonNetworks 赞助
+### 方式 A：直接编译服务端（免 Node 环境）
+由于仓库内已预置编译好的最新前端资源（位于 `web/public/defaultTheme`），您可以直接编译 Go 二进制：
+```bash
+go build -o komari .
+```
 
-[![Sharon Networks](https://raw.githubusercontent.com/komari-monitor/public/refs/heads/main/images/sharon-networks.webp)](https://sharon.io)
+### 方式 B：全量编译（前端 + 服务端）
+```bash
+# 1. 构建前端静态资源
+cd komari-web
+pnpm install
+pnpm run build
+cd ..
 
-SharonNetworks 为您的业务起飞保驾护航！
+# 2. 同步静态文件到服务端内嵌目录
+mkdir -p web/public/defaultTheme/dist
+cp -r komari-web/dist/* web/public/defaultTheme/dist/
+cp komari-web/komari-theme.json web/public/defaultTheme/
 
-亚太数据中心提供顶级的中国优化网络接入 · 低延时 & 高带宽 & 提供 Tbps 级本地清洗高防服务，为您的业务保驾护航，为您的客户提供极致体验。加入社区 [Telegram 群组](https://t.me/SharonNetwork) 可参与公益募捐或群内抽奖免费使用。
+# 3. 编译服务端独立可执行文件
+go build -ldflags "-s -w" -o komari .
 
-### 开源社区
+# 4. 编译客户端探针
+cd komari-agent
+go build -ldflags "-s -w" -o komari-agent .
+```
 
-提交 PR、制作主题的各位开发者
+---
 
-—— 以及：感谢我自己能这么闲
+## ⚠️ 安全须知
 
-## Star History
+Komari 是一款仅供您本人拥有或获得合法运维授权的系统上使用的监控与运维管理软件。请勿将其用于未经授权的未受控环境、恶意持久化或滥用行为。使用者应对自身的部署与操作承担全部责任。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=komari-monitor/komari&type=Date)](https://www.star-history.com/#komari-monitor/komari&Date)
+---
+
+## 📄 开源许可与致谢
+
+- 本项目基于 [MIT License](../LICENSE) 开源。
+- 感谢原项目 [komari-monitor/komari](https://github.com/komari-monitor/komari) 及原作者 **Akizon77** 优秀的原始设计与开源贡献。
