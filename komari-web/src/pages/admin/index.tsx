@@ -1467,6 +1467,46 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   const { refresh } = useNodeDetails();
   const [open, setOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+
+  const detectPlatform = (osStr?: string): "linux" | "windows" | "macos" => {
+    if (!osStr) return "linux";
+    const lower = osStr.toLowerCase();
+    if (lower.includes("win")) return "windows";
+    if (lower.includes("darwin") || lower.includes("mac") || lower.includes("apple")) return "macos";
+    return "linux";
+  };
+
+  const [platform, setPlatform] = React.useState<"linux" | "windows" | "macos">(() =>
+    detectPlatform(node.os)
+  );
+
+  React.useEffect(() => {
+    if (open) {
+      setPlatform(detectPlatform(node.os));
+    }
+  }, [open, node.os]);
+
+  const getUninstallCommand = () => {
+    switch (platform) {
+      case "windows":
+        return `Stop-Service -Name komari-agent -Force -ErrorAction SilentlyContinue; sc.exe delete komari-agent; Remove-Item -Recurse -Force "$Env:ProgramFiles\\Komari" -ErrorAction SilentlyContinue`;
+      case "macos":
+        return `sudo launchctl unload /Library/LaunchDaemons/komari-agent.plist 2>/dev/null; sudo rm -f /Library/LaunchDaemons/komari-agent.plist; launchctl unload ~/Library/LaunchAgents/komari-agent.plist 2>/dev/null; rm -f ~/Library/LaunchAgents/komari-agent.plist; sudo rm -rf /usr/local/komari ~/.komari`;
+      case "linux":
+      default:
+        return `sudo systemctl stop komari-agent 2>/dev/null; sudo systemctl disable komari-agent 2>/dev/null; sudo rm -f /etc/systemd/system/komari-agent.service ~/.config/systemd/user/komari-agent.service; sudo systemctl daemon-reload 2>/dev/null; sudo rc-service komari-agent stop 2>/dev/null; sudo rc-update del komari-agent 2>/dev/null; sudo rm -f /etc/init.d/komari-agent; sudo rm -rf /opt/komari /etc/komari ~/.komari`;
+    }
+  };
+
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(getUninstallCommand());
+      toast.success(t("admin.nodeTable.copyUninstallSuccess", "已复制彻底卸载命令到剪贴板"));
+    } catch {
+      toast.error(t("copy_failed", "复制失败"));
+    }
+  };
+
   const handleDelete = async () => {
     try {
       setDeleting(true);
@@ -1491,17 +1531,59 @@ function DeleteButton({ node }: { node: NodeDetail }) {
           <Trash2Icon size="18" />
         </IconButton>
       </Dialog.Trigger>
-      <Dialog.Content>
-        <Dialog.Title>{t("common.delete")}</Dialog.Title>
-        <Dialog.Description>
-          {t("common.confirm_delete")}
+      <Dialog.Content className="max-w-[560px]">
+        <Dialog.Title>{t("common.delete")} - {node.name}</Dialog.Title>
+        <Dialog.Description size="2" color="gray" className="mb-2">
+          {t("common.confirm_delete", { name: node.name })}
         </Dialog.Description>
+
+        <div className="flex flex-col gap-3 my-3">
+          <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded p-2.5 leading-relaxed">
+            {t(
+              "admin.nodeTable.uninstallTip",
+              "提示：面板删除仅从主控数据库中移除该节点记录。若需在目标服务器上彻底卸载并停止探针监控端，请在被控节点终端执行以下命令："
+            )}
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-neutral-400">
+                {t("admin.nodeTable.targetOs", "目标系统平台")}:
+              </span>
+              <SegmentedControl.Root
+                size="1"
+                value={platform}
+                onValueChange={(val) => setPlatform(val as "linux" | "windows" | "macos")}
+              >
+                <SegmentedControl.Item value="linux">Linux</SegmentedControl.Item>
+                <SegmentedControl.Item value="windows">Windows</SegmentedControl.Item>
+                <SegmentedControl.Item value="macos">macOS</SegmentedControl.Item>
+              </SegmentedControl.Root>
+            </div>
+            <Button
+              size="1"
+              variant="surface"
+              onClick={copyCommand}
+            >
+              <Copy size={13} className="mr-1" />
+              {t("admin.nodeTable.copyUninstall", "复制卸载命令")}
+            </Button>
+          </div>
+
+          <TextArea
+            readOnly
+            rows={3}
+            className="font-mono text-xs select-all resize-none"
+            value={getUninstallCommand()}
+          />
+        </div>
+
         <Flex justify="end" gap="2" mt="4">
-          <Dialog.Trigger>
-            <Button variant="soft">{t("common.cancel")}</Button>
-          </Dialog.Trigger>
+          <Button variant="soft" onClick={() => setOpen(false)}>
+            {t("common.cancel")}
+          </Button>
           <Button disabled={deleting} color="red" onClick={handleDelete}>
-            {t("common.confirm_delete")}
+            {deleting ? t("admin.nodeTable.deleting") : t("common.confirm_delete")}
           </Button>
         </Flex>
       </Dialog.Content>

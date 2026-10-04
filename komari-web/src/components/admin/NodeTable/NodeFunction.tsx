@@ -110,6 +110,46 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
     return finalCommand;
   };
 
+  const detectNodePlatform = (osStr?: string): Platform => {
+    if (!osStr) return "linux";
+    const lower = osStr.toLowerCase();
+    if (lower.includes("win")) return "windows";
+    if (lower.includes("darwin") || lower.includes("mac") || lower.includes("apple")) return "macos";
+    return "linux";
+  };
+
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deletePlatform, setDeletePlatform] = React.useState<Platform>(() =>
+    detectNodePlatform(row.original.os)
+  );
+
+  React.useEffect(() => {
+    if (deleteOpen) {
+      setDeletePlatform(detectNodePlatform(row.original.os));
+    }
+  }, [deleteOpen, row.original.os]);
+
+  const getUninstallCommand = () => {
+    switch (deletePlatform) {
+      case "windows":
+        return `Stop-Service -Name komari-agent -Force -ErrorAction SilentlyContinue; sc.exe delete komari-agent; Remove-Item -Recurse -Force "$Env:ProgramFiles\\Komari" -ErrorAction SilentlyContinue`;
+      case "macos":
+        return `sudo launchctl unload /Library/LaunchDaemons/komari-agent.plist 2>/dev/null; sudo rm -f /Library/LaunchDaemons/komari-agent.plist; launchctl unload ~/Library/LaunchAgents/komari-agent.plist 2>/dev/null; rm -f ~/Library/LaunchAgents/komari-agent.plist; sudo rm -rf /usr/local/komari ~/.komari`;
+      case "linux":
+      default:
+        return `sudo systemctl stop komari-agent 2>/dev/null; sudo systemctl disable komari-agent 2>/dev/null; sudo rm -f /etc/systemd/system/komari-agent.service ~/.config/systemd/user/komari-agent.service; sudo systemctl daemon-reload 2>/dev/null; sudo rc-service komari-agent stop 2>/dev/null; sudo rc-update del komari-agent 2>/dev/null; sudo rm -f /etc/init.d/komari-agent; sudo rm -rf /opt/komari /etc/komari ~/.komari`;
+    }
+  };
+
+  const copyUninstallCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(getUninstallCommand());
+      toast.success(t("admin.nodeTable.copyUninstallSuccess", "已复制彻底卸载命令到剪贴板"));
+    } catch {
+      toast.error(t("copy_failed", "复制失败"));
+    }
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -322,7 +362,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
         </Dialog.Content>
       </Dialog.Root>
       {/** Delete Button */}
-      <Dialog.Root>
+      <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <Dialog.Trigger>
           <IconButton
             variant="ghost"
@@ -334,31 +374,82 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
             <Trash2 className="p-1" />
           </IconButton>
         </Dialog.Trigger>
-        <Dialog.Content>
-          <Dialog.Title>{t("common.confirm_delete")}</Dialog.Title>
-          <Dialog.Description>
-            {t("admin.nodeTable.cannotUndo")}
+        <Dialog.Content className="max-w-[560px]">
+          <Dialog.Title>
+            {t("common.delete")} - {row.original.name}
+          </Dialog.Title>
+          <Dialog.Description size="2" color="gray" className="mb-2">
+            {t("common.confirm_delete", { name: row.original.name })}
           </Dialog.Description>
-          <Flex gap="2" justify={"end"}>
-            <Dialog.Close>
-              <Button variant="soft">{t("common.cancel")}</Button>
-            </Dialog.Close>
-            <Dialog.Trigger>
+
+          <div className="flex flex-col gap-3 my-3">
+            <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded p-2.5 leading-relaxed">
+              {t(
+                "admin.nodeTable.uninstallTip",
+                "提示：面板删除仅从主控数据库中移除该节点记录。若需在目标服务器上彻底卸载并停止探针监控端，请在被控节点终端执行以下命令："
+              )}
+            </div>
+
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-neutral-400">
+                  {t("admin.nodeTable.targetOs", "目标系统平台")}:
+                </span>
+                <SegmentedControl.Root
+                  size="1"
+                  value={deletePlatform}
+                  onValueChange={(val) =>
+                    setDeletePlatform(val as Platform)
+                  }
+                >
+                  <SegmentedControl.Item value="linux">
+                    Linux
+                  </SegmentedControl.Item>
+                  <SegmentedControl.Item value="windows">
+                    Windows
+                  </SegmentedControl.Item>
+                  <SegmentedControl.Item value="macos">
+                    macOS
+                  </SegmentedControl.Item>
+                </SegmentedControl.Root>
+              </div>
               <Button
-                disabled={removing}
-                color="red"
-                onClick={async () => {
-                  setRemoving(true);
-                  await removeClient(row.original.uuid);
-                  setRemoving(false);
-                  if (refreshTable) refreshTable();
-                }}
+                size="1"
+                variant="surface"
+                onClick={copyUninstallCommand}
               >
-                {removing
-                  ? t("admin.nodeTable.deleting")
-                  : t("common.confirm")}
+                <Copy size={13} className="mr-1" />
+                {t("admin.nodeTable.copyUninstall", "复制卸载命令")}
               </Button>
-            </Dialog.Trigger>
+            </div>
+
+            <TextArea
+              readOnly
+              rows={3}
+              className="font-mono text-xs select-all resize-none"
+              value={getUninstallCommand()}
+            />
+          </div>
+
+          <Flex gap="2" justify={"end"} mt="4">
+            <Button variant="soft" onClick={() => setDeleteOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={removing}
+              color="red"
+              onClick={async () => {
+                setRemoving(true);
+                await removeClient(row.original.uuid);
+                setRemoving(false);
+                setDeleteOpen(false);
+                if (refreshTable) refreshTable();
+              }}
+            >
+              {removing
+                ? t("admin.nodeTable.deleting")
+                : t("common.confirm_delete")}
+            </Button>
           </Flex>
         </Dialog.Content>
       </Dialog.Root>
