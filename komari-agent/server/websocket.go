@@ -369,6 +369,17 @@ func handleWebSocketMessages(conn *ws.SafeConn, done chan<- struct{}, onRestartR
 			continue
 		}
 		if message.JSONRPC != v2.Version {
+			// Compatibility fallback for legacy message format (e.g. {"message": "terminal", "request_id": "..."})
+			var legacy struct {
+				Message   string `json:"message"`
+				RequestID string `json:"request_id"`
+			}
+			if errLegacy := json.Unmarshal(message_raw, &legacy); errLegacy == nil {
+				if legacy.Message == "terminal" && legacy.RequestID != "" {
+					go establishTerminalConnection(flags.Token, legacy.RequestID, flags.Endpoint)
+					continue
+				}
+			}
 			log.Printf("Bad v2 ws message version %q", message.JSONRPC)
 			continue
 		}

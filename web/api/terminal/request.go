@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/clients"
+	v2 "github.com/komari-monitor/komari/protocol/v2"
 	"github.com/komari-monitor/komari/utils"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
 	"github.com/komari-monitor/komari/web/api"
@@ -57,7 +58,7 @@ func RequestTerminal(c *gin.Context) {
 		return nil
 	})
 
-	if agent_runtime.GetConnectedClients()[uuid] == nil {
+	if !agent_runtime.IsAgentOnline(uuid) {
 		conn.WriteMessage(1, []byte("Client offline!\n被控端离线!\n"))
 		conn.Close()
 		TerminalSessionsMutex.Lock()
@@ -65,17 +66,29 @@ func RequestTerminal(c *gin.Context) {
 		TerminalSessionsMutex.Unlock()
 		return
 	}
-	err = agent_runtime.GetConnectedClients()[uuid].WriteJSON(gin.H{
-		"message":    "terminal",
+
+	// 1. Dispatch via V2 JSON-RPC (works for WebSocket and HTTP pull)
+	dispatched := agent_runtime.DispatchV2Event(uuid, v2.MethodAgentTerminal, map[string]string{
 		"request_id": id,
 	})
-	if err != nil {
+
+	// 2. Also send legacy V1 format if client has direct WebSocket connection
+	if clientConn := agent_runtime.GetConnectedClients()[uuid]; clientConn != nil {
+		_ = clientConn.WriteJSON(gin.H{
+			"message":    "terminal",
+			"request_id": id,
+		})
+	}
+
+	if !dispatched && agent_runtime.GetConnectedClients()[uuid] == nil {
+		conn.WriteMessage(1, []byte("Failed to dispatch terminal request to agent.\n无法向被控端发送终端请求。\n"))
 		conn.Close()
 		TerminalSessionsMutex.Lock()
 		delete(TerminalSessions, id)
 		TerminalSessionsMutex.Unlock()
 		return
 	}
+
 	conn.WriteMessage(1, []byte("等待被控端连接 waiting for agent...\n"))
 	// 如果没有连接上，则关闭连接
 	time.AfterFunc(30*time.Second, func() {

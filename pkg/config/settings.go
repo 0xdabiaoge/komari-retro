@@ -35,7 +35,7 @@ type Settings struct {
 	// 通知
 	NotificationEnabled        bool    `json:"notification_enabled" default:"true"` // 通知总开关
 	NotificationMethod         string  `json:"notification_method" default:"none"`
-	NotificationTemplate       string  `json:"notification_template" default:"{{emoji}}{{emoji}}{{emoji}}\nEvent: {{event}}\nClients: {{client}}\nMessage: {{message}}\nTime: {{time}}"`
+	NotificationTemplate       string  `json:"notification_template" default:"{{emoji}} <b>【Komari 监控告警】</b> {{emoji}}\n━━━━━━━━━━━━━━━\n📌 <b>告警事件</b>: <code>{{status}}</code>\n🖥 <b>监控节点</b>: <b>{{client}}</b>\n🌐 <b>节点网络</b>: <code>{{ip}}</code> ({{region}})\n📝 <b>告警详情</b>: {{message}}\n⏰ <b>告警时间</b>: <code>{{time}}</code>\n━━━━━━━━━━━━━━━\n🔔 <i>来自 {{site_name}} 监控平台</i>"`
 	ExpireNotificationEnabled  bool    `json:"expire_notification_enabled" default:"true"` // 是否启用过期通知
 	ExpireNotificationLeadDays int     `json:"expire_notification_lead_days" default:"7"`  // 过期前多少天通知，默认7天
 	LoginNotification          bool    `json:"login_notification" default:"true"`          // 登录通知

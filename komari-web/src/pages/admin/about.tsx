@@ -16,7 +16,7 @@ export default function AboutPage() {
   const [view, setView] = useState("open_source");
   useEffect(() => {
     fetch(
-      "https://raw.githubusercontent.com/komari-monitor/komari/refs/heads/main/README.md"
+      "https://raw.githubusercontent.com/0xdabiaoge/komari-retro/refs/heads/main/README.md"
     )
       .then((res) => res.text())
       .then(setMarkdown);

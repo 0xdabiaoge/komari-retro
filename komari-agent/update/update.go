@@ -27,7 +27,7 @@ import (
 var ErrRestartRequired = errors.New("update installed; restart required")
 
 var (
-	CurrentVersion string = "0.0.1"
+	CurrentVersion string = "1.2.5"
 	Repo           string = "0xdabiaoge/komari-retro"
 )
 

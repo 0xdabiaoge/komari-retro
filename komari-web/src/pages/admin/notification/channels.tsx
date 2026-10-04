@@ -9,10 +9,10 @@ import ConfigFormTabs, {
 import {
   SettingCardButton,
   SettingCardLabel,
-  SettingCardLongTextInput,
   SettingCardSelect,
   SettingCardSwitch,
 } from "@/components/admin/SettingCard";
+import { NotificationTemplateCard } from "@/components/admin/NotificationTemplateCard";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
@@ -167,11 +167,9 @@ const NotificationSettings = () => {
         }}
         className="km-page-admin-settings-notification km-setting-card"
       />
-      <SettingCardLongTextInput
-        title={t("settings.notification.template")}
-        description={t("settings.notification.template_description")}
+      <NotificationTemplateCard
         defaultValue={settings.notification_template}
-        OnSave={async (value) => {
+        onSave={async (value) => {
           await updateSettingsWithToast(
             { notification_template: value },
             t,

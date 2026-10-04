@@ -107,7 +107,7 @@ func SendEvent(event models.EventMessage) error {
 	var err error
 	cfg, err := config.GetMany(map[string]any{
 		config.NotificationEnabledKey:  false,
-		config.NotificationTemplateKey: "{{emoji}}{{emoji}}{{emoji}}\nEvent: {{event}}\nClients: {{client}}\nMessage: {{message}}\nTime: {{time}}",
+		config.NotificationTemplateKey: "{{emoji}} <b>【Komari 监控告警】</b> {{emoji}}\n━━━━━━━━━━━━━━━\n📌 <b>告警事件</b>: <code>{{status}}</code>\n🖥 <b>监控节点</b>: <b>{{client}}</b>\n🌐 <b>节点网络</b>: <code>{{ip}}</code> ({{region}})\n📝 <b>告警详情</b>: {{message}}\n⏰ <b>告警时间</b>: <code>{{time}}</code>\n━━━━━━━━━━━━━━━\n🔔 <i>来自 {{site_name}} 监控平台</i>",
 	})
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func SendEvent(event models.EventMessage) error {
 	messageTemplate = parseTemplate(messageTemplate, event)
 
 	for i := 0; i < 3; i++ {
-		err = CurrentProvider().SendTextMessage(messageTemplate, event.Event)
+		err = CurrentProvider().SendTextMessage(messageTemplate, "")
 		if err == nil || err.Error() == "short response: \x00\x00\x00\x1a\x00\x00\x00" { // QQ 会返回这个错误，但实际上消息是发送成功的
 			auditlog.Log("", "", "Event message sent: "+event.Event, "info")
 			return nil
@@ -146,25 +146,138 @@ func SendEvent(event models.EventMessage) error {
 	return err
 }
 
+func escapeTelegramHTML(s string) string {
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
+	return s
+}
+
 func parseTemplate(messageTemplate string, event models.EventMessage) string {
-	// Aggregate client names. If Name is empty, fall back to UUID.
 	clientNames := make([]string, 0, len(event.Clients))
+	clientIPs := make([]string, 0, len(event.Clients))
+	clientRegions := make([]string, 0, len(event.Clients))
+	clientOSs := make([]string, 0, len(event.Clients))
+	clientGroups := make([]string, 0, len(event.Clients))
+
 	for _, c := range event.Clients {
 		name := c.Name
 		if strings.TrimSpace(name) == "" {
-			// fallback to UUID when name is not set
 			name = c.UUID
 		}
 		clientNames = append(clientNames, name)
+
+		ip := c.IPv4
+		if ip == "" {
+			ip = c.IPv6
+		}
+		if ip != "" {
+			clientIPs = append(clientIPs, ip)
+		}
+
+		if c.Region != "" {
+			clientRegions = append(clientRegions, c.Region)
+		}
+		if c.OS != "" {
+			clientOSs = append(clientOSs, c.OS)
+		}
+		if c.Group != "" {
+			clientGroups = append(clientGroups, c.Group)
+		}
 	}
+
 	joinedClients := strings.Join(clientNames, ", ")
+	if joinedClients == "" {
+		joinedClients = "无关联节点"
+	}
+	joinedIPs := strings.Join(clientIPs, ", ")
+	if joinedIPs == "" {
+		joinedIPs = "未知"
+	}
+	joinedRegions := strings.Join(clientRegions, ", ")
+	if joinedRegions == "" {
+		joinedRegions = "未知地区"
+	}
+	joinedOSs := strings.Join(clientOSs, ", ")
+	if joinedOSs == "" {
+		joinedOSs = "未知系统"
+	}
+	joinedGroups := strings.Join(clientGroups, ", ")
+	if joinedGroups == "" {
+		joinedGroups = "默认分组"
+	}
+
+	// 智能 Emoji
+	emoji := event.Emoji
+	if emoji == "" {
+		switch strings.ToLower(event.Event) {
+		case "offline":
+			emoji = "🔴"
+		case "online":
+			emoji = "🟢"
+		case "load":
+			emoji = "📈"
+		case "traffic":
+			emoji = "📊"
+		case "traffic_report":
+			emoji = "📑"
+		case "expire", "renewal":
+			emoji = "⏰"
+		case "login":
+			emoji = "🔐"
+		case "test":
+			emoji = "🚀"
+		default:
+			emoji = "🔔"
+		}
+	}
+
+	// 友好状态描述
+	statusText := event.Event
+	switch strings.ToLower(event.Event) {
+	case "offline":
+		statusText = "节点离线 ⚠️"
+	case "online":
+		statusText = "节点恢复上线 ✅"
+	case "load":
+		statusText = "系统高负载预警 📈"
+	case "traffic":
+		statusText = "流量超额预警 📊"
+	case "traffic_report":
+		statusText = "月度流量报告 📑"
+	case "expire":
+		statusText = "服务器即将到期 ⏰"
+	case "login":
+		statusText = "后台登录提醒 🔐"
+	case "test":
+		statusText = "通知测试 🚀"
+	}
+
+	timeStr := event.Time.Format("2006-01-02 15:04:05")
+	dateStr := event.Time.Format("2006-01-02")
+	siteName, _ := config.GetAs[string](config.SitenameKey, "Komari Retro")
+	if strings.TrimSpace(siteName) == "" {
+		siteName = "Komari Retro"
+	}
 
 	replaceMap := map[string]string{
-		"{{event}}":   event.Event,
-		"{{client}}":  joinedClients,
-		"{{time}}":    event.Time.Format(time.RFC3339),
-		"{{message}}": event.Message,
-		"{{emoji}}":   event.Emoji,
+		"{{event}}":       escapeTelegramHTML(event.Event),
+		"{{status}}":      escapeTelegramHTML(statusText),
+		"{{status_text}}": escapeTelegramHTML(statusText),
+		"{{client}}":      escapeTelegramHTML(joinedClients),
+		"{{client_name}}": escapeTelegramHTML(joinedClients),
+		"{{ip}}":          escapeTelegramHTML(joinedIPs),
+		"{{client_ip}}":   escapeTelegramHTML(joinedIPs),
+		"{{region}}":      escapeTelegramHTML(joinedRegions),
+		"{{os}}":          escapeTelegramHTML(joinedOSs),
+		"{{group}}":       escapeTelegramHTML(joinedGroups),
+		"{{time}}":        timeStr,
+		"{{date}}":        dateStr,
+		"{{raw_time}}":    event.Time.Format(time.RFC3339),
+		"{{message}}":     escapeTelegramHTML(event.Message),
+		"{{emoji}}":       emoji,
+		"{{site_name}}":   escapeTelegramHTML(siteName),
+		"{{server}}":      escapeTelegramHTML(siteName),
 	}
 	result := messageTemplate
 	for placeholder, value := range replaceMap {

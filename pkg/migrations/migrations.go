@@ -36,7 +36,7 @@ type legacyModelConfig struct {
 	CustomBody                 string  `json:"custom_body" gorm:"type:longtext"`
 	NotificationEnabled        bool    `json:"notification_enabled" gorm:"default:false"`
 	NotificationMethod         string  `json:"notification_method" gorm:"type:varchar(64);default:'none'"`
-	NotificationTemplate       string  `json:"notification_template" gorm:"type:longtext;default:'{{emoji}}{{emoji}}{{emoji}}\nEvent: {{event}}\nClients: {{client}}\nMessage: {{message}}\nTime: {{time}}'"`
+	NotificationTemplate       string  `json:"notification_template" gorm:"type:longtext;default:'{{emoji}} <b>【Komari 监控告警】</b> {{emoji}}\n━━━━━━━━━━━━━━━\n📌 <b>告警事件</b>: <code>{{status}}</code>\n🖥 <b>监控节点</b>: <b>{{client}}</b>\n🌐 <b>节点网络</b>: <code>{{ip}}</code> ({{region}})\n📝 <b>告警详情</b>: {{message}}\n⏰ <b>告警时间</b>: <code>{{time}}</code>\n━━━━━━━━━━━━━━━\n🔔 <i>来自 {{site_name}} 监控平台</i>'"`
 	ExpireNotificationEnabled  bool    `json:"expire_notification_enabled" gorm:"default:false"`
 	ExpireNotificationLeadDays int     `json:"expire_notification_lead_days" gorm:"default:7"`
 	LoginNotification          bool    `json:"login_notification" gorm:"default:false"`
