@@ -88,9 +88,17 @@ func UploadBasicInfo(c *gin.Context) {
 		return
 	}
 
-	token := c.Query("token")
-	uuid, err := clients.GetClientUUIDByToken(token)
-	if uuid == "" || err != nil {
+	uuid := ""
+	if v, ok := c.Get("client_uuid"); ok {
+		uuid, _ = v.(string)
+	}
+	if uuid == "" {
+		token := c.Query("token")
+		if token != "" {
+			uuid, _ = clients.GetClientUUIDByToken(token)
+		}
+	}
+	if uuid == "" {
 		c.JSON(400, gin.H{"status": "error", "error": "Invalid token"})
 		return
 	}

@@ -224,6 +224,17 @@ func extractClientToken(c *gin.Context) string {
 		return token
 	}
 
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			return strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		}
+		return strings.TrimSpace(authHeader)
+	}
+	if clientToken := c.GetHeader("X-Client-Token"); clientToken != "" {
+		return strings.TrimSpace(clientToken)
+	}
+
 	if c.Request.Method != http.MethodGet {
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
