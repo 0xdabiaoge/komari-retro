@@ -1468,15 +1468,16 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   const [open, setOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
 
-  const detectPlatform = (osStr?: string): "linux" | "windows" | "macos" => {
+  const detectPlatform = (osStr?: string): "linux" | "windows" | "macos" | "docker" => {
     if (!osStr) return "linux";
     const lower = osStr.toLowerCase();
+    if (lower.includes("docker") || lower.includes("container")) return "docker";
     if (lower.includes("win")) return "windows";
     if (lower.includes("darwin") || lower.includes("mac") || lower.includes("apple")) return "macos";
     return "linux";
   };
 
-  const [platform, setPlatform] = React.useState<"linux" | "windows" | "macos">(() =>
+  const [platform, setPlatform] = React.useState<"linux" | "windows" | "macos" | "docker">(() =>
     detectPlatform(node.os)
   );
 
@@ -1488,6 +1489,8 @@ function DeleteButton({ node }: { node: NodeDetail }) {
 
   const getUninstallCommand = () => {
     switch (platform) {
+      case "docker":
+        return `docker stop komari-agent 2>/dev/null; docker rm -f komari-agent 2>/dev/null; docker rmi ghcr.io/0xdabiaoge/komari-retro-agent:latest 2>/dev/null; rm -f .komari-auto-discovery.json`;
       case "windows":
         return `Stop-Service -Name komari-agent -Force -ErrorAction SilentlyContinue; sc.exe delete komari-agent; Remove-Item -Recurse -Force "$Env:ProgramFiles\\Komari" -ErrorAction SilentlyContinue`;
       case "macos":
@@ -1553,11 +1556,12 @@ function DeleteButton({ node }: { node: NodeDetail }) {
               <SegmentedControl.Root
                 size="1"
                 value={platform}
-                onValueChange={(val) => setPlatform(val as "linux" | "windows" | "macos")}
+                onValueChange={(val) => setPlatform(val as "linux" | "windows" | "macos" | "docker")}
               >
                 <SegmentedControl.Item value="linux">Linux</SegmentedControl.Item>
                 <SegmentedControl.Item value="windows">Windows</SegmentedControl.Item>
                 <SegmentedControl.Item value="macos">macOS</SegmentedControl.Item>
+                <SegmentedControl.Item value="docker">Docker</SegmentedControl.Item>
               </SegmentedControl.Root>
             </div>
             <Button

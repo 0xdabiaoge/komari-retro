@@ -34,7 +34,7 @@ type InstallOptions = {
   serviceName: string;
 };
 
-type Platform = "linux" | "windows" | "macos";
+type Platform = "linux" | "windows" | "macos" | "docker";
 
 export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
   const refreshTable = React.useContext(DataTableRefreshContext);
@@ -106,6 +106,27 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
           `zsh <(curl -sL https://raw.githubusercontent.com/0xdabiaoge/komari-retro/refs/heads/main/komari-agent/install.sh) ` +
           quoteShellArgs(args);
         break;
+      case "docker": {
+        const installOnlyFlags = [
+          "--install-ghproxy",
+          "--install-dir",
+          "--install-service-name",
+          "--install-version",
+        ];
+        const dockerArgs: string[] = [];
+        for (let i = 0; i < args.length; i++) {
+          if (installOnlyFlags.includes(args[i])) {
+            i++;
+            continue;
+          }
+          dockerArgs.push(args[i]);
+        }
+        finalCommand =
+          `docker run -d --name komari-agent --restart=always ` +
+          `ghcr.io/0xdabiaoge/komari-retro-agent:latest ` +
+          quoteShellArgs(dockerArgs);
+        break;
+      }
     }
     return finalCommand;
   };
@@ -113,6 +134,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
   const detectNodePlatform = (osStr?: string): Platform => {
     if (!osStr) return "linux";
     const lower = osStr.toLowerCase();
+    if (lower.includes("docker") || lower.includes("container")) return "docker";
     if (lower.includes("win")) return "windows";
     if (lower.includes("darwin") || lower.includes("mac") || lower.includes("apple")) return "macos";
     return "linux";
@@ -131,6 +153,8 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
 
   const getUninstallCommand = () => {
     switch (deletePlatform) {
+      case "docker":
+        return `docker stop komari-agent 2>/dev/null; docker rm -f komari-agent 2>/dev/null; docker rmi ghcr.io/0xdabiaoge/komari-retro-agent:latest 2>/dev/null; rm -f .komari-auto-discovery.json`;
       case "windows":
         return `Stop-Service -Name komari-agent -Force -ErrorAction SilentlyContinue; sc.exe delete komari-agent; Remove-Item -Recurse -Force "$Env:ProgramFiles\\Komari" -ErrorAction SilentlyContinue`;
       case "macos":
@@ -185,6 +209,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
                 Windows
               </SegmentedControl.Item>
               <SegmentedControl.Item value="macos">macOS</SegmentedControl.Item>
+              <SegmentedControl.Item value="docker">Docker</SegmentedControl.Item>
             </SegmentedControl.Root>
 
             <Flex direction="column" gap="2">
@@ -410,6 +435,9 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
                   </SegmentedControl.Item>
                   <SegmentedControl.Item value="macos">
                     macOS
+                  </SegmentedControl.Item>
+                  <SegmentedControl.Item value="docker">
+                    Docker
                   </SegmentedControl.Item>
                 </SegmentedControl.Root>
               </div>
