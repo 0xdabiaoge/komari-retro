@@ -2,9 +2,11 @@ package accounts
 
 import (
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -12,9 +14,36 @@ import (
 	"github.com/komari-monitor/komari/utils"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const constantSalt = "06Wm4Jv1Hkxx"
+
+// verifyPassword 校验密码：支持 bcrypt，并向前兼容旧版加盐 sha256（恒定时间比较）
+func verifyPassword(hashedPassword, plainPassword string) bool {
+	if strings.HasPrefix(hashedPassword, "$2a$") || strings.HasPrefix(hashedPassword, "$2b$") || strings.HasPrefix(hashedPassword, "$2y$") {
+		return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword)) == nil
+	}
+	legacyHash := legacySha256(plainPassword)
+	return subtle.ConstantTimeCompare([]byte(hashedPassword), []byte(legacyHash)) == 1
+}
+
+func legacySha256(passwd string) string {
+	saltedPassword := passwd + constantSalt
+	hash := sha256.New()
+	hash.Write([]byte(saltedPassword))
+	return base64.StdEncoding.EncodeToString(hash.Sum(nil))
+}
+
+// hashPasswd 对密码进行安全的 bcrypt 哈希计算
+func hashPasswd(passwd string) string {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(passwd), bcrypt.DefaultCost)
+	if err == nil {
+		return string(hashed)
+	}
+	// 极端异常兜底
+	return legacySha256(passwd)
+}
 
 // CheckPassword 检查密码是否正确
 //
@@ -27,8 +56,14 @@ func CheckPassword(username, passwd string) (uuid string, success bool) {
 		// 静默处理错误，不显示日志
 		return "", false
 	}
-	if hashPasswd(passwd) != user.Passwd {
+	if !verifyPassword(user.Passwd, passwd) {
 		return "", false
+	}
+	// 自动平滑升级：旧版 SHA-256 密码在首次成功登录后自动无感升级为 bcrypt
+	if !strings.HasPrefix(user.Passwd, "$2a$") && !strings.HasPrefix(user.Passwd, "$2b$") && !strings.HasPrefix(user.Passwd, "$2y$") {
+		if newHashed, err := bcrypt.GenerateFromPassword([]byte(passwd), bcrypt.DefaultCost); err == nil {
+			_ = db.Model(&models.User{}).Where("uuid = ?", user.UUID).Update("passwd", string(newHashed))
+		}
 	}
 	return user.UUID, true
 }
@@ -44,15 +79,6 @@ func ForceResetPassword(username, passwd string) (err error) {
 		return fmt.Errorf("无法找到用户名")
 	}
 	return nil
-}
-
-// hashPasswd 对密码进行加盐哈希
-func hashPasswd(passwd string) string {
-	saltedPassword := passwd + constantSalt
-	hash := sha256.New()
-	hash.Write([]byte(saltedPassword))
-	hashedPassword := base64.StdEncoding.EncodeToString(hash.Sum(nil))
-	return hashedPassword
 }
 
 func CreateAccount(username, passwd string) (user models.User, err error) {

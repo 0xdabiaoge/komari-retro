@@ -25,14 +25,14 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 	// 私有站点：未登录访客访问控制
 	if group == rpc.RoleGuest {
 		if privateSite, _ := config.GetAs[bool](config.PrivateSiteKey); privateSite {
-			// 1. 若持有有效临时分享许可，允许以访客权限正常访问公开/基础数据
-			if meta != nil && meta.TempShareValid {
+			// 1. 若持有有效分享许可或后台安全入口凭证，允许以访客权限正常访问公开/基础数据
+			if meta != nil && (meta.TempShareValid || meta.AdminEntranceValid) {
 				// 放行
 			} else {
-				// 2. 未持有有效临时分享时，仅放行公开元信息、版本号及 WebSocket 心跳，供前端展示站点基础信息与登录引导
+				// 2. 未持有有效凭据时，彻底屏蔽公开站点元信息，仅放行版本号及心跳
 				switch req.Method {
-				case "public:getPublicSettings", "public:getVersion", "public:getMe", "rpc.ping", "rpc:ping":
-					// 放行基础元信息
+				case "public:getVersion", "public:getMe", "rpc.ping", "rpc:ping":
+					// 放行基础探测/心跳
 				default:
 					return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Private site enabled, please login first", nil)
 				}

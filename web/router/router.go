@@ -90,7 +90,7 @@ func registerAdminRoutes(r *gin.Engine) {
 
 	// --- 二进制/流/重定向类，保留 REST handler ---
 	g.GET("/download/backup", admin.DownloadBackup)
-	g.POST("/upload/backup", admin.UploadBackup)
+	g.POST("/upload/backup", api.RequireSensitive2FA(), admin.UploadBackup)
 	g.GET("/test/geoip", jsonRpc.Bind("admin:testGeoip", jsonRpc.WithQuery("ip")))
 	g.POST("/test/sendMessage", jsonRpc.Bind("admin:testSendMessage"))
 	g.POST("/update/mmdb", admin.UpdateMmdbGeoIP)

@@ -1,6 +1,7 @@
 package security
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"net/url"
 	"strings"
@@ -59,7 +60,8 @@ func IsAPIKeyRequest(r *http.Request) bool {
 	if err != nil || apiKeyConfig == "" || len(apiKeyConfig) < 12 {
 		return false
 	}
-	return r.Header.Get("Authorization") == "Bearer "+apiKeyConfig
+	expected := "Bearer " + apiKeyConfig
+	return subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte(expected)) == 1
 }
 
 func IsAuthorizationPreflight(r *http.Request) bool {

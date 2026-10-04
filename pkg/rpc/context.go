@@ -32,6 +32,8 @@ type ContextMeta struct {
 	UserAgent string
 	// TempShareValid 临时分享访问许可是否有效（基于 temp_key cookie 校验，由传输层填充）
 	TempShareValid bool
+	// AdminEntranceValid 后台安全入口凭证是否有效（私有站点模式下由传输层填充）
+	AdminEntranceValid bool
 }
 
 // 私有类型做 key，避免外部冲突

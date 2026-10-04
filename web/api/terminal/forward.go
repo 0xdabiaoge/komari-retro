@@ -18,6 +18,11 @@ func ForwardTerminal(id string) {
 	errChan := make(chan error, 1)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Prevent panic from crashing the server
+			}
+		}()
 		for {
 			messageType, data, err := session.Browser.ReadMessage()
 			if err != nil {
@@ -26,7 +31,7 @@ func ForwardTerminal(id string) {
 			}
 
 			if messageType == websocket.TextMessage {
-				if session.Agent != nil && string(data[0:1]) == "{" {
+				if session.Agent != nil && len(data) > 0 && data[0] == '{' {
 					err = session.Agent.WriteMessage(websocket.TextMessage, data)
 				} else if session.Agent != nil {
 					err = session.Agent.WriteMessage(websocket.BinaryMessage, data)
@@ -44,6 +49,11 @@ func ForwardTerminal(id string) {
 	}()
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Prevent panic from crashing the server
+			}
+		}()
 		for {
 			_, data, err := session.Agent.ReadMessage()
 			if err != nil {

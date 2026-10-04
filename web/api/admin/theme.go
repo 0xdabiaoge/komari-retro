@@ -2,6 +2,7 @@ package admin
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -315,7 +317,6 @@ func isPrivateIP(host string) bool {
 }
 
 func downloadThemeFromURL(rawURL string) ([]byte, error) {
-	// SSRF protection: block requests to private/internal IPs
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL: %v", err)
@@ -327,25 +328,47 @@ func downloadThemeFromURL(rawURL string) ([]byte, error) {
 		return nil, fmt.Errorf("requests to private/internal addresses are not allowed")
 	}
 
-	// 发送HTTP GET请求
-	resp, err := http.Get(rawURL)
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return errors.New("stopped after 5 redirects")
+			}
+			if isPrivateIP(req.URL.Hostname()) {
+				return errors.New("redirect to private/internal address blocked")
+			}
+			return nil
+		},
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				host, _, err := net.SplitHostPort(addr)
+				if err != nil {
+					return nil, err
+				}
+				if isPrivateIP(host) {
+					return nil, errors.New("connection to private/internal address blocked")
+				}
+				dialer := &net.Dialer{Timeout: 10 * time.Second}
+				return dialer.DialContext(ctx, network, addr)
+			},
+		},
+	}
+
+	resp, err := client.Get(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("下载主题文件失败: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// 检查响应状态码
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("下载主题文件失败，HTTP状态码: %d", resp.StatusCode)
 	}
 
-	// 读取响应内容
-	data, err := io.ReadAll(resp.Body)
+	// 限制读取最大 50MB，防止 Zip 炸弹或无限流 DoS
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 50*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("读取主题文件内容失败: %v", err)
 	}
-
-	// 检查文件大小
 	if len(data) == 0 {
 		return nil, errors.New("下载的主题文件为空")
 	}

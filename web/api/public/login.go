@@ -2,8 +2,11 @@ package public
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
@@ -22,6 +25,57 @@ type LoginRequest struct {
 
 const sessionCookieMaxAge = 2592000
 
+type loginAttemptInfo struct {
+	count       int
+	lockedUntil time.Time
+	lastAttempt time.Time
+}
+
+var (
+	loginAttemptsMu sync.Mutex
+	loginAttempts   = make(map[string]*loginAttemptInfo)
+)
+
+func checkLoginRateLimit(ip string) error {
+	loginAttemptsMu.Lock()
+	defer loginAttemptsMu.Unlock()
+
+	info, exists := loginAttempts[ip]
+	if !exists {
+		return nil
+	}
+	if time.Now().Before(info.lockedUntil) {
+		remainSec := int(time.Until(info.lockedUntil).Seconds())
+		return fmt.Errorf("Too many failed login attempts. Please try again after %d seconds", remainSec)
+	}
+	if time.Since(info.lastAttempt) > 15*time.Minute {
+		delete(loginAttempts, ip)
+	}
+	return nil
+}
+
+func recordLoginFailure(ip string) {
+	loginAttemptsMu.Lock()
+	defer loginAttemptsMu.Unlock()
+
+	info, exists := loginAttempts[ip]
+	if !exists {
+		info = &loginAttemptInfo{}
+		loginAttempts[ip] = info
+	}
+	info.count++
+	info.lastAttempt = time.Now()
+	if info.count >= 5 {
+		info.lockedUntil = time.Now().Add(15 * time.Minute)
+	}
+}
+
+func recordLoginSuccess(ip string) {
+	loginAttemptsMu.Lock()
+	defer loginAttemptsMu.Unlock()
+	delete(loginAttempts, ip)
+}
+
 func setSessionCookie(c *gin.Context, value string, maxAge int) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "session_token",
@@ -35,6 +89,12 @@ func setSessionCookie(c *gin.Context, value string, maxAge int) {
 }
 
 func Login(c *gin.Context) {
+	clientIP := c.ClientIP()
+	if err := checkLoginRateLimit(clientIP); err != nil {
+		api.RespondError(c, http.StatusTooManyRequests, err.Error())
+		return
+	}
+
 	DisablePasswordLogin, _ := config.GetAs[bool](config.DisablePasswordLoginKey, false)
 	if DisablePasswordLogin {
 		api.RespondError(c, http.StatusForbidden, "Password login is disabled")
@@ -59,6 +119,7 @@ func Login(c *gin.Context) {
 
 	uuid, success := accounts.CheckPassword(data.Username, data.Password)
 	if !success {
+		recordLoginFailure(clientIP)
 		api.RespondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
@@ -70,10 +131,12 @@ func Login(c *gin.Context) {
 			return
 		}
 		if ok, err := accounts.Verify2Fa(uuid, data.TwoFa); err != nil || !ok {
+			recordLoginFailure(clientIP)
 			api.RespondError(c, http.StatusUnauthorized, "Invalid 2FA code")
 			return
 		}
 	}
+	recordLoginSuccess(clientIP)
 	// Create session
 	session, err := accounts.CreateSession(uuid, sessionCookieMaxAge, c.Request.UserAgent(), c.ClientIP(), "password")
 	if err != nil {

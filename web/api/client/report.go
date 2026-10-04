@@ -118,17 +118,23 @@ func UploadReport(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
-	// 优先使用 body 中的 UUID，若为空则从中间件注入的上下文中获取
-	uuid := report.UUID
-	if uuid == "" {
-		if v, ok := c.Get("client_uuid"); ok {
-			uuid, _ = v.(string)
+	// 强制以认证上下文中的 client_uuid 为准，绝对不允许客户端在 JSON Body 中伪造其他主机的 UUID
+	authUUID := ""
+	if v, ok := c.Get("client_uuid"); ok {
+		authUUID, _ = v.(string)
+	}
+	if authUUID == "" {
+		token := c.Query("token")
+		if token != "" {
+			authUUID, _ = clients.GetClientUUIDByToken(token)
 		}
 	}
-	if uuid == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "UUID is required"})
+	if authUUID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized client token"})
 		return
 	}
+	report.UUID = authUUID
+	uuid := authUUID
 
 	// POST 上报：落库、更新运行时状态并刷新在线状态
 	if err := ingestReport(uuid, report, 1, true); err != nil {

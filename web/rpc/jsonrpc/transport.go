@@ -173,7 +173,18 @@ func buildContextMeta(c *gin.Context, permissionGroup string) *rpc.ContextMeta {
 	meta.RemoteIP = c.ClientIP()
 	meta.UserAgent = c.GetHeader("User-Agent")
 	meta.TempShareValid = hasTempShareAccess(c)
+	meta.AdminEntranceValid = hasAdminEntranceAccess(c)
 	return meta
+}
+
+func hasAdminEntranceAccess(c *gin.Context) bool {
+	adminPath, _ := config.GetAs[string](config.AdminPathKey, "")
+	adminPath = strings.TrimSpace(adminPath)
+	if adminPath == "" {
+		return false
+	}
+	entranceToken, _ := c.Cookie("admin_entrance_token")
+	return entranceToken == adminPath
 }
 
 // hasTempShareAccess 校验 temp_key 是否为有效的临时分享访问许可（优先 Cookie，兼容 Query 与 Header）。
