@@ -31,7 +31,6 @@ import (
 	logutil "github.com/komari-monitor/komari/utils/log"
 	"github.com/komari-monitor/komari/utils/messageSender"
 	"github.com/komari-monitor/komari/utils/notifier"
-	"github.com/komari-monitor/komari/web/nezha"
 	"github.com/komari-monitor/komari/web/oauth"
 	report_cache "github.com/komari-monitor/komari/web/report"
 	"github.com/komari-monitor/komari/web/router"
@@ -74,15 +73,6 @@ func RunServer() {
 	// oidcInit
 	go oauth.Initialize()
 
-	if conf.NezhaCompatEnabled {
-		go func() {
-			if err := nezha.StartNezhaCompat(conf.NezhaCompatListen); err != nil {
-				log.Printf("Nezha compat server error: %v", err)
-				auditlog.EventLog("error", fmt.Sprintf("Nezha compat server error: %v", err))
-			}
-		}()
-	}
-
 	config.Subscribe(func(event config.ConfigEvent) {
 		if ok, t := config.IsChangedT[string](event, config.OAuthProviderKey); ok {
 			if t == "" || t == "none" {
@@ -99,22 +89,6 @@ func RunServer() {
 				auditlog.EventLog("error", fmt.Sprintf("Failed to load OIDC provider: %v", err))
 			}
 		}
-
-		if ok, t := config.IsChangedT[bool](event, config.NezhaCompatEnabledKey); ok {
-			if t {
-				l, _ := config.GetAs[string](config.NezhaCompatListenKey)
-				if err := nezha.StartNezhaCompat(l); err != nil {
-					log.Printf("start Nezha compat server error: %v", err)
-					auditlog.EventLog("error", fmt.Sprintf("start Nezha compat server error: %v", err))
-				}
-			} else {
-				if err := nezha.StopNezhaCompat(); err != nil {
-					log.Printf("stop Nezha compat server error: %v", err)
-					auditlog.EventLog("error", fmt.Sprintf("stop Nezha compat server error: %v", err))
-				}
-			}
-		}
-
 	})
 	// 初始化 cloudflared
 	if err := cloudflared.AutoStart(GetEnv("KOMARI_CLOUDFLARED_TOKEN", "")); err != nil {
