@@ -27,6 +27,20 @@ export const routes: RouteObject[] = [
     ],
   },
   {
+    path: "/s/:token",
+    element: React.createElement(lazy(() => import("./pages/share/_layout"))),
+    children: [
+      {
+        index: true,
+        element: React.createElement(lazy(() => import("./pages/share/index"))),
+      },
+      {
+        path: "instance/:uuid",
+        element: React.createElement(lazy(() => import("./pages/instance"))),
+      },
+    ],
+  },
+  {
     path: "/admin/database-migration",
     element: React.createElement(
       lazy(() => import("./pages/database_migration")),

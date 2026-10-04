@@ -171,9 +171,44 @@ export default function SiteSettings() {
         defaultChecked={settings.private_site}
         onChange={async (checked) => {
           await updateSettingsWithToast({ private_site: checked }, t);
+          await refetch();
         }}
         className="km-setting-card"
       />
+      {settings.private_site && (
+        <SettingCardShortTextInput
+          title={t("settings.site.admin_path")}
+          description={t("settings.site.admin_path_description")}
+          defaultValue={settings.admin_path || ""}
+          placeholder="/entry-xxxxxx"
+          OnSave={async (data) => {
+            let path = data.trim();
+            if (!path) {
+              toast.error(t("settings.site.admin_path_empty"));
+              return;
+            }
+            if (!path.startsWith("/")) path = "/" + path;
+            if (path === "/" || path === "/admin" || path === "/login" || path.startsWith("/api/")) {
+              toast.error(t("settings.site.admin_path_invalid"));
+              return;
+            }
+            await updateSettingsWithToast({ admin_path: path }, t);
+            await refetch();
+          }}
+          className="km-setting-card"
+        >
+          <Button
+            variant="soft"
+            onClick={() => {
+              const fullUrl = `${window.location.origin}${settings.admin_path || ""}`;
+              navigator.clipboard.writeText(fullUrl);
+              toast.success(t("common.copy", "已复制到剪贴板"));
+            }}
+          >
+            {t("settings.site.admin_path_copy")}
+          </Button>
+        </SettingCardShortTextInput>
+      )}
       <SettingCardCollapse
         title={t("settings.site.temporary_share")}
         description={t("settings.site.temporary_share_description")}
@@ -184,7 +219,7 @@ export default function SiteSettings() {
               (settings.tempory_share_token_expire_at || 0) * 1000 > Date.now(),
           );
           const currentShareLink = isShareValid
-            ? `${window.location.origin}/?temp_key=${settings.tempory_share_token}`
+            ? `${window.location.origin}/s/${settings.tempory_share_token}`
             : "";
           const shareExpireDescription = isShareValid
             ? `${t("admin.nodeTable.expiredAt")}: ${new Date(

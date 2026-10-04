@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"crypto/rand"
+	"strings"
+	"time"
+)
 
 type Settings struct {
 	ID                     uint   `json:"id,omitempty"`                                        // 1
@@ -44,6 +48,9 @@ type Settings struct {
 	RecordEnabled          bool `json:"record_enabled" default:"true"`          // 是否启用记录功能
 	RecordPreserveTime     int  `json:"record_preserve_time" default:"720"`     // 记录保留时间，单位小时，默认30天
 	PingRecordPreserveTime int  `json:"ping_record_preserve_time" default:"24"` // Ping 记录保留时间，单位小时，默认1天
+	AdminPath              string `json:"admin_path" default:""`                 // 后台安全入口路径（例如 /entry-xxxxxx）
+	TemporyShareToken      string `json:"tempory_share_token" default:""`        // 临时只读分享密钥
+	TemporyShareTokenExpireAt int64 `json:"tempory_share_token_expire_at" default:"0"` // 临时分享过期时间戳
 	UpdatedAt              time.Time
 }
 
@@ -56,6 +63,9 @@ const (
 	WsAllowedOriginsKey           = "ws_allowed_origins"
 	ThemeKey                      = "theme"
 	PrivateSiteKey                = "private_site"
+	AdminPathKey                  = "admin_path"
+	TemporyShareTokenKey          = "tempory_share_token"
+	TemporyShareTokenExpireAtKey  = "tempory_share_token_expire_at"
 	ApiKeyKey                     = "api_key"
 	AutoDiscoveryKeyKey           = "auto_discovery_key"
 	ScriptDomainKey               = "script_domain"
@@ -85,3 +95,24 @@ const (
 	UpdatedAtKey                  = "updated_at"
 	XtermjsSettingsKey            = "xtermjs_settings"
 )
+
+// GetOrGenerateAdminPath 获取或自动生成后台安全入口路径（如 /entry-xxxxxx）
+func GetOrGenerateAdminPath() string {
+	path, _ := GetAs[string](AdminPathKey, "")
+	path = strings.TrimSpace(path)
+	if path != "" {
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		return path
+	}
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, 6)
+	_, _ = rand.Read(b)
+	for i := range b {
+		b[i] = chars[int(b[i])%len(chars)]
+	}
+	newPath := "/entry-" + string(b)
+	_ = Set(AdminPathKey, newPath)
+	return newPath
+}

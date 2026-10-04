@@ -111,10 +111,9 @@ var publicPaths = []string{
 }
 
 // PrivateSiteMiddleware 私有站点访问控制。
-// 依赖 IdentityMiddleware 已设置的 role，对未认证的访客在私有站点模式下进行拦截。
 func PrivateSiteMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 已认证用户直接放行
+		// 已认证管理员或客户端直接放行
 		if GetRole(c) != RoleGuest {
 			c.Next()
 			return
@@ -122,15 +121,7 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 
 		path := c.Request.URL.Path
 
-		// 公开路径直接放行（如基础元信息，或由 rpc2 Dispatch 细粒度控制）
-		for _, p := range publicPaths {
-			if strings.HasPrefix(path, p) {
-				c.Next()
-				return
-			}
-		}
-
-		// 非 API 路径直接放行（静态资源等）
+		// 非 API 路径由 SPA 静态服务与 noRoute 负责安全入口控制
 		if !strings.HasPrefix(path, "/api") {
 			c.Next()
 			return
@@ -138,23 +129,61 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 
 		// 非私有站点直接放行
 		privateSite, err := config.GetAs[bool](config.PrivateSiteKey, false)
-		if err != nil {
-			RespondError(c, http.StatusInternalServerError, "Failed to get configuration.")
-			c.Abort()
-			return
-		}
-		if !privateSite {
+		if err != nil || !privateSite {
 			c.Next()
 			return
 		}
 
-		// 临时访问许可
+		// --- 私有站点保护模式 ---
+		adminPath, _ := config.GetAs[string](config.AdminPathKey, "")
+		adminPath = strings.TrimSpace(adminPath)
+		entranceToken, _ := c.Cookie("admin_entrance_token")
+		hasAdminEntrance := adminPath != "" && entranceToken == adminPath
+
+		// 1. /api/login 登录接口：必须持有通过后台安全入口获得的凭证，否则直接返回 404 伪装不存在
+		if path == "/api/login" {
+			if !hasAdminEntrance {
+				c.String(http.StatusNotFound, "404 page not found")
+				c.Abort()
+				return
+			}
+			c.Next()
+			return
+		}
+
+		// 2. /api/public 公开元信息：
+		// - 持有有效临时分享许可 (temp_key): 放行
+		// - 持有后台安全入口凭证: 放行供登录界面渲染
+		// - 否则: 返回 404，不暴露任何面板特征
+		if path == "/api/public" {
+			if hasTempAccess(c) || hasAdminEntrance {
+				c.Next()
+				return
+			}
+			c.String(http.StatusNotFound, "404 page not found")
+			c.Abort()
+			return
+		}
+
+		// 3. /api/version, /api/me: 基础探测与状态放行
+		if path == "/api/version" || path == "/api/me" {
+			c.Next()
+			return
+		}
+
+		// 4. /api/rpc2: 由 JSON-RPC Dispatch 细粒度控制
+		if strings.HasPrefix(path, "/api/rpc2") {
+			c.Next()
+			return
+		}
+
+		// 5. 其余监控数据 API：持有有效临时分享许可时放行，否则 404
 		if hasTempAccess(c) {
 			c.Next()
 			return
 		}
 
-		RespondError(c, http.StatusUnauthorized, "Private site is enabled, please login first.")
+		c.String(http.StatusNotFound, "404 page not found")
 		c.Abort()
 	}
 }

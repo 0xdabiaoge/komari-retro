@@ -15,10 +15,16 @@ const NavBar = () => {
   const location = useLocation();
   const { account } = useAccount();
   const loginRedirect = loginPath(location.pathname, location.search);
+  const getTempKey = () => {
+    const match = document.cookie.match(/(?:^|;\s*)temp_key=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+  };
+  const tempKey = getTempKey();
+  const homePath = publicInfo?.is_share_view && tempKey ? `/s/${tempKey}` : "/";
   return (
     <nav className="km-navbar nav-bar flex rounded-b-lg items-center gap-2 md:gap-3 max-h-16 justify-end min-w-full p-2 px-4">
       <div className="km-navbar-brand mr-auto flex items-center min-w-0">
-        <Link to="/" className="flex items-center min-w-0">
+        <Link to={homePath} className="flex items-center min-w-0">
           <span className="font-bold text-[clamp(1.25rem,5vw,1.875rem)] whitespace-nowrap truncate leading-tight">
             {publicInfo?.sitename}
           </span>
@@ -50,15 +56,17 @@ const NavBar = () => {
         <ThemeSwitch />
         <ColorSwitch />
         <LanguageSwitch />
-        <Button
-          onClick={() => {
-            window.location.href =
-              account?.logged_in ? "/admin/dashboard" : loginRedirect;
-          }}
-        >
-          <LogIn size={16} />
-          {account?.logged_in ? t("settings.title", "Settings") : t("login.title")}
-        </Button>
+        {!publicInfo?.is_share_view && !location.pathname.startsWith("/s/") && (
+          <Button
+            onClick={() => {
+              window.location.href =
+                account?.logged_in ? "/admin/dashboard" : loginRedirect;
+            }}
+          >
+            <LogIn size={16} />
+            {account?.logged_in ? t("settings.title", "Settings") : t("login.title")}
+          </Button>
+        )}
       </div>
     </nav>
   );

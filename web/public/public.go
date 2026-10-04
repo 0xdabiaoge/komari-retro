@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
@@ -261,64 +262,138 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		//
-		func() {
-			tempKey := c.Query("temp_key")
-			if tempKey == "" {
-				return
-			}
 
-			tempKeyExpireTime, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)
-			if err != nil {
-				return
-			}
-			allowTempKey, err := config.GetAs[string]("tempory_share_token", "")
-			if err != nil {
-				return
-			}
-
-			if allowTempKey == "" || tempKey != allowTempKey {
-				return
-			}
-			now := time.Now().Unix()
-			if tempKeyExpireTime < now {
-				return
-			}
-			expireSeconds := int(tempKeyExpireTime - now)
-			if expireSeconds > 0 {
-				c.SetCookie(
-					"temp_key",    // key
-					tempKey,       // value
-					expireSeconds, // maxAge（秒）
-					"/",           // path
-					"",            // domain
-					false,         // secure
-					false,         // httpOnly
-				)
-			}
-		}()
 		reqPath := c.Request.URL.Path
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)
 
-		// SPA 静态资源回退
+		// 静态资源文件优先检查与下发 (如 /assets/..., /favicon.ico 等)
 		distPath := path.Join(DistDir, reqPath)
-
 		content, mimeType, exists := getFileContent(currentTheme, distPath)
 		if exists {
 			c.Data(http.StatusOK, mimeType, content)
 			return
 		}
 
-		// 如果资源不存在，且路径包含扩展名 (如 .js, .css, .png)，则返回 404
-		// 避免将 index.html 作为 js 文件返回导致 "Failed to fetch dynamically imported module"
-		//ext := filepath.Ext(reqPath)
-		//if ext != "" && ext != ".html" {
-		//	c.Status(http.StatusNotFound)
-		//	return
-		//}
+		privateSite, _ := config.GetAs[bool](config.PrivateSiteKey, false)
+		if !privateSite {
+			// 非私有站点：正常下发 index.html 驱动 SPA
+			serveIndex(c)
+			return
+		}
 
-		// 路由 (如 /dashboard, /settings) -> 返回 index.html
-		serveIndex(c)
+		// --- 开启私有站点保护模式 ---
+		adminPath, _ := config.GetAs[string](config.AdminPathKey, "")
+		adminPath = strings.TrimSpace(adminPath)
+		if adminPath == "" {
+			adminPath = config.GetOrGenerateAdminPath()
+		}
+		if !strings.HasPrefix(adminPath, "/") {
+			adminPath = "/" + adminPath
+		}
+
+		cleanPath := strings.TrimRight(reqPath, "/")
+		cleanAdminPath := strings.TrimRight(adminPath, "/")
+
+		// 1. 访问后台安全入口 (例如 /entry-xxxxxx)
+		if cleanAdminPath != "" && cleanPath == cleanAdminPath {
+			// 颁发后台安全入口访问凭证 Cookie (7天有效，HttpOnly，SameSite Lax)
+			c.SetCookie("admin_entrance_token", adminPath, 7*86400, "/", "", false, true)
+			c.Redirect(http.StatusFound, "/admin/login")
+			return
+		}
+
+		// 2. 访问对外只读分享链接 /s/:token 或 /s/:token/*
+		if strings.HasPrefix(reqPath, "/s/") {
+			tokenPart := strings.TrimPrefix(reqPath, "/s/")
+			parts := strings.Split(tokenPart, "/")
+			shareToken := parts[0]
+
+			expireAt, _ := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
+			allowToken, _ := config.GetAs[string](config.TemporyShareTokenKey, "")
+			now := time.Now().Unix()
+
+			if allowToken != "" && shareToken == allowToken && expireAt >= now {
+				expireSeconds := int(expireAt - now)
+				if expireSeconds > 0 {
+					c.SetCookie("temp_key", shareToken, expireSeconds, "/", "", false, false)
+				}
+				serveIndex(c)
+				return
+			}
+
+			// 分享密钥无效或已过期，直接返回 404
+			c.String(http.StatusNotFound, "404 page not found")
+			return
+		}
+
+		// 3. 检查是否为已登录管理员或持有后台安全入口凭证
+		isAdmin := false
+		if session, _ := c.Cookie("session_token"); session != "" {
+			if _, err := accounts.GetUserBySession(session); err == nil {
+				isAdmin = true
+			}
+		}
+		hasAdminEntrance := false
+		if entranceToken, _ := c.Cookie("admin_entrance_token"); entranceToken != "" && entranceToken == adminPath {
+			hasAdminEntrance = true
+		}
+
+		if isAdmin {
+			if reqPath == "/" {
+				c.Redirect(http.StatusFound, "/admin/dashboard")
+				return
+			}
+			serveIndex(c)
+			return
+		}
+
+		if hasAdminEntrance {
+			if reqPath == "/" {
+				c.Redirect(http.StatusFound, "/admin/login")
+				return
+			}
+			if strings.HasPrefix(reqPath, "/admin") || reqPath == "/install" || reqPath == "/database-recovery" {
+				serveIndex(c)
+				return
+			}
+		}
+
+		// 4. 持有有效 temp_key 访问机器详情页 /instance/:uuid 或返回根路径
+		if hasValidTempKey(c) {
+			if reqPath == "/" {
+				allowToken, _ := config.GetAs[string](config.TemporyShareTokenKey, "")
+				if allowToken != "" {
+					c.Redirect(http.StatusFound, "/s/"+allowToken)
+					return
+				}
+			}
+			if strings.HasPrefix(reqPath, "/instance/") {
+				serveIndex(c)
+				return
+			}
+		}
+
+		// 5. 其余任何访问（包括直接访问根路径 /、未授权直接试探 /admin 或 /admin/login），直接返回 404 伪装不存在
+		c.String(http.StatusNotFound, "404 page not found")
 	})
+}
+
+func hasValidTempKey(c *gin.Context) bool {
+	tempKey, _ := c.Cookie("temp_key")
+	if tempKey == "" {
+		tempKey = c.Query("temp_key")
+	}
+	if tempKey == "" {
+		return false
+	}
+	expireAt, err := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
+	if err != nil {
+		return false
+	}
+	allowKey, err := config.GetAs[string](config.TemporyShareTokenKey, "")
+	if err != nil || allowKey == "" || tempKey != allowKey {
+		return false
+	}
+	return expireAt >= time.Now().Unix()
 }

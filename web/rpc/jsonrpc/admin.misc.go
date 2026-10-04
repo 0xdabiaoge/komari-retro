@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
@@ -101,6 +102,9 @@ func adminGetSettings(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	cst, err := config.GetAll()
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to get settings: "+err.Error(), nil)
+	}
+	if p, ok := cst[config.AdminPathKey].(string); !ok || strings.TrimSpace(p) == "" {
+		cst[config.AdminPathKey] = config.GetOrGenerateAdminPath()
 	}
 	return cst, nil
 }
