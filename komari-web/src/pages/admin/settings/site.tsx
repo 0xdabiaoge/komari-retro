@@ -176,151 +176,271 @@ export default function SiteSettings() {
         className="km-setting-card"
       />
       {settings.private_site && (
-        <SettingCardShortTextInput
-          title={t("settings.site.admin_path")}
-          description={t("settings.site.admin_path_description")}
-          defaultValue={settings.admin_path || ""}
-          placeholder="/entry-xxxxxx"
-          OnSave={async (data) => {
-            let path = data.trim();
-            if (!path) {
-              toast.error(t("settings.site.admin_path_empty"));
-              return;
-            }
-            if (!path.startsWith("/")) path = "/" + path;
-            if (path === "/" || path === "/admin" || path === "/login" || path.startsWith("/api/")) {
-              toast.error(t("settings.site.admin_path_invalid"));
-              return;
-            }
-            await updateSettingsWithToast({ admin_path: path }, t);
-            await refetch();
-          }}
-          className="km-setting-card"
-        >
-          <Button
-            variant="soft"
-            onClick={() => {
-              const fullUrl = `${window.location.origin}${settings.admin_path || ""}`;
-              navigator.clipboard.writeText(fullUrl);
-              toast.success(t("common.copy", "已复制到剪贴板"));
+        <>
+          <SettingCardShortTextInput
+            title={t("settings.site.admin_view_path")}
+            description={t("settings.site.admin_view_path_description")}
+            defaultValue={settings.admin_view_path || ""}
+            placeholder="/view-xxxxxx"
+            OnSave={async (data) => {
+              let path = data.trim();
+              if (!path) {
+                toast.error(t("settings.site.admin_view_path_empty"));
+                return;
+              }
+              if (!path.startsWith("/")) path = "/" + path;
+              if (path === "/" || path === "/admin" || path === "/login" || path.startsWith("/api/")) {
+                toast.error(t("settings.site.admin_view_path_invalid"));
+                return;
+              }
+              await updateSettingsWithToast({ admin_view_path: path }, t);
+              await refetch();
             }}
+            className="km-setting-card"
           >
-            {t("settings.site.admin_path_copy")}
-          </Button>
-        </SettingCardShortTextInput>
+            <Button
+              variant="soft"
+              onClick={() => {
+                const fullUrl = `${window.location.origin}${settings.admin_view_path || ""}`;
+                navigator.clipboard.writeText(fullUrl);
+                toast.success(t("common.copy", "已复制到剪贴板"));
+              }}
+            >
+              {t("settings.site.admin_view_path_copy")}
+            </Button>
+          </SettingCardShortTextInput>
+
+          <SettingCardShortTextInput
+            title={t("settings.site.admin_path")}
+            description={t("settings.site.admin_path_description")}
+            defaultValue={settings.admin_path || ""}
+            placeholder="/entry-xxxxxx"
+            OnSave={async (data) => {
+              let path = data.trim();
+              if (!path) {
+                toast.error(t("settings.site.admin_path_empty"));
+                return;
+              }
+              if (!path.startsWith("/")) path = "/" + path;
+              if (path === "/" || path === "/admin" || path === "/login" || path.startsWith("/api/")) {
+                toast.error(t("settings.site.admin_path_invalid"));
+                return;
+              }
+              await updateSettingsWithToast({ admin_path: path }, t);
+              await refetch();
+            }}
+            className="km-setting-card"
+          >
+            <Button
+              variant="soft"
+              onClick={() => {
+                const fullUrl = `${window.location.origin}${settings.admin_path || ""}`;
+                navigator.clipboard.writeText(fullUrl);
+                toast.success(t("common.copy", "已复制到剪贴板"));
+              }}
+            >
+              {t("settings.site.admin_path_copy")}
+            </Button>
+          </SettingCardShortTextInput>
+        </>
       )}
       <SettingCardCollapse
-        title={t("settings.site.temporary_share")}
-        description={t("settings.site.temporary_share_description")}
+        title={t("settings.site.share_links", "对外只读分享链接")}
+        description={t("settings.site.share_links_description", "为访客生成独立的只读监控专属页面，彻底隔离管理功能与登录入口。支持限时分享与永久分享。")}
       >
         {(() => {
-          const isShareValid = Boolean(
+          const isPermValid = Boolean(settings.permanent_share_token);
+          const permShareLink = isPermValid
+            ? `${window.location.origin}/s/${settings.permanent_share_token}`
+            : "";
+          const permDescription = isPermValid
+            ? t("settings.site.permanent_share_valid", "永久有效（除非手动撤销）")
+            : t("settings.site.permanent_share_none", "暂未生成永久分享链接");
+
+          const isTempValid = Boolean(
             settings.tempory_share_token &&
               (settings.tempory_share_token_expire_at || 0) * 1000 > Date.now(),
           );
-          const currentShareLink = isShareValid
+          const tempShareLink = isTempValid
             ? `${window.location.origin}/s/${settings.tempory_share_token}`
             : "";
-          const shareExpireDescription = isShareValid
+          const tempExpireDescription = isTempValid
             ? `${t("admin.nodeTable.expiredAt")}: ${new Date(
                 (settings.tempory_share_token_expire_at || 0) * 1000,
               ).toLocaleString()}`
-            : t("settings.site.temporary_share_none", "暂无有效临时分享链接或已过期");
+            : t("settings.site.temporary_share_none", "暂无有效限时分享链接或已过期");
 
           return (
-            <div className="flex w-full flex-col gap-4">
-              <SettingCardShortTextInput
-                title={t("settings.site.temporary_share_current_link")}
-                value={currentShareLink}
-                placeholder={t("settings.site.temporary_share_none", "暂无有效临时分享链接或已过期")}
-                showSaveButton={false}
-                description={shareExpireDescription}
-                disabled
-                bordless
-              >
-                <Button
-                  disabled={!isShareValid}
-                  onClick={() => {
-                    if (!currentShareLink) return;
-                    navigator.clipboard.writeText(currentShareLink);
-                    toast.success(t("common.copy", "已复制到剪贴板"));
-                  }}
-                >
-                  {t("common.copy")}
-                </Button>
-              </SettingCardShortTextInput>
-
-              <div className="flex flex-col gap-2">
+            <div className="flex w-full flex-col gap-6">
+              {/* 永久分享 */}
+              <div className="flex flex-col gap-3 rounded-lg border p-4">
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-base">
+                    {t("settings.site.permanent_share", "永久分享链接")}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {t("settings.site.permanent_share_description", "永久有效的只读监控页面，除非手动撤销否则永不过期。")}
+                  </span>
+                </div>
                 <SettingCardShortTextInput
-                  title={t("settings.site.temporary_share_hours")}
-                  bordless
+                  title=""
+                  value={permShareLink}
+                  placeholder={t("settings.site.permanent_share_none", "暂未生成永久分享链接")}
                   showSaveButton={false}
-                  value={shareHours}
-                  type="number"
-                  onChange={(e) => {
-                    const val = Number.parseInt(e.target.value, 10);
-                    if (!Number.isNaN(val) && val > 0) {
-                      setShareHours(val);
-                    }
-                  }}
-                />
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {[
-                    { label: "1 小时", hours: 1 },
-                    { label: "6 小时", hours: 6 },
-                    { label: "24 小时", hours: 24 },
-                    { label: "7 天", hours: 168 },
-                    { label: "30 天", hours: 720 },
-                  ].map((preset) => (
-                    <Button
-                      key={preset.hours}
-                      size="1"
-                      variant={shareHours === preset.hours ? "solid" : "soft"}
-                      onClick={() => setShareHours(preset.hours)}
-                    >
-                      {preset.label}
-                    </Button>
-                  ))}
+                  description={permDescription}
+                  disabled
+                  bordless
+                >
+                  <Button
+                    disabled={!isPermValid}
+                    onClick={() => {
+                      if (!permShareLink) return;
+                      navigator.clipboard.writeText(permShareLink);
+                      toast.success(t("common.copy", "已复制到剪贴板"));
+                    }}
+                  >
+                    {t("common.copy")}
+                  </Button>
+                </SettingCardShortTextInput>
+
+                <div className="flex flex-row w-full gap-2">
+                  <Button
+                    onClick={async () => {
+                      const chars =
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                      let key = "";
+                      for (let i = 0; i < 8; i++) {
+                        key += chars.charAt(Math.floor(Math.random() * chars.length));
+                      }
+                      await updateSettingsWithToast(
+                        { permanent_share_token: key },
+                        t,
+                      );
+                      await refetch();
+                    }}
+                  >
+                    {t("settings.site.permanent_share_generate", "生成永久链接")}
+                  </Button>
+                  <Button
+                    color="red"
+                    variant="soft"
+                    disabled={!settings.permanent_share_token}
+                    onClick={async () => {
+                      await updateSettingsWithToast(
+                        { permanent_share_token: "" },
+                        t,
+                      );
+                      await refetch();
+                    }}
+                  >
+                    {t("settings.site.permanent_share_revoke", "撤销永久链接")}
+                  </Button>
                 </div>
               </div>
 
-              <div className="flex flex-row w-full gap-2">
-                <Button
-                  onClick={async () => {
-                    const chars =
-                      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-                    let key = "";
-                    for (let i = 0; i < 8; i++) {
-                      key += chars.charAt(Math.floor(Math.random() * chars.length));
-                    }
-                    const validHours = Math.max(1, shareHours);
-                    await updateSettingsWithToast(
-                      {
-                        tempory_share_token: key,
-                        tempory_share_token_expire_at:
-                          Math.floor(Date.now() / 1000) + validHours * 3600,
-                      },
-                      t,
-                    );
-                    await refetch();
-                  }}
+              {/* 限时分享 */}
+              <div className="flex flex-col gap-3 rounded-lg border p-4">
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-base">
+                    {t("settings.site.temporary_share", "限时分享链接")}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {t("settings.site.temporary_share_description", "具备有效期的只读监控页面，到期后自动失效拒绝访问。")}
+                  </span>
+                </div>
+                <SettingCardShortTextInput
+                  title={t("settings.site.temporary_share_current_link", "当前限时分享链接")}
+                  value={tempShareLink}
+                  placeholder={t("settings.site.temporary_share_none", "暂无有效限时分享链接或已过期")}
+                  showSaveButton={false}
+                  description={tempExpireDescription}
+                  disabled
+                  bordless
                 >
-                  {t("common.generate")}
-                </Button>
-                <Button
-                  color="red"
-                  variant="soft"
-                  disabled={!settings.tempory_share_token}
-                  onClick={async () => {
-                    await updateSettingsWithToast(
-                      { tempory_share_token: "", tempory_share_token_expire_at: 0 },
-                      t,
-                    );
-                    await refetch();
-                  }}
-                >
-                  {t("settings.site.temporary_share_revoke")}
-                </Button>
+                  <Button
+                    disabled={!isTempValid}
+                    onClick={() => {
+                      if (!tempShareLink) return;
+                      navigator.clipboard.writeText(tempShareLink);
+                      toast.success(t("common.copy", "已复制到剪贴板"));
+                    }}
+                  >
+                    {t("common.copy")}
+                  </Button>
+                </SettingCardShortTextInput>
+
+                <div className="flex flex-col gap-2">
+                  <SettingCardShortTextInput
+                    title={t("settings.site.temporary_share_hours", "分享时长（小时）")}
+                    bordless
+                    showSaveButton={false}
+                    value={shareHours}
+                    type="number"
+                    onChange={(e) => {
+                      const val = Number.parseInt(e.target.value, 10);
+                      if (!Number.isNaN(val) && val > 0) {
+                        setShareHours(val);
+                      }
+                    }}
+                  />
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {[
+                      { label: "1 小时", hours: 1 },
+                      { label: "6 小时", hours: 6 },
+                      { label: "24 小时", hours: 24 },
+                      { label: "7 天", hours: 168 },
+                      { label: "30 天", hours: 720 },
+                    ].map((preset) => (
+                      <Button
+                        key={preset.hours}
+                        size="1"
+                        variant={shareHours === preset.hours ? "solid" : "soft"}
+                        onClick={() => setShareHours(preset.hours)}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-row w-full gap-2">
+                  <Button
+                    onClick={async () => {
+                      const chars =
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                      let key = "";
+                      for (let i = 0; i < 8; i++) {
+                        key += chars.charAt(Math.floor(Math.random() * chars.length));
+                      }
+                      const validHours = Math.max(1, shareHours);
+                      await updateSettingsWithToast(
+                        {
+                          tempory_share_token: key,
+                          tempory_share_token_expire_at:
+                            Math.floor(Date.now() / 1000) + validHours * 3600,
+                        },
+                        t,
+                      );
+                      await refetch();
+                    }}
+                  >
+                    {t("settings.site.temporary_share_generate", "生成限时链接")}
+                  </Button>
+                  <Button
+                    color="red"
+                    variant="soft"
+                    disabled={!settings.tempory_share_token}
+                    onClick={async () => {
+                      await updateSettingsWithToast(
+                        { tempory_share_token: "", tempory_share_token_expire_at: 0 },
+                        t,
+                      );
+                      await refetch();
+                    }}
+                  >
+                    {t("settings.site.temporary_share_revoke", "撤销限时链接")}
+                  </Button>
+                </div>
               </div>
             </div>
           );

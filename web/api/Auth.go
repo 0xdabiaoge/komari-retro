@@ -199,11 +199,15 @@ func hasTempAccess(c *gin.Context) bool {
 	if tempKey == "" {
 		return false
 	}
-	expireAt, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)
+	permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
+	if permToken != "" && tempKey == permToken {
+		return true
+	}
+	expireAt, err := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
 	if err != nil {
 		return false
 	}
-	allowKey, err := config.GetAs[string]("tempory_share_token", "")
+	allowKey, err := config.GetAs[string](config.TemporyShareTokenKey, "")
 	if err != nil {
 		return false
 	}

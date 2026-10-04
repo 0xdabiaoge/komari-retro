@@ -49,8 +49,10 @@ type Settings struct {
 	RecordPreserveTime     int  `json:"record_preserve_time" default:"720"`     // 记录保留时间，单位小时，默认30天
 	PingRecordPreserveTime int  `json:"ping_record_preserve_time" default:"24"` // Ping 记录保留时间，单位小时，默认1天
 	AdminPath              string `json:"admin_path" default:""`                 // 后台安全入口路径（例如 /entry-xxxxxx）
+	AdminViewPath          string `json:"admin_view_path" default:""`            // 管理员查看探针前台地址（例如 /view-xxxxxx）
 	TemporyShareToken      string `json:"tempory_share_token" default:""`        // 临时只读分享密钥
 	TemporyShareTokenExpireAt int64 `json:"tempory_share_token_expire_at" default:"0"` // 临时分享过期时间戳
+	PermanentShareToken    string `json:"permanent_share_token" default:""`      // 永久只读分享密钥
 	UpdatedAt              time.Time
 }
 
@@ -64,8 +66,10 @@ const (
 	ThemeKey                      = "theme"
 	PrivateSiteKey                = "private_site"
 	AdminPathKey                  = "admin_path"
+	AdminViewPathKey              = "admin_view_path"
 	TemporyShareTokenKey          = "tempory_share_token"
 	TemporyShareTokenExpireAtKey  = "tempory_share_token_expire_at"
+	PermanentShareTokenKey        = "permanent_share_token"
 	ApiKeyKey                     = "api_key"
 	AutoDiscoveryKeyKey           = "auto_discovery_key"
 	ScriptDomainKey               = "script_domain"
@@ -114,5 +118,26 @@ func GetOrGenerateAdminPath() string {
 	}
 	newPath := "/entry-" + string(b)
 	_ = Set(AdminPathKey, newPath)
+	return newPath
+}
+
+// GetOrGenerateAdminViewPath 获取或自动生成管理员查看探针前台路径（如 /view-xxxxxx）
+func GetOrGenerateAdminViewPath() string {
+	path, _ := GetAs[string](AdminViewPathKey, "")
+	path = strings.TrimSpace(path)
+	if path != "" {
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		return path
+	}
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, 6)
+	_, _ = rand.Read(b)
+	for i := range b {
+		b[i] = chars[int(b[i])%len(chars)]
+	}
+	newPath := "/view-" + string(b)
+	_ = Set(AdminViewPathKey, newPath)
 	return newPath
 }

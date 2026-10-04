@@ -292,28 +292,53 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			adminPath = "/" + adminPath
 		}
 
+		adminViewPath, _ := config.GetAs[string](config.AdminViewPathKey, "")
+		adminViewPath = strings.TrimSpace(adminViewPath)
+		if adminViewPath == "" {
+			adminViewPath = config.GetOrGenerateAdminViewPath()
+		}
+		if !strings.HasPrefix(adminViewPath, "/") {
+			adminViewPath = "/" + adminViewPath
+		}
+
 		cleanPath := strings.TrimRight(reqPath, "/")
 		cleanAdminPath := strings.TrimRight(adminPath, "/")
+		cleanAdminViewPath := strings.TrimRight(adminViewPath, "/")
 
-		// 1. 访问后台安全入口 (例如 /entry-xxxxxx)
+		// 1. 访问后台安全登录入口 (例如 /entry-xxxxxx) -> 设置凭证并跳转至 /admin/login
 		if cleanAdminPath != "" && cleanPath == cleanAdminPath {
-			// 颁发后台安全入口访问凭证 Cookie (7天有效，HttpOnly，SameSite Lax)
 			c.SetCookie("admin_entrance_token", adminPath, 7*86400, "/", "", false, true)
 			c.Redirect(http.StatusFound, "/admin/login")
 			return
 		}
 
-		// 2. 访问对外只读分享链接 /s/:token 或 /s/:token/*
+		// 2. 访问管理员查看探针前台地址 (例如 /view-xxxxxx) -> 设置凭证并跳转至探针首页 /
+		if cleanAdminViewPath != "" && cleanPath == cleanAdminViewPath {
+			c.SetCookie("admin_entrance_token", adminPath, 7*86400, "/", "", false, true)
+			c.Redirect(http.StatusFound, "/")
+			return
+		}
+
+		// 3. 访问对外只读分享链接 /s/:token 或 /s/:token/* (支持永久分享与限时分享)
 		if strings.HasPrefix(reqPath, "/s/") {
 			tokenPart := strings.TrimPrefix(reqPath, "/s/")
 			parts := strings.Split(tokenPart, "/")
 			shareToken := parts[0]
 
+			permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
+			tempToken, _ := config.GetAs[string](config.TemporyShareTokenKey, "")
 			expireAt, _ := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
-			allowToken, _ := config.GetAs[string](config.TemporyShareTokenKey, "")
 			now := time.Now().Unix()
 
-			if allowToken != "" && shareToken == allowToken && expireAt >= now {
+			// 永久分享验证
+			if permToken != "" && shareToken == permToken {
+				c.SetCookie("temp_key", shareToken, 365*86400*10, "/", "", false, false)
+				serveIndex(c)
+				return
+			}
+
+			// 限时分享验证
+			if tempToken != "" && shareToken == tempToken && expireAt >= now {
 				expireSeconds := int(expireAt - now)
 				if expireSeconds > 0 {
 					c.SetCookie("temp_key", shareToken, expireSeconds, "/", "", false, false)
@@ -327,7 +352,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			return
 		}
 
-		// 3. 检查是否为已登录管理员或持有后台安全入口凭证
+		// 4. 检查是否为已登录管理员或持有后台安全入口凭证
 		isAdmin := false
 		if session, _ := c.Cookie("session_token"); session != "" {
 			if _, err := accounts.GetUserBySession(session); err == nil {
@@ -339,32 +364,23 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			hasAdminEntrance = true
 		}
 
-		if isAdmin {
-			if reqPath == "/" {
-				c.Redirect(http.StatusFound, "/admin/dashboard")
-				return
-			}
-			serveIndex(c)
-			return
-		}
-
-		if hasAdminEntrance {
-			if reqPath == "/" {
-				c.Redirect(http.StatusFound, "/admin/login")
-				return
-			}
-			if strings.HasPrefix(reqPath, "/admin") || reqPath == "/install" || reqPath == "/database-recovery" {
+		if isAdmin || hasAdminEntrance {
+			// 已登录管理员或持有安全入口凭证：允许正常访问前台探针、后台管理及相关页面
+			if reqPath == "/" || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/instance/") || reqPath == "/install" || reqPath == "/database-recovery" {
 				serveIndex(c)
 				return
 			}
 		}
 
-		// 4. 持有有效 temp_key 访问机器详情页 /instance/:uuid 或返回根路径
+		// 5. 持有有效 temp_key 访问机器详情页 /instance/:uuid 或返回专属分享页
 		if hasValidTempKey(c) {
 			if reqPath == "/" {
-				allowToken, _ := config.GetAs[string](config.TemporyShareTokenKey, "")
-				if allowToken != "" {
-					c.Redirect(http.StatusFound, "/s/"+allowToken)
+				tempKey, _ := c.Cookie("temp_key")
+				if tempKey == "" {
+					tempKey = c.Query("temp_key")
+				}
+				if tempKey != "" {
+					c.Redirect(http.StatusFound, "/s/"+tempKey)
 					return
 				}
 			}
@@ -374,7 +390,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			}
 		}
 
-		// 5. 其余任何访问（包括直接访问根路径 /、未授权直接试探 /admin 或 /admin/login），直接返回 404 伪装不存在
+		// 6. 其余任何访问（包括外部未授权访问根路径 /、试探 /admin 等），一律返回 404 伪装不存在
 		c.String(http.StatusNotFound, "404 page not found")
 	})
 }
@@ -387,12 +403,16 @@ func hasValidTempKey(c *gin.Context) bool {
 	if tempKey == "" {
 		return false
 	}
+	permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
+	if permToken != "" && tempKey == permToken {
+		return true
+	}
 	expireAt, err := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
 	if err != nil {
 		return false
 	}
-	allowKey, err := config.GetAs[string](config.TemporyShareTokenKey, "")
-	if err != nil || allowKey == "" || tempKey != allowKey {
+	tempToken, err := config.GetAs[string](config.TemporyShareTokenKey, "")
+	if err != nil || tempToken == "" || tempKey != tempToken {
 		return false
 	}
 	return expireAt >= time.Now().Unix()

@@ -1,0 +1,1 @@
+import{r as o,y as a}from"./entry-index-h3T2BR0S.js";import{n as m}from"./chunk-base-button-vdQPvBXt.js";const s=o.forwardRef(({className:r,...t},e)=>o.createElement(m,{...t,ref:e,className:a("rt-IconButton",r)}));s.displayName="IconButton";export{s as o};

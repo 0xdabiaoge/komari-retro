@@ -106,6 +106,9 @@ func adminGetSettings(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonR
 	if p, ok := cst[config.AdminPathKey].(string); !ok || strings.TrimSpace(p) == "" {
 		cst[config.AdminPathKey] = config.GetOrGenerateAdminPath()
 	}
+	if p, ok := cst[config.AdminViewPathKey].(string); !ok || strings.TrimSpace(p) == "" {
+		cst[config.AdminViewPathKey] = config.GetOrGenerateAdminViewPath()
+	}
 	return cst, nil
 }
 
