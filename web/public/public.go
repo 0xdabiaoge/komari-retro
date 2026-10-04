@@ -275,6 +275,23 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			return
 		}
 
+		// 检查当前会话是否为已登录管理员
+		isAdmin := false
+		if session, _ := c.Cookie("session_token"); session != "" {
+			if _, err := accounts.GetUserBySession(session); err == nil {
+				isAdmin = true
+			}
+		}
+
+		// 工作台（/terminal）安全加固：无论是否开启私有站点，工作台页面仅允许已登录的管理员访问
+		// 未登录访客或外部扫描探测一律返回 404 伪装不存在
+		if reqPath == "/terminal" || strings.HasPrefix(reqPath, "/terminal/") {
+			if !isAdmin {
+				c.String(http.StatusNotFound, "404 page not found")
+				return
+			}
+		}
+
 		privateSite, _ := config.GetAs[bool](config.PrivateSiteKey, false)
 		if !privateSite {
 			// 非私有站点：正常下发 index.html 驱动 SPA
@@ -352,13 +369,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			return
 		}
 
-		// 4. 检查是否为已登录管理员或持有后台安全入口凭证
-		isAdmin := false
-		if session, _ := c.Cookie("session_token"); session != "" {
-			if _, err := accounts.GetUserBySession(session); err == nil {
-				isAdmin = true
-			}
-		}
+		// 4. 检查是否持有后台安全入口凭证
 		hasAdminEntrance := false
 		if entranceToken, _ := c.Cookie("admin_entrance_token"); entranceToken != "" && entranceToken == adminPath {
 			hasAdminEntrance = true
