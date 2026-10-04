@@ -8,6 +8,7 @@ import (
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
+	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/protocol/v1"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
 )
@@ -37,6 +38,16 @@ func GetClients(c *gin.Context) {
 	_, err = accounts.GetUserBySession(session)
 	if err == nil {
 		isLogin = true
+	}
+
+	// 私有站点：未登录且未持有有效临时分享许可，拒绝访问并关闭连接
+	if !isLogin {
+		if privateSite, _ := config.GetAs[bool](config.PrivateSiteKey, false); privateSite {
+			if !hasTempAccess(c) {
+				conn.WriteJSON(gin.H{"status": "error", "error": "Private site is enabled, please login first."})
+				return
+			}
+		}
 	}
 
 	// 仅在未登录时需要 Hidden 信息做过滤

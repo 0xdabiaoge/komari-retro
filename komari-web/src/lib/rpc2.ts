@@ -411,7 +411,13 @@ export class RPC2Client {
   private getWebSocketUrl(): string {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    return `${protocol}//${host}${this.baseUrl}`;
+    let url = `${protocol}//${host}${this.baseUrl}`;
+    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const tempKey = searchParams?.get("temp_key");
+    if (tempKey) {
+      url += (url.includes("?") ? "&" : "?") + `temp_key=${encodeURIComponent(tempKey)}`;
+    }
+    return url;
   }
 
   private setupWebSocketHandlers(socket: WebSocket): void {

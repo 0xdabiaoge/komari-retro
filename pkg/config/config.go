@@ -77,6 +77,11 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 
 	// 先尝试直接反序列化
 	if err = json.Unmarshal([]byte(item.Value), &t); err != nil {
+		// 若目标类型为 string 且值非空，兼容未加 JSON 引号的原始文本
+		if strPtr, ok := any(&t).(*string); ok {
+			*strPtr = strings.Trim(item.Value, "\"")
+			return t, nil
+		}
 		// 尝试通用解析后转换
 		var generic any
 		if err := json.Unmarshal([]byte(item.Value), &generic); err != nil {

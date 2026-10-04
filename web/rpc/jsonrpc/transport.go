@@ -176,10 +176,16 @@ func buildContextMeta(c *gin.Context, permissionGroup string) *rpc.ContextMeta {
 	return meta
 }
 
-// hasTempShareAccess 校验 temp_key cookie 是否为有效的临时分享访问许可。
+// hasTempShareAccess 校验 temp_key 是否为有效的临时分享访问许可（优先 Cookie，兼容 Query 与 Header）。
 func hasTempShareAccess(c *gin.Context) bool {
 	tempKey, err := c.Cookie("temp_key")
 	if err != nil || tempKey == "" {
+		tempKey = c.Query("temp_key")
+		if tempKey == "" {
+			tempKey = c.GetHeader("X-Temp-Key")
+		}
+	}
+	if tempKey == "" {
 		return false
 	}
 	expireAt, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)

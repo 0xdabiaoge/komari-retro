@@ -1,4 +1,5 @@
 import {
+  Button,
   Callout,
   Card,
   Flex,
@@ -17,6 +18,9 @@ import Loading from "@/components/loading";
 import { Settings } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { LiveData } from "@/types/LiveData";
+import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { useAccount } from "@/contexts/AccountContext";
+import PrivateSiteCard from "@/components/PrivateSiteCard";
 
 // Intelligent speed formatting function
 const formatSpeed = (bytes: number): string => {
@@ -166,11 +170,43 @@ const Index = () => {
     };
   }, [refresh]);
 
+  const { publicInfo } = usePublicInfo();
+  const { account } = useAccount();
+
+  const isPrivateLocked = Boolean(
+    (publicInfo?.private_site && !account?.logged_in) ||
+      (error &&
+        (error.includes("Private site") ||
+          error.includes("login first") ||
+          error.includes("Unauthorized"))),
+  );
+
+  if (isPrivateLocked) {
+    return (
+      <PrivateSiteCard
+        sitename={publicInfo?.sitename}
+        onUnlockSuccess={() => {
+          refresh();
+        }}
+      />
+    );
+  }
+
   if (isLoading) {
     return <Loading />;
   }
+
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center gap-4 min-h-[40vh]">
+        <Text color="red" size="3" weight="bold">
+          {error}
+        </Text>
+        <Button variant="soft" onClick={() => refresh()}>
+          {t("common.retry", "重试")}
+        </Button>
+      </div>
+    );
   }
 
   return (

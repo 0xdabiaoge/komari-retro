@@ -178,81 +178,118 @@ export default function SiteSettings() {
         title={t("settings.site.temporary_share")}
         description={t("settings.site.temporary_share_description")}
       >
-        <div className="flex w-full flex-col gap-4">
-          <SettingCardShortTextInput
-            title={t("settings.site.temporary_share_current_link")}
-            value={
-              settings.tempory_share_token
-                ? `${window.location.origin}/?temp_key=${settings.tempory_share_token}`
-                : ""
-            }
-            showSaveButton={false}
-            description={`${t("admin.nodeTable.expiredAt")}: ${new Date((settings.tempory_share_token_expire_at || 0) * 1000).toLocaleString()}`}
-            disabled
-            bordless
-          >
-            <Button
-              onClick={() => {
-                if (!settings.tempory_share_token) return;
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/?temp_key=${settings.tempory_share_token}`,
-                );
-                toast.success(t("common.copy"));
-              }}
-            >
-              {t("common.copy")}
-            </Button>
-          </SettingCardShortTextInput>
-          <SettingCardShortTextInput
-            title={t("settings.site.temporary_share_hours")}
-            bordless
-            showSaveButton={false}
-            value={shareHours}
-            type="number"
-            onChange={(e) => {
-              const val = Number.parseInt(e.target.value, 10);
-              if (!Number.isNaN(val)) {
-                setShareHours(val);
-              }
-            }}
-          ></SettingCardShortTextInput>
-          <div className="flex flex-row w-full gap-2">
-            <Button
-              onClick={async () => {
-                const chars =
-                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-                let key = "";
-                for (let i = 0; i < 8; i++) {
-                  key += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                await updateSettingsWithToast(
-                  {
-                    tempory_share_token: key,
-                    tempory_share_token_expire_at:
-                      Math.floor(Date.now() / 1000) + shareHours * 3600,
-                  },
-                  t,
-                );
-                await refetch();
-              }}
-            >
-              {t("common.generate")}
-            </Button>
-            <Button
-              color="red"
-              variant="soft"
-              onClick={async () => {
-                await updateSettingsWithToast(
-                  { tempory_share_token: "", tempory_share_token_expire_at: 0 },
-                  t,
-                );
-                await refetch();
-              }}
-            >
-              {t("settings.site.temporary_share_revoke")}
-            </Button>
-          </div>
-        </div>
+        {(() => {
+          const isShareValid = Boolean(
+            settings.tempory_share_token &&
+              (settings.tempory_share_token_expire_at || 0) * 1000 > Date.now(),
+          );
+          const currentShareLink = isShareValid
+            ? `${window.location.origin}/?temp_key=${settings.tempory_share_token}`
+            : "";
+          const shareExpireDescription = isShareValid
+            ? `${t("admin.nodeTable.expiredAt")}: ${new Date(
+                (settings.tempory_share_token_expire_at || 0) * 1000,
+              ).toLocaleString()}`
+            : t("settings.site.temporary_share_none", "暂无有效临时分享链接或已过期");
+
+          return (
+            <div className="flex w-full flex-col gap-4">
+              <SettingCardShortTextInput
+                title={t("settings.site.temporary_share_current_link")}
+                value={currentShareLink}
+                placeholder={t("settings.site.temporary_share_none", "暂无有效临时分享链接或已过期")}
+                showSaveButton={false}
+                description={shareExpireDescription}
+                disabled
+                bordless
+              >
+                <Button
+                  disabled={!isShareValid}
+                  onClick={() => {
+                    if (!currentShareLink) return;
+                    navigator.clipboard.writeText(currentShareLink);
+                    toast.success(t("common.copy", "已复制到剪贴板"));
+                  }}
+                >
+                  {t("common.copy")}
+                </Button>
+              </SettingCardShortTextInput>
+
+              <div className="flex flex-col gap-2">
+                <SettingCardShortTextInput
+                  title={t("settings.site.temporary_share_hours")}
+                  bordless
+                  showSaveButton={false}
+                  value={shareHours}
+                  type="number"
+                  onChange={(e) => {
+                    const val = Number.parseInt(e.target.value, 10);
+                    if (!Number.isNaN(val) && val > 0) {
+                      setShareHours(val);
+                    }
+                  }}
+                />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {[
+                    { label: "1 小时", hours: 1 },
+                    { label: "6 小时", hours: 6 },
+                    { label: "24 小时", hours: 24 },
+                    { label: "7 天", hours: 168 },
+                    { label: "30 天", hours: 720 },
+                  ].map((preset) => (
+                    <Button
+                      key={preset.hours}
+                      size="1"
+                      variant={shareHours === preset.hours ? "solid" : "soft"}
+                      onClick={() => setShareHours(preset.hours)}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-row w-full gap-2">
+                <Button
+                  onClick={async () => {
+                    const chars =
+                      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                    let key = "";
+                    for (let i = 0; i < 8; i++) {
+                      key += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    const validHours = Math.max(1, shareHours);
+                    await updateSettingsWithToast(
+                      {
+                        tempory_share_token: key,
+                        tempory_share_token_expire_at:
+                          Math.floor(Date.now() / 1000) + validHours * 3600,
+                      },
+                      t,
+                    );
+                    await refetch();
+                  }}
+                >
+                  {t("common.generate")}
+                </Button>
+                <Button
+                  color="red"
+                  variant="soft"
+                  disabled={!settings.tempory_share_token}
+                  onClick={async () => {
+                    await updateSettingsWithToast(
+                      { tempory_share_token: "", tempory_share_token_expire_at: 0 },
+                      t,
+                    );
+                    await refetch();
+                  }}
+                >
+                  {t("settings.site.temporary_share_revoke")}
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </SettingCardCollapse>
       <SettingCardLabel>{t("settings.site.custom")}</SettingCardLabel>
       <label className="text-sm text-muted-foreground -mt-4">

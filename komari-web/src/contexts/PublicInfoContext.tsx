@@ -79,7 +79,10 @@ export const PublicInfoProvider: React.FC<{ children: React.ReactNode }> = ({
     setError(null);
     setIsLoading(true);
     try {
-      const response = await fetch("/api/public");
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const tempKey = searchParams?.get("temp_key");
+      const url = tempKey ? `/api/public?temp_key=${encodeURIComponent(tempKey)}` : "/api/public";
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Failed to fetch public info");
       }

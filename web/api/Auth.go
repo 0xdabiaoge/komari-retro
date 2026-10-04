@@ -105,7 +105,7 @@ var publicPaths = []string{
 	"/api/oauth",
 	"/api/oauth_callback",
 	"/api/version",
-	"/api/recent",
+	"/api/rpc2",
 	"/api/admin",    // 由 RequireRole 处理
 	"/api/clients/", // 由 RequireRole 处理
 }
@@ -122,7 +122,7 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 
 		path := c.Request.URL.Path
 
-		// 公开路径直接放行
+		// 公开路径直接放行（如基础元信息，或由 rpc2 Dispatch 细粒度控制）
 		for _, p := range publicPaths {
 			if strings.HasPrefix(path, p) {
 				c.Next()
@@ -161,7 +161,13 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 
 func hasTempAccess(c *gin.Context) bool {
 	tempKey, err := c.Cookie("temp_key")
-	if err != nil {
+	if err != nil || tempKey == "" {
+		tempKey = c.Query("temp_key")
+		if tempKey == "" {
+			tempKey = c.GetHeader("X-Temp-Key")
+		}
+	}
+	if tempKey == "" {
 		return false
 	}
 	expireAt, err := config.GetAs[int64]("tempory_share_token_expire_at", 0)
