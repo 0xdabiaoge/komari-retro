@@ -181,7 +181,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		shouldReplace := true
 
 		// 特殊页面：强制使用 default 主题，且不进行内容替换
-		if strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") {
+		if strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/terminal") || strings.HasPrefix(reqPath, "/manage") {
 			currentTheme = DefaultTheme
 			shouldReplace = false
 		}
@@ -365,11 +365,9 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		}
 
 		if isAdmin || hasAdminEntrance {
-			// 已登录管理员或持有安全入口凭证：允许正常访问前台探针、后台管理及相关页面
-			if reqPath == "/" || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/instance/") || reqPath == "/install" || reqPath == "/database-recovery" {
-				serveIndex(c)
-				return
-			}
+			// 已登录管理员或持有安全入口凭证：允许正常访问前台探针、后台管理、工作台终端及所有前端页面
+			serveIndex(c)
+			return
 		}
 
 		// 5. 持有有效 temp_key 访问机器详情页 /instance/:uuid 或返回专属分享页
