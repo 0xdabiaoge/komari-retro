@@ -16,7 +16,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
-//go:embed defaultTheme nasdaqTheme
+//go:embed defaultTheme all:nextTheme
 var PublicFS embed.FS
 
 // 常量定义
@@ -34,6 +34,35 @@ const (
 
 func init() {
 	_ = os.MkdirAll("./data/theme", 0755)
+	_ = mime.AddExtensionType(".js", "application/javascript; charset=utf-8")
+	_ = mime.AddExtensionType(".css", "text/css; charset=utf-8")
+}
+
+func getFallbackMimeType(p string) string {
+	switch strings.ToLower(filepath.Ext(p)) {
+	case ".js", ".mjs":
+		return "application/javascript; charset=utf-8"
+	case ".css":
+		return "text/css; charset=utf-8"
+	case ".html", ".htm":
+		return "text/html; charset=utf-8"
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".svg":
+		return "image/svg+xml"
+	case ".json":
+		return "application/json"
+	case ".ico":
+		return "image/x-icon"
+	case ".txt":
+		return "text/plain; charset=utf-8"
+	case ".webp":
+		return "image/webp"
+	default:
+		return ""
+	}
 }
 
 func normalizeHTMLLanguage(language string) string {
@@ -114,7 +143,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	if err != nil {
 		panic("you may forget to put dist of frontend to web/public/defaultTheme/dist")
 	}
-	nasdaqThemeFS, _ := fs.Sub(PublicFS, "nasdaqTheme")
+	nextThemeFS, _ := fs.Sub(PublicFS, "nextTheme")
 
 	getConfig := func() map[string]any {
 		cfg, _ := config.GetMany(map[string]any{
@@ -151,16 +180,24 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			if info, err := os.Stat(localPath); err == nil && !info.IsDir() {
 				content, err := os.ReadFile(localPath)
 				if err == nil {
-					return content, mime.TypeByExtension(filepath.Ext(localPath)), true
+					mimeType := mime.TypeByExtension(filepath.Ext(localPath))
+					if mimeType == "" {
+						mimeType = getFallbackMimeType(localPath)
+					}
+					return content, mimeType, true
 				}
 			}
 
-			// 如果是内置 nasdaq 主题，未在本地自定义时回退读取嵌入文件
-			if themeID == "nasdaq" && nasdaqThemeFS != nil {
+			// 如果是内置 next 主题，未在本地自定义时回退读取嵌入文件
+			if themeID == "next" && nextThemeFS != nil {
 				embedPath := filepath.ToSlash(cleanPath)
 				if !strings.Contains(embedPath, "..") {
-					if content, err := fs.ReadFile(nasdaqThemeFS, embedPath); err == nil {
-						return content, mime.TypeByExtension(filepath.Ext(embedPath)), true
+					if content, err := fs.ReadFile(nextThemeFS, embedPath); err == nil {
+						mimeType := mime.TypeByExtension(filepath.Ext(embedPath))
+						if mimeType == "" {
+							mimeType = getFallbackMimeType(embedPath)
+						}
+						return content, mimeType, true
 					}
 				}
 			}
@@ -177,7 +214,11 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		}
 
 		if content, err := fs.ReadFile(defaultThemeFS, embedPath); err == nil {
-			return content, mime.TypeByExtension(filepath.Ext(embedPath)), true
+			mimeType := mime.TypeByExtension(filepath.Ext(embedPath))
+			if mimeType == "" {
+				mimeType = getFallbackMimeType(embedPath)
+			}
+			return content, mimeType, true
 		}
 
 		return nil, "", false
