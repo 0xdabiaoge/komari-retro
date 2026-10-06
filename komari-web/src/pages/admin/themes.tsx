@@ -32,7 +32,7 @@ import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import Loading from "@/components/loading";
 import { useSettings } from "@/lib/api";
 import UploadDialog from "@/components/UploadDialog";
-import { createChunkUploadTask, type ChunkUploadTask } from "@/lib/chunkUpload";
+import type { ChunkUploadTask } from "@/lib/chunkUpload";
 import {
   getThemeConfigurationType,
   THEME_CONFIGURATION_MANAGED,
