@@ -35,3 +35,5 @@ go.work.sum
 # build
 komari
 .codex
+edge_*_profile/
+screen*.png

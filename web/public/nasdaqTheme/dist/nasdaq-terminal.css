@@ -1,0 +1,345 @@
+/* ==========================================================================
+   NASDAQ Financial Trading Terminal Theme for Komari-Next
+   Wall Street / High-Frequency Trading Aesthetic
+   ========================================================================== */
+
+/* 1. Global Color Palettes & Root Overrides */
+:root, html, body, .dark {
+  --background: #04070e !important;
+  --foreground: #ecf2f8 !important;
+  --card: #080d18 !important;
+  --card-foreground: #f0f6fc !important;
+  --popover: #080d18 !important;
+  --popover-foreground: #f0f6fc !important;
+  --primary: #00f293 !important;
+  --primary-foreground: #020a06 !important;
+  --secondary: #101826 !important;
+  --secondary-foreground: #00f293 !important;
+  --muted: #0d1522 !important;
+  --muted-foreground: #7d8b99 !important;
+  --accent: #131f32 !important;
+  --accent-foreground: #00f293 !important;
+  --destructive: #ff334b !important;
+  --border: #182438 !important;
+  --input: #101826 !important;
+  --ring: #00f293 !important;
+  --radius: 4px !important;
+
+  --chart-1: #00f293 !important;
+  --chart-2: #00b4d8 !important;
+  --chart-3: #ffb703 !important;
+  --chart-4: #9d4edd !important;
+  --chart-5: #ff334b !important;
+  
+  color-scheme: dark !important;
+}
+
+/* 2. Cyber Grid & Trading Terminal Background */
+html {
+  background-color: #04070e !important;
+}
+
+body {
+  background-color: #04070e !important;
+  color: #ecf2f8 !important;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(0, 242, 147, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 90% 20%, rgba(0, 180, 216, 0.05) 0%, transparent 40%),
+    linear-gradient(rgba(0, 242, 147, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 147, 0.025) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px !important;
+  background-attachment: fixed !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  min-height: 100vh !important;
+}
+
+/* 3. Header & Navigation Terminal Bar */
+header, nav, [class*="border-b"] {
+  background: rgba(4, 7, 14, 0.88) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(0, 242, 147, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* 4. Financial HUD Cards & Glassmorphism */
+div[class*="bg-card"], .bg-card, [class*="rounded-xl"][class*="border"], [class*="rounded-lg"][class*="border"] {
+  background: rgba(8, 13, 24, 0.82) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(0, 242, 147, 0.16) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(0, 242, 147, 0.12) !important;
+  border-radius: 6px !important;
+  position: relative !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+div[class*="bg-card"]:hover, .bg-card:hover, [class*="rounded-xl"][class*="border"]:hover {
+  border-color: rgba(0, 242, 147, 0.45) !important;
+  box-shadow: 0 6px 32px rgba(0, 242, 147, 0.12), inset 0 1px 0 rgba(0, 242, 147, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Cyber Accent lines on cards */
+div[class*="bg-card"]::before, .bg-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 2px;
+  background: #00f293;
+  border-radius: 2px 0 0 0;
+}
+
+/* 5. Bloomberg / High-Frequency Trading Typography */
+[class*="tabular-nums"], [class*="text-2xl"], [class*="text-xl"], [class*="text-3xl"], [class*="text-4xl"], [class*="font-mono"] {
+  font-family: "JetBrains Mono", "SF Mono", "Fira Code", Monaco, Consolas, monospace !important;
+  letter-spacing: -0.02em !important;
+  font-feature-settings: "tnum" 1, "zero" 1 !important;
+}
+
+/* 6. Trading Market Colors (Bull Green / Bear Red) */
+.text-green-500, [class*="text-emerald"], [class*="text-green"] {
+  color: #00f293 !important;
+  text-shadow: 0 0 8px rgba(0, 242, 147, 0.5) !important;
+}
+
+.text-red-500, [class*="text-destructive"], [class*="text-rose"], [class*="text-red"] {
+  color: #ff334b !important;
+  text-shadow: 0 0 8px rgba(255, 51, 75, 0.5) !important;
+}
+
+/* Glowing Status Badges */
+.border-green-500, [class*="border-emerald"] {
+  border-color: #00f293 !important;
+  box-shadow: 0 0 8px rgba(0, 242, 147, 0.4) !important;
+}
+
+.bg-green-500, [class*="bg-emerald"] {
+  background-color: #00f293 !important;
+  box-shadow: 0 0 10px #00f293, 0 0 20px rgba(0, 242, 147, 0.5) !important;
+}
+
+/* 7. World Map Visual Radar Enhancements */
+svg path[fill="#e2e8f0"], svg path[fill="#cbd5e1"], svg path[fill="#f1f5f9"], svg path[fill="#334155"] {
+  fill: #0c1422 !important;
+  stroke: #182438 !important;
+  stroke-width: 0.5px !important;
+}
+
+svg path[fill="#22c55e"], svg path[fill="#16a34a"], svg path[fill="#15803d"] {
+  fill: #00f293 !important;
+  filter: drop-shadow(0 0 6px #00f293);
+}
+
+/* 8. Terminal Inputs & Controls */
+input, select, textarea {
+  background: rgba(16, 24, 38, 0.85) !important;
+  border: 1px solid rgba(0, 242, 147, 0.25) !important;
+  color: #ecf2f8 !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #00f293 !important;
+  box-shadow: 0 0 12px rgba(0, 242, 147, 0.35) !important;
+  outline: none !important;
+}
+
+/* 9. Buttons */
+button {
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+button[class*="bg-primary"], .bg-primary {
+  background: #00f293 !important;
+  color: #020a06 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 14px rgba(0, 242, 147, 0.35) !important;
+}
+
+button[class*="bg-primary"]:hover, .bg-primary:hover {
+  background: #1aff9f !important;
+  box-shadow: 0 0 20px rgba(0, 242, 147, 0.6) !important;
+}
+
+/* 10. Table Terminal Matrix */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 3px !important;
+}
+
+tr {
+  background: rgba(8, 13, 24, 0.65) !important;
+  transition: background 0.15s ease !important;
+}
+
+tr:hover {
+  background: rgba(0, 242, 147, 0.08) !important;
+}
+
+th {
+  color: #7d8b99 !important;
+  font-family: "JetBrains Mono", monospace !important;
+  text-transform: uppercase !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* 11. Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #04070e;
+}
+::-webkit-scrollbar-thumb {
+  background: #182438;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f293;
+}
+
+/* 12. Top NASDAQ Live Streaming Ticker Tape */
+#nasdaq-ticker-bar {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  width: 100%;
+  height: 34px;
+  background: #02050a;
+  border-bottom: 1px solid rgba(0, 242, 147, 0.25);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 11px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.nasdaq-badge-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  background: rgba(0, 242, 147, 0.12);
+  border-right: 1px solid rgba(0, 242, 147, 0.3);
+  color: #00f293;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.nasdaq-pulse-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #00f293;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00f293;
+  animation: nasdaqPulse 1.5s infinite;
+}
+
+@keyframes nasdaqPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.nasdaq-ticker-track {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+  align-items: center;
+}
+
+.nasdaq-ticker-items {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  white-space: nowrap;
+  will-change: transform;
+  animation: nasdaqScroll 42s linear infinite;
+}
+
+.nasdaq-ticker-track:hover .nasdaq-ticker-items {
+  animation-play-state: paused;
+}
+
+@keyframes nasdaqScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.nasdaq-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #c9d1d9;
+}
+
+.nasdaq-item .symbol {
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.nasdaq-item .price {
+  color: #f0f6fc;
+}
+
+.nasdaq-item .up {
+  color: #00f293;
+  text-shadow: 0 0 6px rgba(0, 242, 147, 0.4);
+}
+
+.nasdaq-item .down {
+  color: #ff334b;
+  text-shadow: 0 0 6px rgba(255, 51, 75, 0.4);
+}
+
+.nasdaq-item .highlight {
+  color: #00b4d8;
+  font-weight: 600;
+}
+
+.nasdaq-badge-right {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 100%;
+  background: rgba(16, 24, 38, 0.9);
+  border-left: 1px solid rgba(0, 242, 147, 0.2);
+  color: #7d8b99;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+/* 13. Terminal Brand Header Banner */
+.nasdaq-terminal-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(8, 13, 24, 0.7);
+  border: 1px solid rgba(0, 242, 147, 0.15);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.nasdaq-banner-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #00f293;
+}
