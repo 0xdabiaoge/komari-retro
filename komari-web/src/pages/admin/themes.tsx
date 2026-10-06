@@ -171,17 +171,65 @@ const ThemePage = () => {
 
     setUploading(true);
     setUploadProgress(0);
-    const task = createChunkUploadTask("/api/admin/upload");
-    uploadTaskRef.current = task;
+
+    const xhr = new XMLHttpRequest();
+    const abortTask: ChunkUploadTask = {
+      cancel: () => xhr.abort(),
+      upload: async () => undefined,
+    };
+    uploadTaskRef.current = abortTask;
+
     try {
-      await task.upload("theme", file, setUploadProgress);
+      await new Promise<void>((resolve, reject) => {
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        });
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              if (res.status === "error") {
+                reject(new Error(res.message || "Upload failed"));
+              } else {
+                resolve();
+              }
+            } catch {
+              resolve();
+            }
+          } else {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              reject(new Error(res.message || `HTTP ${xhr.status}`));
+            } catch {
+              reject(new Error(`HTTP ${xhr.status}`));
+            }
+          }
+        });
+        xhr.addEventListener("error", () =>
+          reject(new Error(t("theme.upload_failed")))
+        );
+        xhr.addEventListener("abort", () =>
+          reject(new DOMException("Upload canceled", "AbortError"))
+        );
+
+        xhr.open("PUT", "/api/admin/theme/upload");
+        xhr.setRequestHeader("Content-Type", "application/zip");
+        xhr.send(file);
+      });
+
       toast.success(t("theme.upload_success"));
       setUploadDialogOpen(false);
       setUploadProgress(0);
       await fetchThemes();
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
-        toast.error(t("theme.upload_failed") + ": " + (error instanceof Error ? error.message : String(error)));
+        toast.error(
+          t("theme.upload_failed") +
+            ": " +
+            (error instanceof Error ? error.message : String(error))
+        );
       }
     } finally {
       setUploading(false);
@@ -193,6 +241,7 @@ const ThemePage = () => {
   const cancelUpload = () => {
     uploadTaskRef.current?.cancel();
     setUploadProgress(0);
+    setUploading(false);
   };
 
   // 设置主题

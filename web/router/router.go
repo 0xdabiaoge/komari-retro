@@ -102,6 +102,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	theme := g.Group("/theme")
 	{
 		theme.PUT("/upload", admin.UploadTheme)
+		theme.POST("/upload", admin.UploadTheme)
 		theme.GET("/list", admin.ListThemes)
 		theme.POST("/delete", admin.DeleteTheme)
 		theme.GET("/set", admin.SetTheme)

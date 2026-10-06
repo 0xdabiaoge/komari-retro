@@ -25,26 +25,40 @@ import (
 
 // UploadTheme 上传主题
 func UploadTheme(c *gin.Context) {
-	// 读取上传的文件内容
-	data, err := io.ReadAll(c.Request.Body)
+	var data []byte
+	var err error
+
+	// 1. 先尝试按 multipart 表单读取（如果客户端以 FormData 上传）
+	fileHeader, formErr := c.FormFile("theme")
+	if formErr != nil {
+		fileHeader, formErr = c.FormFile("file")
+	}
+
+	if formErr == nil && fileHeader != nil {
+		f, openErr := fileHeader.Open()
+		if openErr == nil {
+			defer f.Close()
+			data, err = io.ReadAll(f)
+		}
+	}
+
+	// 2. 如果不是表单上传，则直接从 Body 读取二进制流
+	if len(data) == 0 {
+		data, err = io.ReadAll(c.Request.Body)
+	}
+
 	if err != nil || len(data) == 0 {
 		api.RespondError(c, http.StatusBadRequest, "请选择要上传的主题文件")
 		return
 	}
 
 	// 临时文件名
-	tempFile := filepath.Join(os.TempDir(), "uploaded_theme.zip")
+	tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("uploaded_theme_%d.zip", time.Now().UnixNano()))
 	if err := os.WriteFile(tempFile, data, 0644); err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
 	defer os.Remove(tempFile)
-
-	// 检查文件扩展名（这里假定上传的就是zip）
-	if !strings.HasSuffix(strings.ToLower(tempFile), ".zip") {
-		api.RespondError(c, http.StatusBadRequest, "只支持ZIP格式的主题文件")
-		return
-	}
 
 	// 解压ZIP文件并验证
 	themeInfo, err := extractAndValidateTheme(tempFile)
