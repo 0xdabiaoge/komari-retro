@@ -3,12 +3,7 @@
   "short": "nasdaq",
   "version": "1.0.0",
   "author": "Komari",
-  "description": {
-    "en": "A high-frequency financial terminal and Nasdaq stock exchange style theme for Komari Monitor.",
-    "zh-CN": "高频金融交易终端与纳斯达克大屏风格主题，提供实时行情跑马灯、大盘指数、L2报价表与热力图。",
-    "zh-TW": "高頻金融交易終端與納斯達克大屏風格主題，提供即時行情跑馬燈、大盤指數、L2報價表與熱力圖。",
-    "ja": "高頻度金融取引端末とナスダック市場スタイルのテーマ。リアルタイムティッカー、指数、L2気配値表とヒートマップを提供。"
-  },
+  "description": "A high-frequency financial terminal and Nasdaq stock exchange style theme for Komari Monitor. / 高频金融交易终端与纳斯达克大屏风格主题。",
   "url": "https://github.com/0xdabiaoge/komari-retro",
   "preview": "dist/preview.svg",
   "configuration": {
