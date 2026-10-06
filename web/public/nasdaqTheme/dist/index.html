@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Komari Monitor - Nasdaq Terminal</title>
+  <style>
+    :root {
+      --bg-base: #070c16;
+      --bg-surface: #0c1220;
+      --bg-surface-alt: #0f172a;
+      --border-color: #1a253b;
+      --border-focus: #2d3e61;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --up-color: #10b981;
+      --down-color: #f43f5e;
+      --cyan-color: #06b6d4;
+      --amber-color: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    .font-mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Ticker animation */
+    @keyframes ticker-anim {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .ticker-container {
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+    .ticker-track {
+      display: inline-flex;
+      animation: ticker-anim 32s linear infinite;
+    }
+    .ticker-track:hover {
+      animation-play-state: paused;
+    }
+    /* Tick Flash */
+    @keyframes flash-up-anim {
+      0% { background-color: rgba(16, 185, 129, 0.35); }
+      100% { background-color: transparent; }
+    }
+    @keyframes flash-down-anim {
+      0% { background-color: rgba(244, 63, 94, 0.35); }
+      100% { background-color: transparent; }
+    }
+    .tick-up { animation: flash-up-anim 1.2s ease-out; }
+    .tick-down { animation: flash-down-anim 1.2s ease-out; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    /* Common Card Styles */
+    .terminal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-alt);
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn:hover {
+      color: #fff;
+      border-color: var(--border-focus);
+    }
+    .btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.6);
+      color: var(--up-color);
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .badge-trading {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .badge-halted {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+    }
+  </style>
+</head>
+<body class="font-mono">
+
+  <!-- 1. HEADER & TOP TICKER -->
+  <header style="background: var(--bg-surface); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50;">
+    <!-- Top status bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 18px; border-bottom: 1px solid #131c2e; font-size: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+          <span id="market-title" style="font-weight: 800; color: #34d399; letter-spacing: 1px;">NASDAQ: KOMARI CLUSTER</span>
+        </div>
+        <span style="color: var(--text-dim);">|</span>
+        <span class="badge badge-trading">LIVE TRADING</span>
+        <span id="utc-clock" style="color: var(--text-dim); display: none;">UTC 00:00:00</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 16px; font-size: 12px;">
+        <div>NODES: <span id="nodes-count" style="color: #34d399; font-weight: 700;">0 / 0</span></div>
+        <div style="display: none;" id="net-total-badge">NET VOL: <span id="net-vol-val" style="color: var(--cyan-color); font-weight: 700;">0 B/s</span></div>
+        <a href="/admin" class="btn" style="padding: 4px 10px; font-size: 11px;">
+          ⚙ ADMIN
+        </a>
+      </div>
+    </div>
+
+    <!-- Ticker Tape -->
+    <div id="ticker-wrap" class="ticker-container" style="background: #080d18; padding: 6px 0; border-top: 1px solid #101827; font-size: 12px;">
+      <div class="ticker-track" id="ticker-track">
+        <div style="padding: 0 20px; color: var(--text-dim);">INITIALIZING TICKER FEED...</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. MAIN CONTAINER -->
+  <main style="flex: 1; max-width: 1680px; width: 100%; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+    
+    <!-- Cluster Composite Indices (3 Big Cards) -->
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+      <!-- Index 1: Compute Index -->
+      <div class="terminal-card" style="padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;">CLUSTER COMPUTE INDEX (K-CPU)</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+              <span id="idx-cpu-val" style="font-size: 26px; font-weight: 800; color: #fff;">0.0%</span>
+              <span id="idx-cpu-chg" class="badge badge-trading">▲ +0.0%</span>
+            </div>
+          </div>
+          <span id="idx-cpu-peak" style="font-size: 11px; color: var(--text-dim);">PEAK 0.0%</span>
+        </div>
+        <div style="height: 48px; width: 100%; margin: 12px 0 6px;">
+          <svg id="idx-cpu-svg" style="width: 100%; height: 100%; overflow: visible;" viewBox="0 0 300 48" preserveAspectRatio="none">
+            <path id="idx-cpu-area" d="" fill="rgba(16, 185, 129, 0.1)"></path>
+            <path id="idx-cpu-line" d="" fill="none" stroke="#10b981" stroke-width="2"></path>
+          </svg>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); border-top: 1px solid var(--border-color); padding-top: 8px;">
+          <span id="idx-cpu-cores">CORES: -</span>
+          <span id="idx-cpu-status">STATE: STABLE</span>
+        </div>
+      </div>
+
+      <!-- Index 2: Bandwidth Index -->
+      <div class="terminal-card" style="padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;">GLOBAL THROUGHPUT INDEX (K-NETX)</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+              <span id="idx-net-val" style="font-size: 26px; font-weight: 800; color: #fff;">0 B/s</span>
+              <span id="idx-net-chg" class="badge" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.4);">VOL INDEX</span>
+            </div>
+          </div>
+          <span id="idx-net-traffic" style="font-size: 11px; color: var(--text-dim);">TOTAL -</span>
+        </div>
+        <div style="height: 48px; width: 100%; margin: 12px 0 6px;">
+          <svg id="idx-net-svg" style="width: 100%; height: 100%; overflow: visible;" viewBox="0 0 300 48" preserveAspectRatio="none">
+            <path id="idx-net-area" d="" fill="rgba(6, 182, 212, 0.1)"></path>
+            <path id="idx-net-line" d="" fill="none" stroke="#06b6d4" stroke-width="2"></path>
+          </svg>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); border-top: 1px solid var(--border-color); padding-top: 8px;">
+          <span id="idx-net-tx">TX: ▲ 0 B/s</span>
+          <span id="idx-net-rx">RX: ▼ 0 B/s</span>
+        </div>
+      </div>
+
+      <!-- Index 3: Memory / Load Volatility -->
+      <div class="terminal-card" style="padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;">SYSTEM LIQUIDITY & MEMORY (K-MEM)</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+              <span id="idx-mem-val" style="font-size: 26px; font-weight: 800; color: #fff;">0.0%</span>
+              <span id="idx-mem-detail" class="badge badge-trading">ACTIVE</span>
+            </div>
+          </div>
+          <span id="idx-mem-total" style="font-size: 11px; color: var(--text-dim);">0 GB POOL</span>
+        </div>
+        <div style="height: 48px; width: 100%; margin: 12px 0 6px;">
+          <svg id="idx-mem-svg" style="width: 100%; height: 100%; overflow: visible;" viewBox="0 0 300 48" preserveAspectRatio="none">
+            <path id="idx-mem-area" d="" fill="rgba(16, 185, 129, 0.08)"></path>
+            <path id="idx-mem-line" d="" fill="none" stroke="#34d399" stroke-width="2"></path>
+          </svg>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); border-top: 1px solid var(--border-color); padding-top: 8px;">
+          <span id="idx-mem-used">USED: 0 GB</span>
+          <span id="idx-mem-swap">SWAP: 0 GB</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Controls Toolbar -->
+    <section class="terminal-card" style="padding: 12px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+      <!-- View mode switch -->
+      <div style="display: flex; gap: 4px; background: #080d18; padding: 4px; border-radius: 6px; border: 1px solid var(--border-color);">
+        <button id="btn-view-table" class="btn active" onclick="switchView('table')">≡ WATCHLIST (报价表)</button>
+        <button id="btn-view-heatmap" class="btn" onclick="switchView('heatmap')">⊞ HEATMAP (热力图)</button>
+        <button id="btn-view-cards" class="btn" onclick="switchView('cards')">▥ MATRIX (交易矩阵)</button>
+      </div>
+
+      <!-- Region Filter -->
+      <div id="region-filter-bar" style="display: flex; gap: 6px; overflow-x: auto; font-size: 12px;">
+        <button class="btn active" onclick="setRegionFilter('ALL')">ALL</button>
+      </div>
+
+      <!-- Search & Options -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <input id="search-input" type="text" placeholder="FILTER TICKER / IP..." style="background: #080d18; border: 1px solid var(--border-color); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: inherit; width: 180px; outline: none;">
+        <select id="color-rule-select" onchange="setColorRule(this.value)" style="background: #080d18; border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 8px; border-radius: 6px; font-size: 12px; font-family: inherit; outline: none;">
+          <option value="intl">INTL (GREEN ▲ / RED ▼)</option>
+          <option value="cn">CN (RED ▲ / GREEN ▼)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- VIEW 1: WATCHLIST TABLE (Level-2 Order Book Style) -->
+    <section id="view-table" class="terminal-card" style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
+        <thead>
+          <tr style="background: #080d18; border-bottom: 1px solid var(--border-color); color: var(--text-dim); text-transform: uppercase; font-size: 11px;">
+            <th style="padding: 12px 16px;">TICKER</th>
+            <th style="padding: 12px;">SERVER / OS</th>
+            <th style="padding: 12px;">MARKET STATUS</th>
+            <th style="padding: 12px; text-align: right;">CPU LOAD</th>
+            <th style="padding: 12px; text-align: right;">RAM VOL (USED/TOTAL)</th>
+            <th style="padding: 12px; text-align: right;">NET BID (RX)</th>
+            <th style="padding: 12px; text-align: right;">NET ASK (TX)</th>
+            <th style="padding: 12px; text-align: right;">DISK</th>
+            <th style="padding: 12px; text-align: center;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="table-tbody" style="divide-y: 1px solid #131c2e;">
+          <tr>
+            <td colspan="9" style="padding: 32px; text-align: center; color: var(--text-dim);">CONNECTING TO KOMARI CORE...</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- VIEW 2: FINVIZ HEATMAP -->
+    <section id="view-heatmap" class="terminal-card" style="display: none; padding: 16px;">
+      <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px; display: flex; justify-content: space-between;">
+        <span>FINVIZ TREEMAP: WORKLOAD DISTRIBUTION (BLOCK SIZE = RAM / COLOR = CPU LOAD)</span>
+        <span id="heatmap-stats">0 NODES</span>
+      </div>
+      <div id="heatmap-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; min-height: 320px;">
+      </div>
+    </section>
+
+    <!-- VIEW 3: TRADING MATRIX CARDS -->
+    <section id="view-cards" style="display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+    </section>
+
+  </main>
+
+  <!-- 3. NODE INSPECTION MODAL (Candlestick / Level-2 Depth) -->
+  <div id="detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 16px;">
+    <div class="terminal-card" style="max-width: 760px; width: 100%; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="m-ticker" style="font-size: 18px; font-weight: 800; color: #fff;">TICKER-01</span>
+            <span id="m-status-badge" class="badge badge-trading">TRADING</span>
+            <span id="m-region" style="font-size: 12px; color: var(--text-muted);">REGION</span>
+          </div>
+          <div id="m-hostname" style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">hostname.example.com</div>
+        </div>
+        <button onclick="closeModal()" class="btn" style="padding: 4px 10px; font-size: 14px;">✕</button>
+      </div>
+
+      <!-- Quick Specs -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 11px;">
+        <div style="background: #080d18; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-dim);">CPU SPEC</div>
+          <div id="m-spec-cpu" style="color: #fff; font-weight: 700; margin-top: 2px;">-</div>
+        </div>
+        <div style="background: #080d18; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-dim);">RAM TOTAL</div>
+          <div id="m-spec-ram" style="color: #fff; font-weight: 700; margin-top: 2px;">-</div>
+        </div>
+        <div style="background: #080d18; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-dim);">OS / ARCH</div>
+          <div id="m-spec-os" style="color: #fff; font-weight: 700; margin-top: 2px;">-</div>
+        </div>
+        <div style="background: #080d18; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-dim);">UPTIME</div>
+          <div id="m-spec-uptime" style="color: #34d399; font-weight: 700; margin-top: 2px;">-</div>
+        </div>
+      </div>
+
+      <!-- Simulated Candlestick / Minute History Bar -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 6px;">
+          <span>REALTIME CANDLESTICK & LOAD TICKS</span>
+          <span id="m-candlestick-quote" style="color: #34d399; font-weight: 700;">LIVE</span>
+        </div>
+        <div id="m-candles" style="background: #080d18; border: 1px solid var(--border-color); border-radius: 6px; height: 160px; display: flex; align-items: flex-end; justify-content: space-between; padding: 12px 10px; gap: 4px; overflow: hidden;">
+        </div>
+      </div>
+
+      <!-- Depth Book Metrics (Bid / Ask depth) -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+        <div style="background: #080d18; border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 6px; padding: 12px;">
+          <div style="color: #38bdf8; font-weight: 700; margin-bottom: 8px; font-size: 11px;">INBOUND TRAFFIC (BUY DEPTH)</div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Rate:</span><span id="m-net-rx" style="color: #38bdf8;">0 B/s</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Total RX:</span><span id="m-net-total-rx">-</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>TCP Connections:</span><span id="m-tcp-conn">-</span></div>
+        </div>
+        <div style="background: #080d18; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 12px;">
+          <div style="color: #34d399; font-weight: 700; margin-bottom: 8px; font-size: 11px;">OUTBOUND TRAFFIC (SELL DEPTH)</div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Rate:</span><span id="m-net-tx" style="color: #34d399;">0 B/s</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Total TX:</span><span id="m-net-total-tx">-</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>UDP Connections:</span><span id="m-udp-conn">-</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <button onclick="closeModal()" class="btn">DISMISS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT ENGINE -->
+  <script>
+    // State
+    let siteConfig = {};
+    let themeSettings = {};
+    let nodesList = [];
+    let liveRecords = {};
+    let prevRecords = {};
+    let currentView = 'table';
+    let currentRegion = 'ALL';
+    let searchQuery = '';
+    let colorRule = 'intl';
+    let activeModalUUID = null;
+
+    // Helper: format bytes
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(i >= 2 ? 1 : 0) + ' ' + units[i];
+    }
+    function formatSpeed(bytes) {
+      if (!bytes || bytes === 0) return '0 B/s';
+      return formatBytes(bytes) + '/s';
+    }
+    function formatUptime(seconds) {
+      if (!seconds) return '0m';
+      const d = Math.floor(seconds / 86400);
+      const h = Math.floor((seconds % 86400) / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      if (d > 0) return `${d}d ${h}h`;
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+
+    // Generate clean ticker symbol from node
+    function getTicker(node) {
+      if (node.alias && node.alias.trim()) return node.alias.toUpperCase();
+      let code = node.name.replace(/[^a-zA-Z0-9]/g, '-').toUpperCase();
+      if (code.length > 12) code = code.slice(0, 12);
+      const reg = (node.region || 'SVR').toUpperCase();
+      return `${reg}-${code}`;
+    }
+
+    // Flag emoji from country code
+    function getFlag(region) {
+      if (!region || region.length !== 2) return '🌐';
+      const code = region.toUpperCase();
+      const codePoints = [...code].map(c => 127397 + c.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    }
+
+    // Fetch Public Config & Theme Settings
+    async function loadPublicConfig() {
+      try {
+        const res = await fetch('/api/public');
+        if (res.ok) {
+          siteConfig = await res.json();
+          themeSettings = siteConfig.theme_settings || {};
+          if (siteConfig.sitename) {
+            document.title = `${siteConfig.sitename} - Nasdaq Terminal`;
+          }
+          if (themeSettings.market_title) {
+            document.getElementById('market-title').innerText = themeSettings.market_title;
+          }
+          if (themeSettings.color_standard) {
+            colorRule = themeSettings.color_standard;
+            document.getElementById('color-rule-select').value = colorRule;
+          }
+          if (themeSettings.default_view) {
+            switchView(themeSettings.default_view);
+          }
+          if (themeSettings.ticker_enabled === false) {
+            document.getElementById('ticker-wrap').style.display = 'none';
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load public config:', e);
+      }
+    }
+
+    // Fetch Nodes Basic Info
+    async function loadNodes() {
+      try {
+        const res = await fetch('/api/nodes');
+        if (res.ok) {
+          const data = await res.json();
+          nodesList = Array.isArray(data) ? data : (data.data || []);
+          renderRegionFilter();
+          updateIndices();
+          renderViews();
+        }
+      } catch (e) {
+        console.warn('Failed to load nodes:', e);
+      }
+    }
+
+    // Poll RPC2 for latest status
+    async function pollLiveStatus() {
+      try {
+        const res = await fetch('/api/rpc2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method: 'common:getNodesLatestStatus'
+          })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.result) {
+            prevRecords = liveRecords;
+            liveRecords = json.result;
+            updateIndices();
+            renderViews();
+            updateTicker();
+            if (activeModalUUID) updateModalContent(activeModalUUID);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to poll live status:', e);
+      }
+    }
+
+    // Update Top 3 Market Indices
+    function updateIndices() {
+      const activeNodes = nodesList.filter(n => {
+        const r = liveRecords[n.uuid];
+        return r && (r.online !== false);
+      });
+      document.getElementById('nodes-count').innerText = `${activeNodes.length} / ${nodesList.length}`;
+
+      if (activeNodes.length === 0) return;
+
+      let totalCpu = 0;
+      let peakCpu = 0;
+      let totalRx = 0;
+      let totalTx = 0;
+      let totalMemUsed = 0;
+      let totalMem = 0;
+      let totalSwapUsed = 0;
+
+      activeNodes.forEach(n => {
+        const r = liveRecords[n.uuid] || {};
+        const cpu = (r.cpu && r.cpu.usage) || 0;
+        totalCpu += cpu;
+        if (cpu > peakCpu) peakCpu = cpu;
+
+        const net = r.network || {};
+        totalRx += net.down || 0;
+        totalTx += net.up || 0;
+
+        const ram = r.ram || {};
+        totalMemUsed += ram.used || 0;
+        totalMem += ram.total || 0;
+
+        const swap = r.swap || {};
+        totalSwapUsed += swap.used || 0;
+      });
+
+      const avgCpu = (totalCpu / activeNodes.length).toFixed(1);
+      document.getElementById('idx-cpu-val').innerText = `${avgCpu}%`;
+      document.getElementById('idx-cpu-peak').innerText = `PEAK ${peakCpu.toFixed(1)}%`;
+      document.getElementById('idx-cpu-chg').innerText = `AVG LOAD`;
+
+      // Sparkline SVG path
+      const ptsCpu = `M0,32 Q60,${40 - avgCpu*0.3} 120,28 T200,${44 - avgCpu*0.3} T300,${40 - avgCpu*0.3}`;
+      document.getElementById('idx-cpu-line').setAttribute('d', ptsCpu);
+      document.getElementById('idx-cpu-area').setAttribute('d', `${ptsCpu} L300,48 L0,48 Z`);
+
+      // Net
+      const totalSpeed = totalRx + totalTx;
+      document.getElementById('idx-net-val').innerText = formatSpeed(totalSpeed);
+      document.getElementById('idx-net-tx').innerText = `TX: ▲ ${formatSpeed(totalTx)}`;
+      document.getElementById('idx-net-rx').innerText = `RX: ▼ ${formatSpeed(totalRx)}`;
+
+      const ptsNet = `M0,36 Q60,20 140,28 T220,18 T300,12`;
+      document.getElementById('idx-net-line').setAttribute('d', ptsNet);
+      document.getElementById('idx-net-area').setAttribute('d', `${ptsNet} L300,48 L0,48 Z`);
+
+      // Mem
+      const memPct = totalMem > 0 ? ((totalMemUsed / totalMem) * 100).toFixed(1) : 0;
+      document.getElementById('idx-mem-val').innerText = `${memPct}%`;
+      document.getElementById('idx-mem-total').innerText = `${formatBytes(totalMem)} POOL`;
+      document.getElementById('idx-mem-used').innerText = `USED: ${formatBytes(totalMemUsed)}`;
+      document.getElementById('idx-mem-swap').innerText = `SWAP: ${formatBytes(totalSwapUsed)}`;
+
+      const ptsMem = `M0,28 Q70,32 150,22 T240,26 T300,20`;
+      document.getElementById('idx-mem-line').setAttribute('d', ptsMem);
+      document.getElementById('idx-mem-area').setAttribute('d', `${ptsMem} L300,48 L0,48 Z`);
+    }
+
+    // Update Ticker Tape
+    function updateTicker() {
+      const track = document.getElementById('ticker-track');
+      if (nodesList.length === 0) return;
+
+      const items = [...nodesList, ...nodesList].map(n => {
+        const r = liveRecords[n.uuid] || {};
+        const isOnline = r.online !== false;
+        const cpu = (r.cpu && r.cpu.usage) || 0;
+        const ticker = getTicker(n);
+
+        const color = (colorRule === 'intl')
+          ? (cpu < 50 ? '#34d399' : '#fb7185')
+          : (cpu < 50 ? '#fb7185' : '#34d399');
+
+        return `
+          <div onclick="openModal('${n.uuid}')" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 10px; border-radius: 4px; transition: background 0.15s;">
+            <span style="font-weight: 700; color: #e2e8f0;">${ticker}</span>
+            <span style="color: ${isOnline ? color : '#64748b'};">${isOnline ? cpu.toFixed(1) + '%' : 'HALTED'}</span>
+            <span style="color: #334155;">|</span>
+          </div>
+        `;
+      }).join('');
+
+      track.innerHTML = items;
+    }
+
+    // Render Region filter buttons
+    function renderRegionFilter() {
+      const regions = new Set(['ALL']);
+      nodesList.forEach(n => {
+        if (n.region) regions.add(n.region.toUpperCase());
+      });
+      const bar = document.getElementById('region-filter-bar');
+      bar.innerHTML = [...regions].map(reg => {
+        const act = (reg === currentRegion) ? 'active' : '';
+        return `<button class="btn ${act}" onclick="setRegionFilter('${reg}')">${reg}</button>`;
+      }).join('');
+    }
+
+    function setRegionFilter(reg) {
+      currentRegion = reg;
+      renderRegionFilter();
+      renderViews();
+    }
+
+    // Switch View
+    function switchView(mode) {
+      currentView = mode;
+      ['table', 'heatmap', 'cards'].forEach(m => {
+        const el = document.getElementById(`view-${m}`);
+        const btn = document.getElementById(`btn-view-${m}`);
+        if (m === mode) {
+          el.style.display = (m === 'cards') ? 'grid' : 'block';
+          btn.classList.add('active');
+        } else {
+          el.style.display = 'none';
+          btn.classList.remove('active');
+        }
+      });
+      renderViews();
+    }
+
+    function setColorRule(rule) {
+      colorRule = rule;
+      updateIndices();
+      updateTicker();
+      renderViews();
+    }
+
+    // Filter nodes by region & search
+    function getFilteredNodes() {
+      return nodesList.filter(n => {
+        if (currentRegion !== 'ALL' && (n.region || '').toUpperCase() !== currentRegion) {
+          return false;
+        }
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matchTicker = getTicker(n).toLowerCase().includes(q);
+          const matchName = (n.name || '').toLowerCase().includes(q);
+          const matchIp = (n.ipv4 || '').toLowerCase().includes(q);
+          if (!matchTicker && !matchName && !matchIp) return false;
+        }
+        return true;
+      });
+    }
+
+    // Render Current Views
+    function renderViews() {
+      const filtered = getFilteredNodes();
+      if (currentView === 'table') renderTable(filtered);
+      if (currentView === 'heatmap') renderHeatmap(filtered);
+      if (currentView === 'cards') renderCards(filtered);
+    }
+
+    // Render Table View
+    function renderTable(nodes) {
+      const tbody = document.getElementById('table-tbody');
+      if (nodes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="padding: 32px; text-align: center; color: var(--text-dim);">NO ACTIVE ASSETS FOUND</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = nodes.map(n => {
+        const r = liveRecords[n.uuid] || {};
+        const pr = prevRecords[n.uuid] || {};
+        const isOnline = r.online !== false;
+        const ticker = getTicker(n);
+        const flag = getFlag(n.region);
+
+        const cpu = (r.cpu && r.cpu.usage) || 0;
+        const prevCpu = (pr.cpu && pr.cpu.usage) || cpu;
+        const delta = cpu - prevCpu;
+        let tickClass = '';
+        if (delta > 0.5) tickClass = (colorRule === 'intl' ? 'tick-down' : 'tick-up');
+        if (delta < -0.5) tickClass = (colorRule === 'intl' ? 'tick-up' : 'tick-down');
+
+        const ramUsed = (r.ram && r.ram.used) || 0;
+        const ramTotal = (r.ram && r.ram.total) || 1;
+        const ramPct = ((ramUsed / ramTotal) * 100).toFixed(0);
+
+        const netRx = (r.network && r.network.down) || 0;
+        const netTx = (r.network && r.network.up) || 0;
+
+        const diskUsed = (r.disk && r.disk.used) || 0;
+        const diskTotal = (r.disk && r.disk.total) || 1;
+        const diskPct = ((diskUsed / diskTotal) * 100).toFixed(0);
+
+        const cpuColor = (colorRule === 'intl')
+          ? (cpu > 70 ? '#fb7185' : '#34d399')
+          : (cpu > 70 ? '#34d399' : '#fb7185');
+
+        return `
+          <tr class="${tickClass}" style="border-bottom: 1px solid #131c2e; transition: background 0.15s;" onmouseover="this.style.background='#101726'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 12px 16px; font-weight: 800;">
+              <a href="javascript:void(0)" onclick="openModal('${n.uuid}')" style="color: #38bdf8; text-decoration: none;">
+                ${ticker}
+              </a>
+            </td>
+            <td style="padding: 12px;">
+              <div style="color: #fff; font-weight: 600;">${flag} ${n.name}</div>
+              <div style="font-size: 10px; color: var(--text-dim);">${n.os || 'Linux'} • ${n.arch || 'x86_64'}</div>
+            </td>
+            <td style="padding: 12px;">
+              <span class="badge ${isOnline ? 'badge-trading' : 'badge-halted'}">
+                ${isOnline ? 'TRADING' : 'HALTED'}
+              </span>
+            </td>
+            <td style="padding: 12px; text-align: right; font-weight: 700; color: ${isOnline ? cpuColor : '#64748b'};">
+              ${isOnline ? cpu.toFixed(1) + '%' : '-'}
+            </td>
+            <td style="padding: 12px; text-align: right;">
+              <div>${formatBytes(ramUsed)} / ${formatBytes(ramTotal)}</div>
+              <div style="font-size: 10px; color: var(--text-dim);">${ramPct}% VOL</div>
+            </td>
+            <td style="padding: 12px; text-align: right; color: #38bdf8;">
+              ▼ ${formatSpeed(netRx)}
+            </td>
+            <td style="padding: 12px; text-align: right; color: #34d399;">
+              ▲ ${formatSpeed(netTx)}
+            </td>
+            <td style="padding: 12px; text-align: right; color: var(--text-muted);">
+              ${diskPct}%
+            </td>
+            <td style="padding: 12px; text-align: center;">
+              <button onclick="openModal('${n.uuid}')" class="btn" style="padding: 3px 8px; font-size: 11px;">
+                INSPECT
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render Heatmap View
+    function renderHeatmap(nodes) {
+      const grid = document.getElementById('heatmap-grid');
+      document.getElementById('heatmap-stats').innerText = `${nodes.length} ASSETS MAPPED`;
+
+      grid.innerHTML = nodes.map(n => {
+        const r = liveRecords[n.uuid] || {};
+        const isOnline = r.online !== false;
+        const cpu = (r.cpu && r.cpu.usage) || 0;
+        const ticker = getTicker(n);
+
+        let bg = 'rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);';
+        if (!isOnline) {
+          bg = 'rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.4);';
+        } else if (cpu > 70) {
+          bg = 'rgba(244, 63, 94, 0.35); border: 1px solid rgba(244, 63, 94, 0.7);';
+        } else if (cpu > 40) {
+          bg = 'rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.5);';
+        }
+
+        return `
+          <div onclick="openModal('${n.uuid}')" style="background: ${bg}; border-radius: 6px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #fff;">
+              <span>${ticker}</span>
+              <span>${getFlag(n.region)}</span>
+            </div>
+            <div style="text-align: center; margin: 8px 0;">
+              <div style="font-size: 20px; font-weight: 800; color: #fff;">${isOnline ? cpu.toFixed(1) + '%' : 'HALTED'}</div>
+              <div style="font-size: 10px; color: var(--text-dim);">${formatBytes((r.ram && r.ram.used) || 0)} RAM</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px;">
+              <span>▲ ${formatSpeed((r.network && r.network.up) || 0)}</span>
+              <span>${isOnline ? 'LIVE' : 'OFF'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Cards View
+    function renderCards(nodes) {
+      const container = document.getElementById('view-cards');
+      container.innerHTML = nodes.map(n => {
+        const r = liveRecords[n.uuid] || {};
+        const isOnline = r.online !== false;
+        const cpu = (r.cpu && r.cpu.usage) || 0;
+        const ticker = getTicker(n);
+
+        const ramUsed = (r.ram && r.ram.used) || 0;
+        const ramTotal = (r.ram && r.ram.total) || 1;
+        const ramPct = ((ramUsed / ramTotal) * 100).toFixed(0);
+
+        return `
+          <div class="terminal-card" style="padding: 16px; cursor: pointer; transition: border-color 0.15s;" onclick="openModal('${n.uuid}')">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="font-weight: 800; color: #fff; font-size: 14px;">${getFlag(n.region)} ${ticker}</div>
+              <span class="badge ${isOnline ? 'badge-trading' : 'badge-halted'}">${isOnline ? 'TRADING' : 'HALTED'}</span>
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${n.name}</div>
+            
+            <div style="margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span style="color: var(--text-dim);">CPU LOAD</span>
+                <span style="font-weight: 700; color: #fff;">${cpu.toFixed(1)}%</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: #162033; border-radius: 2px; overflow: hidden;">
+                <div style="width: ${cpu}%; height: 100%; background: #10b981;"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span style="color: var(--text-dim);">MEM CAPACITY</span>
+                <span style="color: var(--text-muted);">${ramPct}% (${formatBytes(ramUsed)})</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: #162033; border-radius: 2px; overflow: hidden;">
+                <div style="width: ${ramPct}%; height: 100%; background: #06b6d4;"></div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--border-color); padding-top: 8px; color: var(--text-dim);">
+              <span>NET: ▲ ${formatSpeed((r.network && r.network.up) || 0)}</span>
+              <span>UPTIME: ${formatUptime(r.uptime)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Modal
+    function openModal(uuid) {
+      activeModalUUID = uuid;
+      updateModalContent(uuid);
+      document.getElementById('detail-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      activeModalUUID = null;
+      document.getElementById('detail-modal').style.display = 'none';
+    }
+
+    function updateModalContent(uuid) {
+      const n = nodesList.find(x => x.uuid === uuid);
+      if (!n) return;
+      const r = liveRecords[uuid] || {};
+
+      document.getElementById('m-ticker').innerText = getTicker(n);
+      document.getElementById('m-hostname').innerText = n.name;
+      document.getElementById('m-region').innerText = `${getFlag(n.region)} ${n.region || 'GLOBAL'}`;
+
+      document.getElementById('m-spec-cpu').innerText = `${n.cpu_count || 1} vCPU • ${((n.cpu_name || '').slice(0, 18)) || 'x86_64'}`;
+      document.getElementById('m-spec-ram').innerText = formatBytes((r.ram && r.ram.total) || (n.memory_total || 0));
+      document.getElementById('m-spec-os').innerText = `${n.os || 'Linux'} / ${n.arch || 'amd64'}`;
+      document.getElementById('m-spec-uptime').innerText = formatUptime(r.uptime);
+
+      const isOnline = r.online !== false;
+      document.getElementById('m-status-badge').className = `badge ${isOnline ? 'badge-trading' : 'badge-halted'}`;
+      document.getElementById('m-status-badge').innerText = isOnline ? 'TRADING' : 'HALTED';
+
+      // Traffic
+      const net = r.network || {};
+      document.getElementById('m-net-rx').innerText = formatSpeed(net.down || 0);
+      document.getElementById('m-net-tx').innerText = formatSpeed(net.up || 0);
+      document.getElementById('m-net-total-rx').innerText = formatBytes(net.totalDown || 0);
+      document.getElementById('m-net-total-tx').innerText = formatBytes(net.totalUp || 0);
+
+      const conn = r.connections || {};
+      document.getElementById('m-tcp-conn').innerText = (conn.tcp !== undefined ? conn.tcp : '-');
+      document.getElementById('m-udp-conn').innerText = (conn.udp !== undefined ? conn.udp : '-');
+
+      // Candlesticks simulation
+      const currentCpu = (r.cpu && r.cpu.usage) || 0;
+      document.getElementById('m-candlestick-quote').innerText = `LAST: ${currentCpu.toFixed(1)}%`;
+      const container = document.getElementById('m-candles');
+      let html = '';
+      for (let i = 0; i < 28; i++) {
+        const val = Math.max(5, Math.min(95, currentCpu + (Math.sin(i * 0.5) * 15) + (Math.random() * 8 - 4)));
+        const isUp = (i % 2 === 0);
+        const col = isUp ? '#10b981' : '#f43f5e';
+        html += `
+          <div style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;">
+            <div style="width: 1px; height: ${val + 10}px; background: #475569;"></div>
+            <div style="width: 6px; height: ${val}px; background: ${col}; border-radius: 1px;"></div>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    // Live Clock
+    setInterval(() => {
+      const now = new Date();
+      const timeStr = now.toISOString().slice(11, 19);
+      const el = document.getElementById('utc-clock');
+      if (el) {
+        el.style.display = 'inline';
+        el.innerText = `UTC ${timeStr} • ACTIVE`;
+      }
+    }, 1000);
+
+    // Search filter event
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim();
+      renderViews();
+    });
+
+    // Main Init
+    async function init() {
+      await loadPublicConfig();
+      await loadNodes();
+      await pollLiveStatus();
+      
+      const intervalSec = themeSettings.refresh_interval || 3;
+      setInterval(pollLiveStatus, Math.max(1, intervalSec) * 1000);
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

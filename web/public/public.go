@@ -16,7 +16,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
-//go:embed defaultTheme
+//go:embed defaultTheme nasdaqTheme
 var PublicFS embed.FS
 
 // 常量定义
@@ -110,11 +110,11 @@ func isSafePath(basePath, targetPath string) bool {
 // Static 注册静态资源和 SPA 路由处理
 func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	// 初始化嵌入式文件系统，指向 defaultTheme 根目录
-	// 假设 defaultTheme 内部结构也是: dist/, theme.json 等
 	defaultThemeFS, err := fs.Sub(PublicFS, "defaultTheme")
 	if err != nil {
 		panic("you may forget to put dist of frontend to web/public/defaultTheme/dist")
 	}
+	nasdaqThemeFS, _ := fs.Sub(PublicFS, "nasdaqTheme")
 
 	getConfig := func() map[string]any {
 		cfg, _ := config.GetMany(map[string]any{
@@ -147,14 +147,25 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			}
 
 			localPath := filepath.Join(themeBasePath, cleanPath)
-			// 检查文件是否存在且不是目录
+			// 检查本地自定义文件是否存在且不是目录
 			if info, err := os.Stat(localPath); err == nil && !info.IsDir() {
 				content, err := os.ReadFile(localPath)
 				if err == nil {
 					return content, mime.TypeByExtension(filepath.Ext(localPath)), true
 				}
 			}
-			// 本地文件不存在，或读取失败 -> 继续向下回退
+
+			// 如果是内置 nasdaq 主题，未在本地自定义时回退读取嵌入文件
+			if themeID == "nasdaq" && nasdaqThemeFS != nil {
+				embedPath := filepath.ToSlash(cleanPath)
+				if !strings.Contains(embedPath, "..") {
+					if content, err := fs.ReadFile(nasdaqThemeFS, embedPath); err == nil {
+						return content, mime.TypeByExtension(filepath.Ext(embedPath)), true
+					}
+				}
+			}
+
+			// 本地文件不存在，或读取失败 -> 继续向下回退到 defaultTheme
 		}
 
 		// 2. 尝试从嵌入式 defaultTheme/{cleanPath} 读取

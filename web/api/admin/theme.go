@@ -87,20 +87,44 @@ func ListThemes(c *gin.Context) {
 	}
 
 	var themes []models.Theme
+	seen := make(map[string]bool)
+
+	// 内置默认主题
 	defaultTheme, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
 	if err == nil {
 		dt := models.Theme{}
-		err := json.Unmarshal(defaultTheme, &dt)
-		if err == nil {
+		if err := json.Unmarshal(defaultTheme, &dt); err == nil {
 			themes = append(themes, dt)
+			seen[dt.Short] = true
 		}
-
 	}
+
+	// 内置纳斯达克金融交易主题
+	nasdaqTheme, err := public.PublicFS.ReadFile("nasdaqTheme/komari-theme.json")
+	if err == nil {
+		nt := models.Theme{}
+		if err := json.Unmarshal(nasdaqTheme, &nt); err == nil && !seen[nt.Short] {
+			themes = append(themes, nt)
+			seen[nt.Short] = true
+		}
+	}
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			themeConfigPath := filepath.Join(dataDir, entry.Name(), "komari-theme.json")
 			if themeInfo, err := loadThemeConfig(themeConfigPath); err == nil {
-				themes = append(themes, themeInfo)
+				if seen[themeInfo.Short] {
+					// 外部自定义目录覆盖内置配置
+					for i, t := range themes {
+						if t.Short == themeInfo.Short {
+							themes[i] = themeInfo
+							break
+						}
+					}
+				} else {
+					themes = append(themes, themeInfo)
+					seen[themeInfo.Short] = true
+				}
 			}
 		}
 	}
@@ -119,8 +143,8 @@ func DeleteTheme(c *gin.Context) {
 		return
 	}
 
-	if req.Short == "default" {
-		api.RespondError(c, http.StatusBadRequest, "默认主题不能删除")
+	if req.Short == "default" || req.Short == "nasdaq" {
+		api.RespondError(c, http.StatusBadRequest, "系统内置主题不能删除")
 		return
 	}
 
@@ -149,8 +173,8 @@ func SetTheme(c *gin.Context) {
 		return
 	}
 
-	// 如果不是default主题，检查主题是否存在
-	if themeName != "default" {
+	// 如果是内置主题（default 或 nasdaq），无需检查外部目录
+	if themeName != "default" && themeName != "nasdaq" {
 		themeDir := filepath.Join("./data/theme", themeName)
 		themeConfigPath := filepath.Join(themeDir, "komari-theme.json")
 
