@@ -99,6 +99,16 @@ func ListThemes(c *gin.Context) {
 		}
 	}
 
+	// 内置纳斯达克金融股票主题 (基于 Komari Next 现代架构打造)
+	nasdaqTheme, err := public.PublicFS.ReadFile("nasdaqTheme/komari-theme.json")
+	if err == nil {
+		nt := models.Theme{}
+		if err := json.Unmarshal(nasdaqTheme, &nt); err == nil && !seen[nt.Short] {
+			themes = append(themes, nt)
+			seen[nt.Short] = true
+		}
+	}
+
 	// 内置 Next 现代主题
 	nextTheme, err := public.PublicFS.ReadFile("nextTheme/komari-theme.json")
 	if err == nil {
@@ -143,7 +153,7 @@ func DeleteTheme(c *gin.Context) {
 		return
 	}
 
-	if req.Short == "default" || req.Short == "next" {
+	if req.Short == "default" || req.Short == "nasdaq" || req.Short == "next" {
 		api.RespondError(c, http.StatusBadRequest, "系统内置主题不能删除")
 		return
 	}
@@ -173,8 +183,8 @@ func SetTheme(c *gin.Context) {
 		return
 	}
 
-	// 如果是内置主题（default 或 next），无需检查外部目录
-	if themeName != "default" && themeName != "next" {
+	// 如果是内置主题（default, nasdaq 或 next），无需检查外部目录
+	if themeName != "default" && themeName != "nasdaq" && themeName != "next" {
 		themeDir := filepath.Join("./data/theme", themeName)
 		themeConfigPath := filepath.Join(themeDir, "komari-theme.json")
 

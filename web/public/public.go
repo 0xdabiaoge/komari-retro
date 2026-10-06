@@ -16,7 +16,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
-//go:embed defaultTheme all:nextTheme
+//go:embed defaultTheme all:nasdaqTheme all:nextTheme
 var PublicFS embed.FS
 
 // 常量定义
@@ -143,6 +143,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	if err != nil {
 		panic("you may forget to put dist of frontend to web/public/defaultTheme/dist")
 	}
+	nasdaqThemeFS, _ := fs.Sub(PublicFS, "nasdaqTheme")
 	nextThemeFS, _ := fs.Sub(PublicFS, "nextTheme")
 
 	getConfig := func() map[string]any {
@@ -185,6 +186,20 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 						mimeType = getFallbackMimeType(localPath)
 					}
 					return content, mimeType, true
+				}
+			}
+
+			// 如果是内置 nasdaq 金融主题，未在本地自定义时回退读取嵌入文件
+			if themeID == "nasdaq" && nasdaqThemeFS != nil {
+				embedPath := filepath.ToSlash(cleanPath)
+				if !strings.Contains(embedPath, "..") {
+					if content, err := fs.ReadFile(nasdaqThemeFS, embedPath); err == nil {
+						mimeType := mime.TypeByExtension(filepath.Ext(embedPath))
+						if mimeType == "" {
+							mimeType = getFallbackMimeType(embedPath)
+						}
+						return content, mimeType, true
+					}
 				}
 			}
 
