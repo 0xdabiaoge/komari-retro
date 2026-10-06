@@ -169,7 +169,7 @@ const AdminPanelBar = ({ content, onboardingReady = false }: AdminPanelBarProps)
           t("theme.manage_with_name", {
             name: currentTheme === "default" ? "" : currentTheme,
           });
-        const icon: string = cfg.icon || "Palette"; // fallback icon
+        const icon: string = cfg.icon || "Settings2"; // fallback icon for theme settings
         const item: ExtendedMenuItem = {
           labelKey: rawLabel,
           rawLabel,
@@ -331,10 +331,26 @@ const AdminPanelBar = ({ content, onboardingReady = false }: AdminPanelBarProps)
   // 主题配置和插件注入页面分别作为“主题”“插件”主菜单的二级菜单。
   const mergedBaseMenuItems: ExtendedMenuItem[] = useMemo(() => {
     return baseMenuItems.map((item) => {
-      if (item.labelKey === "theme.menu" && extraMenuItems.length > 0) {
+      if (item.labelKey === "theme.menu") {
+        const baseChildren =
+          item.children && item.children.length > 0
+            ? item.children
+            : [
+                {
+                  labelKey: "theme.title",
+                  path: "/admin/themes",
+                  icon: "Palette",
+                },
+              ];
+        if (extraMenuItems.length > 0) {
+          return {
+            ...item,
+            children: [...baseChildren, ...extraMenuItems],
+          };
+        }
         return {
           ...item,
-          children: [...(item.children || []), ...extraMenuItems],
+          children: baseChildren,
         };
       }
       if (item.labelKey === "plugin.title" && pluginMenuItems.length > 0) {

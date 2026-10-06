@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Flex, Heading, Callout, Button } from "@radix-ui/themes";
+import { Palette } from "lucide-react";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import ConfigFormTabs from "@/components/admin/ConfigFormTabs";
 import { toast } from "sonner";
@@ -38,6 +40,7 @@ interface ThemeConfigResponse {
 }
 
 const ThemeManaged: React.FC = () => {
+  const navigate = useNavigate();
   const { publicInfo, refresh } = usePublicInfo();
   const theme = publicInfo?.theme;
   const themeSettings = publicInfo?.theme_settings || {}; // 当前值
@@ -183,13 +186,31 @@ const ThemeManaged: React.FC = () => {
                     })
                   : t("theme.title")}
               </Heading>
-              <Button onClick={saveAll} disabled={saving}>
-                {t("common.save")}
-              </Button>
+              <Flex gap="2" align="center">
+                <Button
+                  variant="soft"
+                  onClick={() => navigate("/admin/themes")}
+                  className="gap-2"
+                >
+                  <Palette size={16} />
+                  {t("theme.title")}
+                </Button>
+                <Button onClick={saveAll} disabled={saving}>
+                  {t("common.save")}
+                </Button>
+              </Flex>
             </Flex>
           }
           footer={
-            <Flex className="mt-4">
+            <Flex className="mt-4" justify="between" align="center">
+              <Button
+                variant="soft"
+                onClick={() => navigate("/admin/themes")}
+                className="gap-2"
+              >
+                <Palette size={16} />
+                {t("theme.title")}
+              </Button>
               <Button onClick={saveAll} disabled={saving}>
                 {t("common.save")}
               </Button>
@@ -197,13 +218,23 @@ const ThemeManaged: React.FC = () => {
           }
         />
       ) : (
-        <Heading size="4">
-          {theme
-            ? t("theme.manage_with_name", {
-                name: theme === "default" ? "" : theme,
-              })
-            : t("theme.title")}
-        </Heading>
+        <Flex justify="between" align="center" wrap="wrap" gap="3">
+          <Heading size="4">
+            {theme
+              ? t("theme.manage_with_name", {
+                  name: theme === "default" ? "" : theme,
+                })
+              : t("theme.title")}
+          </Heading>
+          <Button
+            variant="soft"
+            onClick={() => navigate("/admin/themes")}
+            className="gap-2"
+          >
+            <Palette size={16} />
+            {t("theme.title")}
+          </Button>
+        </Flex>
       )}
     </Flex>
   );

@@ -63,7 +63,14 @@
     {
       "labelKey": "theme.menu",
       "path": "/admin/themes",
-      "icon": "Palette"
+      "icon": "Palette",
+      "children": [
+        {
+          "labelKey": "theme.title",
+          "path": "/admin/themes",
+          "icon": "Palette"
+        }
+      ]
     },
     {
       "labelKey": "system.title",
