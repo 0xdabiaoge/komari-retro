@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
+import { authorizeSensitiveAccess } from "@/lib/sensitive";
 import {
   SettingCardButton,
   SettingCardCollapse,
@@ -15,7 +16,8 @@ import Loading from "@/components/loading";
 import { DownloadIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import UploadDialog from "@/components/UploadDialog";
-import { createChunkUploadTask, type ChunkUploadTask } from "@/lib/chunkUpload";
+import type { ChunkUploadTask } from "@/lib/chunkUpload";
+import { createBackupUploadTask } from "@/lib/backupUpload";
 
 export default function SiteSettings() {
   const { t } = useTranslation();
@@ -38,7 +40,7 @@ export default function SiteSettings() {
 
     setRestoring(true);
     setRestoreProgress(0);
-    const task = createChunkUploadTask("/api/admin/upload");
+    const task = createBackupUploadTask();
     restoreTaskRef.current = task;
     try {
       await task.upload("backup", file, setRestoreProgress);
@@ -306,12 +308,7 @@ export default function SiteSettings() {
                 <div className="flex flex-row w-full gap-2">
                   <Button
                     onClick={async () => {
-                      const chars =
-                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-                      let key = "";
-                      for (let i = 0; i < 8; i++) {
-                        key += chars.charAt(Math.floor(Math.random() * chars.length));
-                      }
+                      const key = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, "0")).join("");
                       await updateSettingsWithToast(
                         { permanent_share_token: key },
                         t,
@@ -406,12 +403,7 @@ export default function SiteSettings() {
                 <div className="flex flex-row w-full gap-2">
                   <Button
                     onClick={async () => {
-                      const chars =
-                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-                      let key = "";
-                      for (let i = 0; i < 8; i++) {
-                        key += chars.charAt(Math.floor(Math.random() * chars.length));
-                      }
+                      const key = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, "0")).join("");
                       const validHours = Math.max(1, shareHours);
                       await updateSettingsWithToast(
                         {
@@ -595,8 +587,9 @@ export default function SiteSettings() {
       <SettingCardIconButton
         title={t("settings.site.backup_download")}
         description={t("settings.site.backup_download_description")}
-        onClick={() => {
-          window.open("/api/admin/download/backup", "_blank");
+        onClick={async () => {
+          try { await authorizeSensitiveAccess(); window.location.assign("/api/admin/download/backup"); }
+          catch (error) { toast.error(String(error)); }
         }}
         className="km-setting-card"
       >

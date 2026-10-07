@@ -22,8 +22,8 @@ const steps: Partial<Record<GuideId, GuideStep[]>> = {
     { target: nav("/admin/notification/general"), title: "onboarding.notifications.rules_title", description: "onboarding.notifications.rules_description" },
   ],
   markets: [
-    { target: nav("/admin/market/themes"), title: "onboarding.markets.title", description: "onboarding.markets.description" },
-    { target: nav("/admin/market/plugins"), title: "onboarding.markets.plugins_title", description: "onboarding.markets.plugins_description" },
+    { target: nav("/admin/themes"), title: "onboarding.markets.title", description: "onboarding.markets.description" },
+    { target: nav("/admin/plugins"), title: "onboarding.markets.plugins_title", description: "onboarding.markets.plugins_description" },
   ],
 };
 

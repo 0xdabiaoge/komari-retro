@@ -102,6 +102,33 @@ func TestSendDownloadStreamUsesRawHTTPBody(t *testing.T) {
 	}
 }
 
+func TestSendDownloadStreamAboveOld128MiBLimit(t *testing.T) {
+	const size = int64(129 << 20)
+	file, err := os.CreateTemp(t.TempDir(), "large-stream-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = file.Truncate(size); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	file.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count, err := io.Copy(io.Discard, r.Body)
+		if err != nil || count != size || r.ContentLength != size {
+			t.Errorf("stream count=%d length=%d error=%v", count, r.ContentLength, err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"status":"ok"}`)
+	}))
+	defer server.Close()
+	preserveAgentConfig(t, server.URL)
+	_, err = sendDownloadStream(map[string]interface{}{"path": file.Name(), "offset": int64(0), "length": size, "file_size": size, "transfer_id": "large", "transfer_token": "isolated"})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestFileStreamClientUsesHTTP11(t *testing.T) {
 	client := fileStreamHTTPClient()
 	transport, ok := client.Transport.(*http.Transport)

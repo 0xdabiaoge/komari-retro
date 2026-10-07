@@ -1,59 +1,40 @@
 package terminal
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/web/api"
+	"github.com/komari-monitor/komari/web/connection"
+	"net/http"
 )
 
 func EstablishConnection(c *gin.Context) {
-	session_id := c.Query("id")
+	id := c.Query("id")
 	TerminalSessionsMutex.Lock()
-	session, exists := TerminalSessions[session_id]
+	session := TerminalSessions[id]
+	valid := session != nil && session.Browser != nil && session.Agent == nil && c.GetString("client_uuid") == session.UUID
 	TerminalSessionsMutex.Unlock()
-	if !exists || session == nil || session.Browser == nil {
-		c.JSON(404, gin.H{"status": "error", "error": "Session not found"})
+	if !valid {
+		c.JSON(http.StatusConflict, gin.H{"error": "Terminal session unavailable or client mismatch"})
 		return
 	}
-
-	// 验证被控端客户端身份，必须与申请建立终端的主机 UUID 完全一致 (防冒充劫持)
-	if clientUUID, ok := c.Get("client_uuid"); ok {
-		if uuidStr, ok := clientUUID.(string); ok && uuidStr != "" && uuidStr != session.UUID {
-			c.JSON(http.StatusForbidden, gin.H{"status": "error", "error": "Client identity does not match terminal session"})
-			return
-		}
-	}
-
-	// Upgrade the connection to WebSocket
 	if !api.IsWebSocketUpgrade(c) {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Require WebSocket upgrade"})
+		c.Status(http.StatusBadRequest)
 		return
 	}
-	conn, err := api.UpgradeWebSocket(c)
+	raw, err := api.UpgradeWebSocket(c)
 	if err != nil {
-		TerminalSessionsMutex.Lock()
-		if session.Browser != nil {
-			session.Browser.Close()
-		}
-		delete(TerminalSessions, session_id)
-		TerminalSessionsMutex.Unlock()
 		return
 	}
-
+	raw.SetReadLimit(1 << 20)
+	raw.SetCloseHandler(func(int, string) error { closeTerminal(id); return nil })
+	agent := connection.NewSafeConn(raw)
 	TerminalSessionsMutex.Lock()
-	session.Agent = conn
-	TerminalSessionsMutex.Unlock()
-
-	conn.SetCloseHandler(func(code int, text string) error {
-		TerminalSessionsMutex.Lock()
-		delete(TerminalSessions, session_id)
+	if TerminalSessions[id] != session || session.Agent != nil {
 		TerminalSessionsMutex.Unlock()
-		// 通知 Browser 关闭终端连接
-		if session.Browser != nil {
-			session.Browser.Close()
-		}
-		return nil
-	})
-	go ForwardTerminal(session_id)
+		agent.Close()
+		return
+	}
+	session.Agent = agent
+	TerminalSessionsMutex.Unlock()
+	go ForwardTerminal(id)
 }

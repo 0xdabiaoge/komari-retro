@@ -1,10 +1,12 @@
 package public
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,14 +36,19 @@ type loginAttemptInfo struct {
 var (
 	loginAttemptsMu sync.Mutex
 	loginAttempts   = make(map[string]*loginAttemptInfo)
+	lastLoginPrune  time.Time
 )
 
 func checkLoginRateLimit(ip string) error {
 	loginAttemptsMu.Lock()
 	defer loginAttemptsMu.Unlock()
+	pruneLoginAttemptsLocked(time.Now())
 
 	info, exists := loginAttempts[ip]
 	if !exists {
+		if len(loginAttempts) >= 10000 {
+			return fmt.Errorf("Login rate-limit capacity exceeded; try again later")
+		}
 		return nil
 	}
 	if time.Now().Before(info.lockedUntil) {
@@ -57,9 +64,13 @@ func checkLoginRateLimit(ip string) error {
 func recordLoginFailure(ip string) {
 	loginAttemptsMu.Lock()
 	defer loginAttemptsMu.Unlock()
+	pruneLoginAttemptsLocked(time.Now())
 
 	info, exists := loginAttempts[ip]
 	if !exists {
+		if len(loginAttempts) >= 10000 {
+			return
+		}
 		info = &loginAttemptInfo{}
 		loginAttempts[ip] = info
 	}
@@ -74,6 +85,18 @@ func recordLoginSuccess(ip string) {
 	loginAttemptsMu.Lock()
 	defer loginAttemptsMu.Unlock()
 	delete(loginAttempts, ip)
+}
+
+func pruneLoginAttemptsLocked(now time.Time) {
+	if now.Sub(lastLoginPrune) <= time.Minute {
+		return
+	}
+	for key, entry := range loginAttempts {
+		if now.Sub(entry.lastAttempt) > 15*time.Minute && now.After(entry.lockedUntil) {
+			delete(loginAttempts, key)
+		}
+	}
+	lastLoginPrune = now
 }
 
 func setSessionCookie(c *gin.Context, value string, maxAge int) {
@@ -116,10 +139,21 @@ func Login(c *gin.Context) {
 		api.RespondError(c, http.StatusBadRequest, "Invalid request body: Username and password are required")
 		return
 	}
+	if len(data.Username) > 255 || len(data.Password) > 4096 || len(data.TwoFa) > 64 {
+		api.RespondError(c, 400, "Invalid credential length")
+		return
+	}
+	accountHash := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(data.Username))))
+	accountKey := fmt.Sprintf("account:%x", accountHash)
+	if err := checkLoginRateLimit(accountKey); err != nil {
+		api.RespondError(c, 429, err.Error())
+		return
+	}
 
 	uuid, success := accounts.CheckPassword(data.Username, data.Password)
 	if !success {
 		recordLoginFailure(clientIP)
+		recordLoginFailure(accountKey)
 		api.RespondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
@@ -127,16 +161,20 @@ func Login(c *gin.Context) {
 	user, _ := accounts.GetUserByUUID(uuid)
 	if user.TwoFactor != "" { // 开启了2FA
 		if data.TwoFa == "" {
+			recordLoginFailure(clientIP)
+			recordLoginFailure(accountKey)
 			api.RespondError(c, http.StatusUnauthorized, "2FA code is required")
 			return
 		}
 		if ok, err := accounts.Verify2Fa(uuid, data.TwoFa); err != nil || !ok {
 			recordLoginFailure(clientIP)
+			recordLoginFailure(accountKey)
 			api.RespondError(c, http.StatusUnauthorized, "Invalid 2FA code")
 			return
 		}
 	}
 	recordLoginSuccess(clientIP)
+	recordLoginSuccess(accountKey)
 	// Create session
 	session, err := accounts.CreateSession(uuid, sessionCookieMaxAge, c.Request.UserAgent(), c.ClientIP(), "password")
 	if err != nil {

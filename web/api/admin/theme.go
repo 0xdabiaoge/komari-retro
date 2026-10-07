@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
+	"github.com/komari-monitor/komari/pkg/archiveutil"
 	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/web/api"
 	"github.com/komari-monitor/komari/web/public"
@@ -99,28 +100,8 @@ func ListThemes(c *gin.Context) {
 		}
 	}
 
-	// 内置纳斯达克金融股票主题 (基于 Komari Next 现代架构打造)
-	nasdaqTheme, err := public.PublicFS.ReadFile("nasdaqTheme/komari-theme.json")
-	if err == nil {
-		nt := models.Theme{}
-		if err := json.Unmarshal(nasdaqTheme, &nt); err == nil && !seen[nt.Short] {
-			themes = append(themes, nt)
-			seen[nt.Short] = true
-		}
-	}
-
-	// 内置 Next 现代主题
-	nextTheme, err := public.PublicFS.ReadFile("nextTheme/komari-theme.json")
-	if err == nil {
-		nt := models.Theme{}
-		if err := json.Unmarshal(nextTheme, &nt); err == nil && !seen[nt.Short] {
-			themes = append(themes, nt)
-			seen[nt.Short] = true
-		}
-	}
-
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") && !strings.EqualFold(entry.Name(), "next") && !strings.EqualFold(entry.Name(), "nasdaq") {
 			themeConfigPath := filepath.Join(dataDir, entry.Name(), "komari-theme.json")
 			if themeInfo, err := loadThemeConfig(themeConfigPath); err == nil {
 				if seen[themeInfo.Short] {
@@ -153,7 +134,7 @@ func DeleteTheme(c *gin.Context) {
 		return
 	}
 
-	if req.Short == "default" || req.Short == "nasdaq" || req.Short == "next" {
+	if !isValidThemeShort(req.Short) {
 		api.RespondError(c, http.StatusBadRequest, "系统内置主题不能删除")
 		return
 	}
@@ -183,8 +164,12 @@ func SetTheme(c *gin.Context) {
 		return
 	}
 
-	// 如果是内置主题（default, nasdaq 或 next），无需检查外部目录
-	if themeName != "default" && themeName != "nasdaq" && themeName != "next" {
+	if themeName != "default" && !isValidThemeShort(themeName) {
+		api.RespondError(c, 400, "Invalid theme name")
+		return
+	}
+	// 默认主题无需检查外部目录
+	if themeName != "default" {
 		themeDir := filepath.Join("./data/theme", themeName)
 		themeConfigPath := filepath.Join(themeDir, "komari-theme.json")
 
@@ -233,7 +218,10 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 	}
 	defer rc.Close()
 
-	configData, err := io.ReadAll(rc)
+	configData, err := io.ReadAll(io.LimitReader(rc, 1<<20))
+	if themeConfigFile.UncompressedSize64 > 1<<20 {
+		return themeInfo, fmt.Errorf("theme metadata exceeds 1 MiB")
+	}
 	if err != nil {
 		return themeInfo, fmt.Errorf("读取主题配置失败: %v", err)
 	}
@@ -248,7 +236,7 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 	}
 
 	// 验证Short字段格式（只允许字母、数字、下划线、连字符）
-	if !isValidThemeShort(themeInfo.Short) {
+	if !isValidThemeShort(themeInfo.Short) || themeInfo.Short == "next" || themeInfo.Short == "nasdaq" {
 		return themeInfo, fmt.Errorf("主题short字段格式无效，只允许字母、数字、下划线和连字符")
 	}
 
@@ -256,58 +244,25 @@ func extractAndValidateTheme(zipPath string) (models.Theme, error) {
 		return themeInfo, err
 	}
 
-	// 创建主题目录
-	themeDir := filepath.Join("./data/theme", themeInfo.Short)
-
-	// 如果目录已存在，先删除
-	if _, err := os.Stat(themeDir); err == nil {
-		if err := os.RemoveAll(themeDir); err != nil {
-			return themeInfo, fmt.Errorf("删除原有主题失败: %v", err)
+	base := "./data/theme"
+	if err := os.MkdirAll(base, 0755); err != nil {
+		return themeInfo, err
+	}
+	staged, err := os.MkdirTemp(base, ".staged-")
+	if err != nil {
+		return themeInfo, err
+	}
+	defer os.RemoveAll(staged)
+	if err = archiveutil.Extract(zipPath, staged, archiveutil.ThemeLimits); err != nil {
+		return themeInfo, err
+	}
+	if themeInfo.ConfigurationType() == models.ThemeConfigurationManaged {
+		if entry, statErr := os.Stat(filepath.Join(staged, "dist", "index.html")); statErr != nil || entry.IsDir() {
+			return themeInfo, fmt.Errorf("theme entry point missing")
 		}
 	}
-
-	if err := os.MkdirAll(themeDir, 0755); err != nil {
-		return themeInfo, fmt.Errorf("创建主题目录失败: %v", err)
-	}
-
-	// 解压文件到主题目录
-	for _, f := range r.File {
-		path := filepath.Join(themeDir, f.Name)
-
-		// 安全检查，防止路径遍历攻击
-		if !strings.HasPrefix(path, filepath.Clean(themeDir)+string(os.PathSeparator)) {
-			continue
-		}
-
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.FileInfo().Mode())
-			continue
-		}
-
-		// 创建目录
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			return themeInfo, fmt.Errorf("创建目录失败: %v", err)
-		}
-
-		// 解压文件
-		rc, err := f.Open()
-		if err != nil {
-			return themeInfo, fmt.Errorf("打开压缩文件失败: %v", err)
-		}
-
-		outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.FileInfo().Mode())
-		if err != nil {
-			rc.Close()
-			return themeInfo, fmt.Errorf("创建文件失败: %v", err)
-		}
-
-		_, err = io.Copy(outFile, rc)
-		outFile.Close()
-		rc.Close()
-
-		if err != nil {
-			return themeInfo, fmt.Errorf("解压文件失败: %v", err)
-		}
+	if _, err = archiveutil.Activate(staged, filepath.Join(base, themeInfo.Short)); err != nil {
+		return themeInfo, err
 	}
 
 	return themeInfo, nil
@@ -331,7 +286,7 @@ func loadThemeConfig(configPath string) (models.Theme, error) {
 
 // isValidThemeShort 验证主题short字段格式
 func isValidThemeShort(short string) bool {
-	if short == "" || short == "default" {
+	if short == "" || strings.EqualFold(short, "default") || strings.EqualFold(short, "next") || strings.EqualFold(short, "nasdaq") || len(short) > 64 {
 		return false
 	}
 
@@ -413,7 +368,10 @@ func downloadThemeFromURL(rawURL string) ([]byte, error) {
 	}
 
 	// 限制读取最大 50MB，防止 Zip 炸弹或无限流 DoS
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 50*1024*1024))
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 50*1024*1024+1))
+	if len(data) > 50*1024*1024 {
+		return nil, fmt.Errorf("theme archive exceeds 50 MiB")
+	}
 	if err != nil {
 		return nil, fmt.Errorf("读取主题文件内容失败: %v", err)
 	}
@@ -729,7 +687,10 @@ func peekThemeFromZip(zipPath string) (models.Theme, error) {
 	}
 	defer rc.Close()
 
-	configData, err := io.ReadAll(rc)
+	if themeConfigFile.UncompressedSize64 > 1<<20 {
+		return themeInfo, fmt.Errorf("theme metadata exceeds 1 MiB")
+	}
+	configData, err := io.ReadAll(io.LimitReader(rc, 1<<20))
 	if err != nil {
 		return themeInfo, fmt.Errorf("读取主题配置失败: %v", err)
 	}

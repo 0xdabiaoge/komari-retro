@@ -30,6 +30,12 @@ func IdentityMiddleware() gin.HandlerFunc {
 		// 1. API Key 认证
 		apiKey := c.GetHeader("Authorization")
 		if isApiKeyValid(apiKey) {
+			scope, _ := config.GetAs[string](config.ApiKeyScopeKey, "full")
+			if scope != "full" && strings.HasPrefix(c.Request.URL.Path, "/api/admin") {
+				RespondError(c, http.StatusForbidden, "Read-only API key cannot access administration")
+				c.Abort()
+				return
+			}
 			c.Set("role", RoleAdmin)
 			c.Set("api_key", apiKey[7:])
 			c.Set("uuid", "00000000-0000-0000-0000-000000000000") // API Key
@@ -40,12 +46,14 @@ func IdentityMiddleware() gin.HandlerFunc {
 		// 2. Session 认证
 		session, err := c.Cookie("session_token")
 		if err == nil && session != "" {
-			uuid, err := accounts.GetSession(session)
+			user, err := accounts.GetUserBySession(session)
 			if err == nil {
 				c.Set("role", RoleAdmin)
 				c.Set("session", session)
-				c.Set("uuid", uuid)
-				accounts.UpdateLatest(session, c.Request.UserAgent(), c.ClientIP())
+				c.Set("uuid", user.UUID)
+				if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+					accounts.UpdateLatest(session, c.Request.UserAgent(), c.ClientIP())
+				}
 				c.Next()
 				return
 			}
@@ -178,6 +186,11 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if strings.HasPrefix(path, "/api/preview/client/") {
+			c.Next()
+			return
+		}
+
 		// 5. 其余监控数据 API：持有有效临时分享许可时放行，否则 404
 		if hasTempAccess(c) {
 			c.Next()
@@ -235,7 +248,7 @@ func extractClientToken(c *gin.Context) string {
 		return strings.TrimSpace(clientToken)
 	}
 
-	if c.Request.Method != http.MethodGet {
+	if c.Request.Method != http.MethodGet && strings.Contains(c.GetHeader("Content-Type"), "application/json") {
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			return ""

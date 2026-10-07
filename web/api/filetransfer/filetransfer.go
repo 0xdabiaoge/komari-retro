@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -18,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/clients"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
+	"github.com/komari-monitor/komari/web/api"
 )
 
 const (
@@ -46,13 +48,14 @@ type previewTokenEntry struct {
 }
 
 type uploadSession struct {
-	UploadID   string    `json:"upload_id"`
-	UUID       string    `json:"uuid"`
-	Path       string    `json:"path"`
-	Size       int64     `json:"size"`
-	ChunkSize  int64     `json:"chunk_size"`
-	ChunkCount int64     `json:"chunk_count"`
-	CreatedAt  time.Time `json:"created_at"`
+	UploadID     string    `json:"upload_id"`
+	UUID         string    `json:"uuid"`
+	OwnerSession string    `json:"-"`
+	Path         string    `json:"path"`
+	Size         int64     `json:"size"`
+	ChunkSize    int64     `json:"chunk_size"`
+	ChunkCount   int64     `json:"chunk_count"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type transferBridge struct {
@@ -64,7 +67,13 @@ type transferBridge struct {
 	UploadBody    io.Reader
 	UploadLength  int64
 	Done          chan struct{}
+	DoneOnce      sync.Once
+	Claimed       bool
 }
+
+func (bridge *transferBridge) finish() { bridge.DoneOnce.Do(func() { close(bridge.Done) }) }
+
+var executeFileOperation = agent_runtime.ExecuteFileOperation
 
 var (
 	previewTokensMu  sync.RWMutex
@@ -103,6 +112,9 @@ func getBridge(id string) *transferBridge {
 func HandleFileTransfer(c *gin.Context) {
 	transferID := c.Param("id")
 	token := c.Query("token")
+	if token == "" {
+		token = strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+	}
 	transferToken := c.Query("transfer_token")
 
 	if transferToken == "" {
@@ -124,6 +136,14 @@ func HandleFileTransfer(c *gin.Context) {
 
 	if bridge.TransferToken != transferToken {
 		c.String(http.StatusForbidden, "invalid transfer token")
+		return
+	}
+	bridgesMu.Lock()
+	claimed := bridge.Claimed
+	bridge.Claimed = true
+	bridgesMu.Unlock()
+	if claimed {
+		c.String(http.StatusConflict, "transfer already attached")
 		return
 	}
 
@@ -151,9 +171,9 @@ func HandleFileTransfer(c *gin.Context) {
 		}
 		c.Status(http.StatusOK)
 		if bridge.UploadBody != nil {
-			_, _ = io.Copy(c.Writer, bridge.UploadBody)
+			_, _ = io.CopyN(c.Writer, bridge.UploadBody, bridge.UploadLength)
 		}
-		close(bridge.Done)
+		bridge.finish()
 	} else {
 		c.String(http.StatusBadRequest, "unsupported transfer direction")
 	}
@@ -228,7 +248,7 @@ func streamDownload(c *gin.Context, uuid, path string, inline bool, chunkSizeStr
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
-	statRaw, err := agent_runtime.ExecuteFileOperation(ctx, uuid, "stat", map[string]interface{}{"path": path})
+	statRaw, err := executeFileOperation(ctx, uuid, "stat", map[string]interface{}{"path": path})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Failed to stat file: %v", err)})
 		return
@@ -245,6 +265,28 @@ func streamDownload(c *gin.Context, uuid, path string, inline bool, chunkSizeStr
 		return
 	}
 
+	if stat.Size < 0 || stat.Size > 1<<40 {
+		c.JSON(400, gin.H{"message": "File exceeds the 1 TiB transfer limit"})
+		return
+	}
+	offset, length := int64(0), stat.Size
+	if rangeHeader := c.GetHeader("Range"); rangeHeader != "" {
+		var rangeErr error
+		offset, length, rangeErr = parseRange(rangeHeader, stat.Size)
+		if rangeErr != nil {
+			c.Header("Content-Range", fmt.Sprintf("bytes */%d", stat.Size))
+			c.Status(416)
+			return
+		}
+		c.Header("Content-Range", fmt.Sprintf("bytes %d-%d/%d", offset, offset+length-1, stat.Size))
+		c.Status(http.StatusPartialContent)
+	}
+	c.Header("Accept-Ranges", "bytes")
+	if stat.Size == 0 {
+		c.Header("Content-Length", "0")
+		c.Status(http.StatusOK)
+		return
+	}
 	chunkSize := defaultTransferChunkSize
 	if chunkSizeStr != "" {
 		if parsed, err := strconv.ParseInt(chunkSizeStr, 10, 64); err == nil && parsed >= minTransferChunkSize && parsed <= maxTransferChunkSize {
@@ -265,23 +307,31 @@ func streamDownload(c *gin.Context, uuid, path string, inline bool, chunkSizeStr
 	}
 	registerBridge(bridge)
 	defer removeBridge(transferID)
+	defer bridge.finish()
 
 	// Dispatch download_stream to agent
+	streamErrors := make(chan error, 1)
 	go func() {
-		streamCtx, streamCancel := context.WithTimeout(context.Background(), 2*time.Hour)
+		streamCtx, streamCancel := context.WithTimeout(c.Request.Context(), 2*time.Hour)
 		defer streamCancel()
-		_, _ = agent_runtime.ExecuteFileOperation(streamCtx, uuid, "download_stream", map[string]interface{}{
+		_, operationErr := executeFileOperation(streamCtx, uuid, "download_stream", map[string]interface{}{
 			"path":           path,
 			"transfer_id":    transferID,
 			"transfer_token": transferToken,
-			"offset":         int64(0),
-			"length":         stat.Size,
+			"offset":         offset,
+			"length":         length,
 			"file_size":      stat.Size,
 		})
+		if operationErr != nil {
+			streamErrors <- operationErr
+		}
 	}()
 
 	select {
 	case <-c.Request.Context().Done():
+		return
+	case streamErr := <-streamErrors:
+		c.JSON(http.StatusBadGateway, gin.H{"message": streamErr.Error()})
 		return
 	case <-time.After(30 * time.Second):
 		c.JSON(http.StatusGatewayTimeout, gin.H{"message": "Agent stream timeout"})
@@ -304,20 +354,22 @@ func streamDownload(c *gin.Context, uuid, path string, inline bool, chunkSizeStr
 		}
 
 		dispositionType := "attachment"
-		if inline {
+		if inline && (strings.HasPrefix(contentType, "image/") && contentType != "image/svg+xml" || contentType == "application/pdf" || strings.HasPrefix(contentType, "text/plain")) {
 			dispositionType = "inline"
 		}
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("Content-Security-Policy", "sandbox; default-src 'none'")
 
 		c.Header("Content-Type", contentType)
-		c.Header("Content-Length", strconv.FormatInt(stat.Size, 10))
-		c.Header("Content-Disposition", fmt.Sprintf(`%s; filename="%s"`, dispositionType, filename))
+		c.Header("Content-Length", strconv.FormatInt(length, 10))
+		c.Header("Content-Disposition", mime.FormatMediaType(dispositionType, map[string]string{"filename": filename}))
 		c.Header("X-Komari-Transfer-Chunk-Size", strconv.FormatInt(chunkSize, 10))
 		if !stat.ModifiedAt.IsZero() {
 			c.Header("Last-Modified", stat.ModifiedAt.UTC().Format(http.TimeFormat))
 		}
 
-		_, _ = io.Copy(c.Writer, stream)
-		close(bridge.Done)
+		_, _ = io.CopyN(c.Writer, stream, length)
+		bridge.finish()
 		return
 	}
 }
@@ -329,6 +381,10 @@ func HandleFileUpload(c *gin.Context) {
 
 	switch operation {
 	case "init", "start":
+		if err := api.VerifySensitive2FA(c); err != nil {
+			api.RespondError(c, 401, err.Error())
+			return
+		}
 		handleUploadInit(c, uuid)
 	case "chunk":
 		handleUploadChunk(c, uuid)
@@ -352,6 +408,11 @@ func handleUploadInit(c *gin.Context, uuid string) {
 		return
 	}
 
+	if body.Size < 0 || body.Size > 1<<40 || strings.TrimSpace(body.Path) == "" {
+		c.JSON(400, gin.H{"message": "invalid file size or path"})
+		return
+	}
+
 	chunkSize := body.ChunkSize
 	if chunkSize < minTransferChunkSize || chunkSize > maxTransferChunkSize {
 		chunkSize = defaultTransferChunkSize
@@ -363,7 +424,7 @@ func handleUploadInit(c *gin.Context, uuid string) {
 	if body.Size == 0 {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 		defer cancel()
-		_, err := agent_runtime.ExecuteFileOperation(ctx, uuid, "create", map[string]interface{}{"path": body.Path})
+		_, err := executeFileOperation(ctx, uuid, "create", map[string]interface{}{"path": body.Path})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("Failed to create file: %v", err)})
 			return
@@ -382,16 +443,22 @@ func handleUploadInit(c *gin.Context, uuid string) {
 	chunkCount := (body.Size + chunkSize - 1) / chunkSize
 
 	session := &uploadSession{
-		UploadID:   uploadID,
-		UUID:       uuid,
-		Path:       body.Path,
-		Size:       body.Size,
-		ChunkSize:  chunkSize,
-		ChunkCount: chunkCount,
-		CreatedAt:  time.Now(),
+		UploadID:     uploadID,
+		UUID:         uuid,
+		OwnerSession: c.GetString("session"),
+		Path:         body.Path,
+		Size:         body.Size,
+		ChunkSize:    chunkSize,
+		ChunkCount:   chunkCount,
+		CreatedAt:    time.Now(),
 	}
 
 	uploadSessionsMu.Lock()
+	if len(uploadSessions) >= 1024 {
+		uploadSessionsMu.Unlock()
+		c.JSON(http.StatusTooManyRequests, gin.H{"message": "Upload session capacity exceeded"})
+		return
+	}
 	uploadSessions[uploadID] = session
 	uploadSessionsMu.Unlock()
 
@@ -418,11 +485,15 @@ func handleUploadChunk(c *gin.Context, uuid string) {
 	session, exists := uploadSessions[uploadID]
 	uploadSessionsMu.RUnlock()
 
-	if !exists {
+	if !exists || session.UUID != uuid || session.OwnerSession != c.GetString("session") || time.Since(session.CreatedAt) > uploadSessionTTL {
 		c.JSON(http.StatusNotFound, gin.H{"message": "upload session not found or expired"})
 		return
 	}
 
+	if chunkIndex >= session.ChunkCount {
+		c.JSON(400, gin.H{"message": "chunk index out of range"})
+		return
+	}
 	offset := chunkIndex * session.ChunkSize
 	length := session.ChunkSize
 	if offset+length > session.Size {
@@ -437,12 +508,13 @@ func handleUploadChunk(c *gin.Context, uuid string) {
 		ClientUUID:    uuid,
 		TransferToken: transferToken,
 		Direction:     "upload",
-		UploadBody:    c.Request.Body,
+		UploadBody:    http.MaxBytesReader(c.Writer, c.Request.Body, length),
 		UploadLength:  length,
 		Done:          make(chan struct{}),
 	}
 	registerBridge(bridge)
 	defer removeBridge(transferID)
+	defer bridge.finish()
 
 	args := map[string]interface{}{
 		"path":           session.Path,
@@ -463,7 +535,7 @@ func handleUploadChunk(c *gin.Context, uuid string) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
 	defer cancel()
 
-	_, err = agent_runtime.ExecuteFileOperation(ctx, uuid, "upload_stream", args)
+	_, err = executeFileOperation(ctx, uuid, "upload_stream", args)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("upload chunk failed: %v", err)})
 		return
@@ -483,12 +555,10 @@ func handleUploadCommit(c *gin.Context, uuid string) {
 
 	uploadSessionsMu.Lock()
 	session, exists := uploadSessions[body.UploadID]
-	if exists {
-		delete(uploadSessions, body.UploadID)
-	}
+
 	uploadSessionsMu.Unlock()
 
-	if !exists {
+	if !exists || session.UUID != uuid || session.OwnerSession != c.GetString("session") || time.Since(session.CreatedAt) > uploadSessionTTL {
 		c.JSON(http.StatusNotFound, gin.H{"message": "upload session not found or expired"})
 		return
 	}
@@ -496,7 +566,7 @@ func handleUploadCommit(c *gin.Context, uuid string) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
-	_, err := agent_runtime.ExecuteFileOperation(ctx, uuid, "upload_commit", map[string]interface{}{
+	_, err := executeFileOperation(ctx, uuid, "upload_commit", map[string]interface{}{
 		"upload_id":   session.UploadID,
 		"path":        session.Path,
 		"total_size":  session.Size,
@@ -508,6 +578,9 @@ func handleUploadCommit(c *gin.Context, uuid string) {
 		return
 	}
 
+	uploadSessionsMu.Lock()
+	delete(uploadSessions, body.UploadID)
+	uploadSessionsMu.Unlock()
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"status": "ok"}})
 }
 
@@ -523,15 +596,91 @@ func handleUploadCancel(c *gin.Context, uuid string) {
 
 	if uploadID != "" {
 		uploadSessionsMu.Lock()
+		if entry := uploadSessions[uploadID]; entry != nil && (entry.UUID != uuid || entry.OwnerSession != c.GetString("session")) {
+			uploadSessionsMu.Unlock()
+			c.Status(404)
+			return
+		}
 		delete(uploadSessions, uploadID)
 		uploadSessionsMu.Unlock()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_, _ = agent_runtime.ExecuteFileOperation(ctx, uuid, "upload_cancel", map[string]interface{}{
+		_, _ = executeFileOperation(ctx, uuid, "upload_cancel", map[string]interface{}{
 			"upload_id": uploadID,
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"status": "ok"}})
+}
+
+func parseRange(header string, size int64) (int64, int64, error) {
+	invalid := errors.New("invalid byte range")
+	if !strings.HasPrefix(header, "bytes=") || strings.Contains(header, ",") || size <= 0 {
+		return 0, 0, invalid
+	}
+	parts := strings.Split(strings.TrimPrefix(header, "bytes="), "-")
+	if len(parts) != 2 {
+		return 0, 0, invalid
+	}
+	if parts[0] == "" {
+		n, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil || n <= 0 {
+			return 0, 0, invalid
+		}
+		if n > size {
+			n = size
+		}
+		return size - n, n, nil
+	}
+	start, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || start < 0 || start >= size {
+		return 0, 0, invalid
+	}
+	end := size - 1
+	if parts[1] != "" {
+		end, err = strconv.ParseInt(parts[1], 10, 64)
+		if err != nil || end < start {
+			return 0, 0, invalid
+		}
+		if end >= size {
+			end = size - 1
+		}
+	}
+	return start, end - start + 1, nil
+}
+
+func init() {
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for now := range ticker.C {
+			previewTokensMu.Lock()
+			for id, entry := range previewTokens {
+				if now.After(entry.ExpiresAt) {
+					delete(previewTokens, id)
+				}
+			}
+			previewTokensMu.Unlock()
+			uploadSessionsMu.Lock()
+			var expired []*uploadSession
+			for id, entry := range uploadSessions {
+				if now.Sub(entry.CreatedAt) > uploadSessionTTL {
+					expired = append(expired, entry)
+					delete(uploadSessions, id)
+				}
+			}
+			uploadSessionsMu.Unlock()
+			batchCtx, batchCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			for _, entry := range expired {
+				if batchCtx.Err() != nil {
+					break
+				}
+				ctx, cancel := context.WithTimeout(batchCtx, 5*time.Second)
+				_, _ = executeFileOperation(ctx, entry.UUID, "upload_cancel", map[string]interface{}{"upload_id": entry.UploadID, "path": entry.Path})
+				cancel()
+			}
+			batchCancel()
+		}
+	}()
 }

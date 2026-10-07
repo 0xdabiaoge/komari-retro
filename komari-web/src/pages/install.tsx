@@ -156,8 +156,9 @@ export default function Install() {
 
   if (ready === false)
     return (
-      <main className="km-page-install flex min-h-screen items-center justify-center p-6">
+      <main className="km-page-install flex min-h-screen flex-col gap-4 items-center justify-center p-6">
         <Text>{t("install.completed")}</Text>
+        <Button onClick={() => window.location.assign("/")}>{t("common.back", "返回")}</Button>
       </main>
     );
 

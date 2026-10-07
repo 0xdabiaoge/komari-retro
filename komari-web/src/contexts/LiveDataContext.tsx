@@ -34,6 +34,8 @@ const sameLiveRecord = (left: LiveRecord, right: LiveRecord) =>
   left.connections.tcp === right.connections.tcp &&
   left.connections.udp === right.connections.udp &&
   left.gpu?.average_usage === right.gpu?.average_usage &&
+  left.gpu?.count === right.gpu?.count &&
+  JSON.stringify(left.gpu?.detailed_info) === JSON.stringify(right.gpu?.detailed_info) &&
   Boolean(left.gpu) === Boolean(right.gpu) &&
   left.uptime === right.uptime &&
   left.process === right.process &&
@@ -77,10 +79,10 @@ const mergeLiveData = (
         tcp: record.connections ?? 0,
         udp: record.connections_udp ?? 0,
       },
-      gpu:
+      gpu: record.gpu_detail ?? (
         record.gpu !== undefined
           ? { count: 0, average_usage: record.gpu, detailed_info: [] }
-          : undefined,
+          : undefined),
       uptime: record.uptime ?? 0,
       process: record.process ?? 0,
       message: "",
@@ -148,6 +150,7 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     let timer: number | undefined;
     let stopped = false;
+    let failures = 0;
     let running = false; // 防抖：避免并发请求
     const refreshCallbacks = refreshCallbacksRef.current;
 
@@ -161,7 +164,7 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({
     const scheduleNext = () => {
       clearTimer();
       if (!stopped && !document.hidden) {
-        timer = window.setTimeout(fetchLatest, LIVE_DATA_INTERVAL_MS);
+        timer = window.setTimeout(fetchLatest, Math.min(30000,LIVE_DATA_INTERVAL_MS * 2 ** failures));
       }
     };
 
@@ -180,9 +183,11 @@ export const LiveDataProvider: React.FC<{ children: React.ReactNode }> = ({
           setLiveData(live);
           notifyRefreshCallbacks(live);
         }
+        failures = 0;
         setShowCallout(true);
       } catch (e) {
         if (stopped) return;
+        failures = Math.min(failures + 1,4);
         console.error("RPC2 获取最新状态失败:", e);
         setShowCallout(false);
       } finally {

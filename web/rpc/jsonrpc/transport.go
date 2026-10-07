@@ -73,8 +73,7 @@ func serveWebSocket(c *gin.Context) {
 	conn := connection.NewSafeConn(_conn)
 	defer conn.Close()
 
-	permissionGroup := detectPermissionGroup(c)
-	meta := buildContextMeta(c, permissionGroup)
+	_conn.SetReadLimit(1 << 20)
 	for {
 		var req rpc.JsonRpcRequest
 		if err := conn.ReadJSON(&req); err != nil {
@@ -92,12 +91,22 @@ func serveWebSocket(c *gin.Context) {
 			continue
 		}
 		// 同步写：SafeConn 内部有锁，串行写避免响应乱序与并发竞态。
-		conn.WriteJSON(Dispatch(context.Background(), meta, &req))
+		// Re-evaluate credentials for every message, including revocation/expiry.
+		meta := buildContextMeta(c, detectPermissionGroup(c))
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+		response := Dispatch(ctx, meta, &req)
+		cancel()
+		if req.ID == nil {
+			continue
+		}
+		if err := conn.WriteJSON(response); err != nil {
+			break
+		}
 	}
 }
 
 func servePost(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, rpc.ErrorResponse(nil, rpc.ParseError, "read body error", err.Error()))
 		return
@@ -107,15 +116,26 @@ func servePost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, jerr.Response())
 		return
 	}
+	if len(requests) > 100 {
+		c.JSON(http.StatusRequestEntityTooLarge, rpc.ErrorResponse(nil, rpc.InvalidRequest, "Batch exceeds 100 requests", nil))
+		return
+	}
 	permissionGroup := detectPermissionGroup(c)
 	meta := buildContextMeta(c, permissionGroup)
 
 	responses := make([]*rpc.JsonRpcResponse, 0, len(requests))
 	for _, rreq := range requests {
-		responses = append(responses, Dispatch(c.Request.Context(), meta, rreq))
+		response := Dispatch(c.Request.Context(), meta, rreq)
+		if rreq.ID != nil {
+			responses = append(responses, response)
+		}
 	}
 	// 单条直接对象，批量数组（符合 JSON-RPC 2.0）。
-	if len(responses) == 1 {
+	if len(responses) == 0 {
+		c.Status(http.StatusNoContent)
+		return
+	}
+	if len(strings.TrimSpace(string(body))) > 0 && strings.TrimSpace(string(body))[0] != '[' {
 		c.JSON(http.StatusOK, responses[0])
 	} else {
 		c.JSON(http.StatusOK, responses)
@@ -126,6 +146,12 @@ func servePost(c *gin.Context) {
 func detectPermissionGroup(c *gin.Context) string {
 	permissionGroup := rpc.RoleGuest
 	token := c.Query("Authorization")
+	if token == "" {
+		token = c.Query("token")
+	}
+	if token == "" {
+		token = strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+	}
 	if _, err := clients.GetClientUUIDByToken(token); err == nil {
 		permissionGroup = rpc.RoleClient
 	}
@@ -139,7 +165,7 @@ func detectPermissionGroup(c *gin.Context) string {
 		return permissionGroup
 	}
 	cfg, _ := config.GetAs[string](config.ApiKeyKey, "")
-	if len(cfg) > 8 && apiKey == "Bearer "+cfg {
+	if len(cfg) >= 12 && apiKey == "Bearer "+cfg {
 		permissionGroup = rpc.RoleAdmin
 	}
 	return permissionGroup
@@ -148,8 +174,16 @@ func detectPermissionGroup(c *gin.Context) string {
 // buildContextMeta 从 gin.Context 构建 *rpc.ContextMeta。
 func buildContextMeta(c *gin.Context, permissionGroup string) *rpc.ContextMeta {
 	meta := &rpc.ContextMeta{Permission: permissionGroup}
+	cfg, _ := config.GetAs[string](config.ApiKeyKey, "")
+	if len(cfg) >= 12 && c.GetHeader("Authorization") == "Bearer "+cfg {
+		meta.APIKey = true
+		meta.APIKeyScope, _ = config.GetAs[string](config.ApiKeyScopeKey, "full")
+	}
 	// 客户端 token：query Authorization 或 header Bearer。
 	token := c.Query("Authorization")
+	if token == "" {
+		token = c.Query("token")
+	}
 	if token == "" {
 		hAuth := c.GetHeader("Authorization")
 		if strings.HasPrefix(hAuth, "Bearer ") {
@@ -174,6 +208,11 @@ func buildContextMeta(c *gin.Context, permissionGroup string) *rpc.ContextMeta {
 	meta.UserAgent = c.GetHeader("User-Agent")
 	meta.TempShareValid = hasTempShareAccess(c)
 	meta.AdminEntranceValid = hasAdminEntranceAccess(c)
+	if meta.APIKey {
+		meta.User = nil
+		meta.UserUUID = "00000000-0000-0000-0000-000000000000"
+		meta.SessionToken = ""
+	}
 	return meta
 }
 

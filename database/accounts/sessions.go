@@ -125,7 +125,7 @@ func UpdateLatestIp(session, ip string) error {
 
 func UpdateLatest(session, useragent, ip string) error {
 	db := dbcore.GetDBInstance()
-	return db.Model(&models.Session{}).Where("session = ?", session).Updates(map[string]interface{}{
+	return db.Model(&models.Session{}).Where("session = ? AND (latest_online IS NULL OR latest_online < ?)", session, time.Now().Add(-time.Minute)).Updates(map[string]interface{}{
 		"latest_online":     time.Now(),
 		"latest_user_agent": useragent,
 		"latest_ip":         ip,

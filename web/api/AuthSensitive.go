@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -22,6 +23,12 @@ func RequireSensitive2FA() gin.HandlerFunc {
 }
 
 func VerifySensitive2FA(c *gin.Context) error {
+	return verifySensitive2FA(c, true)
+}
+
+func VerifySensitive2FACode(c *gin.Context) error { return verifySensitive2FA(c, false) }
+
+func verifySensitive2FA(c *gin.Context, allowGrant bool) error {
 	if _, ok := c.Get("api_key"); ok {
 		return nil
 	}
@@ -40,18 +47,15 @@ func VerifySensitive2FA(c *gin.Context) error {
 	if user.TwoFactor == "" {
 		return nil
 	}
-	code := get2FACode(c)
-	if code == "" {
-		return err2FARequired()
+	return accounts.VerifySensitiveSession(uuidString, c.GetString("session"), get2FACode(c), allowGrant)
+}
+
+func AuthorizeSensitive(c *gin.Context) {
+	if err := VerifySensitive2FACode(c); err != nil {
+		RespondError(c, 401, err.Error())
+		return
 	}
-	valid, err := accounts.Verify2Fa(uuidString, code)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return err2FAInvalid()
-	}
-	return nil
+	RespondSuccess(c, "Authorized for five minutes")
 }
 
 func get2FACode(c *gin.Context) string {
@@ -71,7 +75,7 @@ func get2FACode(c *gin.Context) string {
 			return code
 		}
 	}
-	if c.Request.Body == nil || c.Request.Method == http.MethodGet {
+	if c.Request.Body == nil || c.Request.Method == http.MethodGet || !strings.Contains(c.GetHeader("Content-Type"), "application/json") {
 		return ""
 	}
 	bodyBytes, err := io.ReadAll(c.Request.Body)

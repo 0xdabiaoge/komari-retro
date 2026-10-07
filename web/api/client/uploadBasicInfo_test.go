@@ -35,10 +35,12 @@ func (p staticGeoIPProvider) Close() error {
 }
 
 func TestV2BasicInfoFillsRegionFromGeoIP(t *testing.T) {
+	t.Chdir(t.TempDir())
 	flags.DatabaseType = "sqlite"
 	flags.DatabaseFile = "file:v2_basic_info_geoip?mode=memory&cache=shared"
 
 	db := dbcore.GetDBInstance()
+	t.Cleanup(func() { _ = dbcore.Close() })
 	if err := config.Set(config.GeoIpEnabledKey, true); err != nil {
 		t.Fatalf("enable geoip: %v", err)
 	}

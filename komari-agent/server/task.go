@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/komari-monitor/komari-agent/dnsresolver"
@@ -21,6 +22,10 @@ import (
 	"github.com/komari-monitor/komari-agent/ws"
 	ping "github.com/prometheus-community/pro-bing"
 )
+
+var taskSlots = make(chan struct{}, 4)
+var taskMu sync.Mutex
+var seenTasks = map[string]time.Time{}
 
 func NewTask(task_id, command string) {
 	if task_id == "" {
@@ -34,22 +39,52 @@ func NewTask(task_id, command string) {
 		uploadTaskResult(task_id, "Remote control is disabled.", -1, time.Now())
 		return
 	}
-	log.Printf("Executing task %s with command: %s", task_id, command)
+	taskMu.Lock()
+	now := time.Now()
+	for id, at := range seenTasks {
+		if now.Sub(at) > 10*time.Minute {
+			delete(seenTasks, id)
+		}
+	}
+	if _, exists := seenTasks[task_id]; exists {
+		taskMu.Unlock()
+		return
+	}
+	if len(seenTasks) >= 4096 {
+		taskMu.Unlock()
+		uploadTaskResult(task_id, "Task capacity exceeded", -1, now)
+		return
+	}
+	select {
+	case taskSlots <- struct{}{}:
+	default:
+		taskMu.Unlock()
+		uploadTaskResult(task_id, "Too many concurrent commands", -1, now)
+		return
+	}
+	seenTasks[task_id] = now
+	taskMu.Unlock()
+	defer func() { <-taskSlots }()
+	log.Printf("Executing remote task")
 	result, exitCode := runTaskCommand(command)
 	uploadTaskResult(task_id, result, exitCode, time.Now())
 }
 
 func runTaskCommand(command string) (string, int) {
-	cmd, cleanup, err := buildTaskCommand(command)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cmd, cleanup, err := buildTaskCommandContext(ctx, command)
 	if err != nil {
 		return err.Error(), -1
 	}
 	defer cleanup()
 
-	var stdout, stderr bytes.Buffer
+	var stdout, stderr cappedBuffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	cmd.WaitDelay = 5 * time.Second
+	configureTaskCancellation(cmd)
 	err = cmd.Run()
 
 	result := stdout.String()
@@ -70,7 +105,31 @@ func runTaskCommand(command string) (string, int) {
 	return result, exitCode
 }
 
+type cappedBuffer struct {
+	bytes.Buffer
+	truncated bool
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	n := len(p)
+	left := (128 << 10) - b.Len()
+	if len(p) > left {
+		p = p[:left]
+		b.truncated = true
+	}
+	_, _ = b.Buffer.Write(p)
+	return n, nil
+}
+func (b *cappedBuffer) String() string {
+	if b.truncated {
+		return b.Buffer.String() + "\n[output truncated at 128 KiB]"
+	}
+	return b.Buffer.String()
+}
 func buildTaskCommand(command string) (*exec.Cmd, func(), error) {
+	return buildTaskCommandContext(context.Background(), command)
+}
+func buildTaskCommandContext(ctx context.Context, command string) (*exec.Cmd, func(), error) {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		scriptFile, err := os.CreateTemp("", "komari-task-*.ps1")
@@ -95,10 +154,10 @@ func buildTaskCommand(command string) (*exec.Cmd, func(), error) {
 			cleanup()
 			return nil, func() {}, err
 		}
-		cmd = exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptFile.Name())
+		cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptFile.Name())
 		return cmd, cleanup, nil
 	} else {
-		cmd = exec.Command("sh", "-s")
+		cmd = exec.CommandContext(ctx, "sh", "-s")
 		cmd.Stdin = strings.NewReader(command)
 	}
 	return cmd, func() {}, nil

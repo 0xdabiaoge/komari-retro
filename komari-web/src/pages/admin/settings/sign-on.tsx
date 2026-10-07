@@ -11,6 +11,7 @@ import Loading from "@/components/loading";
 import React from "react";
 import { renderProviderInputs } from "@/utils/renderProviders";
 import { toast } from "sonner";
+import { authorizeSensitiveAccess } from "@/lib/sensitive";
 
 export default function SignOnSettings() {
   const { t } = useTranslation();
@@ -77,6 +78,7 @@ export default function SignOnSettings() {
       addition: JSON.stringify(values),
     };
     try {
+      await authorizeSensitiveAccess();
       const res = await fetch("/api/admin/settings/oidc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,12 +165,7 @@ const ApiCard = () => {
 
   // 生成32位随机字符串
   const generateRandomString = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = 'komari-';
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    return "komari-" + Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, "0")).join("");
   };
 
   // 处理生成按钮点击
@@ -185,6 +182,7 @@ const ApiCard = () => {
   }, [settings?.api_key]);
 
   return (
+    <>
     <SettingCardShortTextInput
         title={t("settings.api.title")}
         description={t("settings.api.description")}
@@ -206,5 +204,13 @@ const ApiCard = () => {
           <Button variant="soft" color="green" onClick={handleGenerateApiKey}>{t('common.generate')}</Button>
         </div>
       </SettingCardShortTextInput>
+      <SettingCardSelect
+        title="API 权限"
+        description="只读密钥用于查询监控数据；完整权限密钥可执行管理操作。"
+        value={settings.api_key_scope || "full"}
+        options={[{ value: "read-only", label: "只读监控数据" }, { value: "full", label: "完整管理权限" }]}
+        OnSave={async (value) => { await updateSettingsWithToast({ api_key_scope: value }, t); }}
+      />
+    </>
   )
 }

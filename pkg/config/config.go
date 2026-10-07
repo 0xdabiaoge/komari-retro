@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -25,6 +26,7 @@ var (
 	db    *gorm.DB
 	SetDb = func(gdb *gorm.DB) {
 		db = gdb
+		invalidateSnapshot()
 		if err := db.AutoMigrate(&ConfigItem{}); err != nil {
 			panic("failed to migrate config item table: " + err.Error())
 		}
@@ -34,12 +36,14 @@ var (
 // Get 获取原始值 (反序列化为 interface{})
 func Get(key string, defaul ...any) (any, error) {
 	var item ConfigItem
-	err := db.First(&item, "key = ?", key).Error
+	err := cachedItem(key, &item)
 	if err != nil {
-		if len(defaul) > 0 {
+		if len(defaul) > 0 && errors.Is(err, gorm.ErrRecordNotFound) {
 			v := defaul[0]
-			err = Set(key, v)
-			return v, err
+			if err = insertDefault(key, v); err != nil {
+				return nil, err
+			}
+			return Get(key)
 		}
 		return nil, err
 	}
@@ -56,21 +60,25 @@ func GetAs[T any](key string, defaul ...any) (T, error) {
 	var t T
 	var item ConfigItem
 
-	err := db.First(&item, "key = ?", key).Error
+	err := cachedItem(key, &item)
 	if err != nil {
-		if len(defaul) > 0 {
+		if len(defaul) > 0 && errors.Is(err, gorm.ErrRecordNotFound) {
 			// 尝试直接类型断言
 			if v, ok := defaul[0].(T); ok {
-				err = Set(key, v)
-				return v, err
+				if err = insertDefault(key, v); err != nil {
+					return t, err
+				}
+				return GetAs[T](key)
 			}
 			// 尝试类型转换
 			val := reflect.ValueOf(&t).Elem()
 			if err := convertAndSet(defaul[0], val); err != nil {
 				return t, fmt.Errorf("default value type mismatch: expected %T, got %T", t, defaul[0])
 			}
-			err = Set(key, t)
-			return t, err
+			if err = insertDefault(key, t); err != nil {
+				return t, err
+			}
+			return GetAs[T](key)
 		}
 		return t, err
 	}
@@ -108,7 +116,7 @@ func GetMany(keys map[string]any) (map[string]any, error) {
 	if len(keyList) == 0 {
 		return result, nil
 	}
-	if err := db.Where("key IN ?", keyList).Find(&items).Error; err != nil {
+	if err := cachedItems(keyList, &items); err != nil {
 		return nil, err
 	}
 
@@ -145,10 +153,11 @@ func GetMany(keys map[string]any) (map[string]any, error) {
 	if len(toInsert) > 0 {
 		if err := db.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "key"}},
-			DoUpdates: clause.AssignmentColumns([]string{"value"}),
+			DoNothing: true,
 		}).Create(&toInsert).Error; err != nil {
 			slog.Warn("batch insert default config failed", "error", err)
 		}
+		invalidateSnapshot()
 	}
 
 	return result, nil
@@ -203,7 +212,7 @@ func GetManyAs[T any]() (*T, error) {
 	}
 
 	var items []ConfigItem
-	if err := db.Where("key IN ?", keys).Find(&items).Error; err != nil {
+	if err := cachedItems(keys, &items); err != nil {
 		return nil, err
 	}
 
@@ -251,10 +260,11 @@ func GetManyAs[T any]() (*T, error) {
 	if len(toInsert) > 0 {
 		if err := db.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "key"}},
-			DoUpdates: clause.AssignmentColumns([]string{"value"}),
+			DoNothing: true,
 		}).Create(&toInsert).Error; err != nil {
 			slog.Warn("batch insert default config failed", "error", err)
 		}
+		invalidateSnapshot()
 	}
 
 	return &t, nil
@@ -383,7 +393,7 @@ func convertAndSet(val any, fieldVal reflect.Value) error {
 func GetAll() (map[string]any, error) {
 	var items []ConfigItem
 	result := make(map[string]any)
-	if err := db.Find(&items).Error; err != nil {
+	if err := cachedItems(nil, &items); err != nil {
 		return nil, err
 	}
 
@@ -428,6 +438,7 @@ func Set(key string, value any) error {
 	}
 
 	newVal := map[string]any{key: value}
+	invalidateSnapshot()
 	publishEvent(oldVal, newVal)
 	return nil
 }
@@ -498,6 +509,7 @@ func SetManyAs[T any](config T) error {
 		return err
 	}
 
+	invalidateSnapshot()
 	publishEvent(oldVal, newVal)
 	return nil
 }
@@ -549,6 +561,7 @@ func SetMany(cst map[string]any) error {
 		return err
 	}
 
+	invalidateSnapshot()
 	publishEvent(oldVal, newVal)
 	return nil
 }
@@ -637,4 +650,62 @@ func publishEvent(oldVal, newVal map[string]any) {
 		event := ConfigEvent{Old: oldVal, New: newVal}
 		go sub(event)
 	}
+}
+
+// Only immutable serialized values are cached; every caller gets fresh decoded objects.
+// This process owns the data directory exclusively. CLI changes become visible on restart.
+func insertDefault(key string, value any) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	err = db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "key"}}, DoNothing: true}).Create(&ConfigItem{Key: key, Value: string(encoded)}).Error
+	invalidateSnapshot()
+	return err
+}
+
+var snapshotMu sync.Mutex
+var snapshot map[string]string
+
+func invalidateSnapshot() { snapshotMu.Lock(); snapshot = nil; snapshotMu.Unlock() }
+func cachedItems(keys []string, out *[]ConfigItem) error {
+	snapshotMu.Lock()
+	defer snapshotMu.Unlock()
+	if snapshot == nil {
+		var rows []ConfigItem
+		if db == nil {
+			return fmt.Errorf("configuration database is not initialized")
+		}
+		if err := db.Find(&rows).Error; err != nil {
+			return err
+		}
+		snapshot = make(map[string]string, len(rows))
+		for _, row := range rows {
+			snapshot[row.Key] = row.Value
+		}
+	}
+	*out = nil
+	if keys == nil {
+		for key, value := range snapshot {
+			*out = append(*out, ConfigItem{key, value})
+		}
+	} else {
+		for _, key := range keys {
+			if value, ok := snapshot[key]; ok {
+				*out = append(*out, ConfigItem{key, value})
+			}
+		}
+	}
+	return nil
+}
+func cachedItem(key string, out *ConfigItem) error {
+	var items []ConfigItem
+	if err := cachedItems([]string{key}, &items); err != nil {
+		return err
+	}
+	if len(items) == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	*out = items[0]
+	return nil
 }

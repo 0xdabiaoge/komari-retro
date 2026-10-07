@@ -155,6 +155,9 @@ func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, 
 		hours = "4"
 	}
 	hoursInt, err := strconv.Atoi(hours)
+	if hoursInt < 1 || hoursInt > 31*24 {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Hours must be between 1 and 744", nil)
+	}
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid hours parameter", nil)
 	}
@@ -338,6 +341,9 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		hours = "4"
 	}
 	hoursInt, err := strconv.Atoi(hours)
+	if hoursInt < 1 || hoursInt > 31*24 {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Hours must be between 1 and 744", nil)
+	}
 	if err != nil {
 		hoursInt = 4
 	}
@@ -471,20 +477,21 @@ func publicListMetricDefinitions(_ context.Context, _ *rpc.JsonRpcRequest) (any,
 	return []any{}, nil
 }
 
-func publicGetPingMetricStats(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
 		Hours int `json:"hours"`
 	}
-	req.BindParams(&params)
-	if params.Hours <= 0 {
+	if err := req.BindParams(&params); err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid parameters", nil)
+	}
+	if params.Hours == 0 {
 		params.Hours = 24
+	}
+	if params.Hours < 1 || params.Hours > 744 {
+		return nil, rpc.MakeError(rpc.InvalidParams, "hours must be 1..744", nil)
 	}
 	endTime := time.Now()
 	startTime := endTime.Add(-time.Duration(params.Hours) * time.Hour)
-
-	pingTasks, _ := tasks.GetAllPingTasks()
-	cinfo, _ := clients.GetAllClientBasicInfo()
-
 	type pingMetricStat struct {
 		EntityID string   `json:"entity_id"`
 		TaskID   string   `json:"task_id"`
@@ -497,36 +504,24 @@ func publicGetPingMetricStats(_ context.Context, req *rpc.JsonRpcRequest) (any, 
 		Max      *float64 `json:"max"`
 		Latest   *float64 `json:"latest"`
 	}
-
 	stats := make([]pingMetricStat, 0)
-	for _, c := range cinfo {
-		nodeStats := getPingStatsForNode(c.UUID, pingTasks)
-		for taskIDStr, st := range nodeStats {
-			avgVal := float64(st.Avg)
-			minVal := float64(st.Min)
-			maxVal := float64(st.Max)
-			latestVal := float64(st.Latest)
-			stats = append(stats, pingMetricStat{
-				EntityID: c.UUID,
-				TaskID:   taskIDStr,
-				Name:     st.Name,
-				Total:    100,
-				Valid:    int(100 - st.Loss),
-				Loss:     st.Loss,
-				Avg:      &avgVal,
-				Min:      &minVal,
-				Max:      &maxVal,
-				Latest:   &latestVal,
-			})
-		}
+	query := `WITH filtered AS (
+        SELECT p.*, ROW_NUMBER() OVER (PARTITION BY p.client,p.task_id ORDER BY p.time DESC,p.rowid DESC) AS recency
+        FROM ping_records p JOIN clients c ON c.uuid=p.client
+        WHERE p.time>=? AND p.time<=? AND (? OR c.hidden=0)
+    ) SELECT f.client AS entity_id, CAST(f.task_id AS TEXT) AS task_id, t.name,
+        COUNT(*) AS total, SUM(CASE WHEN f.value>=0 THEN 1 ELSE 0 END) AS valid,
+        100.0*SUM(CASE WHEN f.value<0 THEN 1 ELSE 0 END)/COUNT(*) AS loss,
+        AVG(CASE WHEN f.value>=0 THEN f.value END) AS avg,
+        MIN(CASE WHEN f.value>=0 THEN f.value END) AS min,
+        MAX(CASE WHEN f.value>=0 THEN f.value END) AS max,
+        MAX(CASE WHEN f.recency=1 AND f.value>=0 THEN f.value END) AS latest
+        FROM filtered f JOIN ping_tasks t ON t.id=f.task_id GROUP BY f.client,f.task_id,t.name
+        ORDER BY f.client,f.task_id`
+	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(query, startTime, endTime, isLoginFromCtx(ctx)).Scan(&stats).Error; err != nil {
+		return nil, rpc.MakeError(rpc.InternalError, "Failed to query ping statistics", nil)
 	}
-
-	return map[string]any{
-		"start": startTime.Format(time.RFC3339),
-		"end":   endTime.Format(time.RFC3339),
-		"stats": stats,
-		"count": len(stats),
-	}, nil
+	return map[string]any{"start": startTime.Format(time.RFC3339), "end": endTime.Format(time.RFC3339), "stats": stats, "count": len(stats)}, nil
 }
 
 func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -556,9 +551,12 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 		startTime = endTime.Add(-24 * time.Hour)
 	}
 
-	recs, err := getLoadRecordsCombined("", startTime, endTime)
+	if !startTime.Before(endTime) || endTime.Sub(startTime) > 31*24*time.Hour {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid history window (maximum 31 days)", nil)
+	}
+	recs, err := records.SampleLoad(ctx, "", startTime, endTime, 10000)
 	if err != nil {
-		recs = []models.Record{}
+		return nil, rpc.MakeError(rpc.InternalError, "Unable to query metrics", err.Error())
 	}
 
 	isLogin := isLoginFromCtx(ctx)
@@ -660,4 +658,3 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 		"count":  totalCount,
 	}, nil
 }
-

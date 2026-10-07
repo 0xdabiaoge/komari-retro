@@ -2,6 +2,9 @@ package jsonrpc
 
 import (
 	"context"
+	"github.com/komari-monitor/komari/database/accounts"
+	"strings"
+	"time"
 
 	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
@@ -41,10 +44,34 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 	}
 
 	// 命名空间权限校验。
+	if meta.APIKey && meta.APIKeyScope != "full" && !(strings.HasPrefix(req.Method, "public:") || strings.HasPrefix(req.Method, "common:") || req.Method == "rpc:ping" || req.Method == "rpc.ping") {
+		return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Read-only API key cannot access administration", nil)
+	}
 	if !rpc.CheckPermission(group, req.Method) {
 		return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Permission denied", nil)
 	}
 
+	sensitive := strings.HasPrefix(req.Method, "admin:file") || req.Method == "admin:setOidcProvider"
+	if req.Method == "admin:editSettings" {
+		var settings map[string]any
+		req.BindParams(&settings)
+		for key := range settings {
+			if key == "api_key" || key == "api_key_scope" || strings.HasPrefix(key, "o_auth") || key == "disable_password_login" || key == "admin_path" || strings.Contains(key, "share_token") {
+				sensitive = true
+			}
+		}
+	}
+	if sensitive && meta.User != nil && !meta.APIKey {
+		var otp struct {
+			Code string `json:"2fa_code"`
+		}
+		req.BindParams(&otp)
+		if err := accounts.VerifySensitiveSession(meta.UserUUID, meta.SessionToken, otp.Code, true); err != nil {
+			return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, err.Error(), nil)
+		}
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	return rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)
 }
 

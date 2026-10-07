@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/komari-monitor/komari/database/clients"
-	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/database/models"
 	recordsdb "github.com/komari-monitor/komari/database/records"
 	"github.com/komari-monitor/komari/database/tasks"
@@ -32,6 +31,9 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		MaxCount int    `json:"maxCount"`  // max number of points; -1 unlimited; default 4000
 	}
 	req.BindParams(&params)
+	if params.Hours > 31*24 || params.Hours < 0 || params.MaxCount < 0 || params.MaxCount > 10000 {
+		return nil, rpc.MakeError(rpc.InvalidParams, "History is limited to 31 days and 10000 points", nil)
+	}
 
 	// defaults
 	if params.Type == "" {
@@ -69,8 +71,11 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		startTime = endTime.Add(-time.Duration(hours) * time.Hour)
 	}
 
+	if !startTime.Before(endTime) || endTime.Sub(startTime) > 31*24*time.Hour {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid history window (maximum 31 days)", nil)
+	}
 	// Hidden filtering for non-admin
-	isAdmin := meta.Permission == "admin"
+	isAdmin := meta != nil && meta.Permission == "admin"
 	hidden := map[string]bool{}
 	if !isAdmin {
 		cinfo, err := clients.GetAllClientBasicInfo()
@@ -90,7 +95,11 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 	switch params.Type {
 	case "load":
 		// fetch load records
-		recs, err := getLoadRecordsCombined(params.UUID, startTime, endTime)
+		count := params.MaxCount
+		if count == 0 {
+			count = 4000
+		}
+		recs, err := recordsdb.SampleLoad(ctx, params.UUID, startTime, endTime, count)
 		if err != nil {
 			return nil, rpc.MakeError(rpc.InternalError, "Failed to fetch records", err.Error())
 		}
@@ -502,54 +511,6 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 }
 
 // ---------- helpers for load records ----------
-
-// getLoadRecordsCombined fetches records for a client or all clients within a time range,
-// combining recent short-term table and long-term table with 15-min grouping for recent part.
-func getLoadRecordsCombined(uuid string, start, end time.Time) ([]models.Record, error) {
-	// prefer the existing function when uuid provided
-	if uuid != "" {
-		return recordsdb.GetRecordsByClientAndTime(uuid, start, end)
-	}
-	db := dbcore.GetDBInstance()
-	fourHoursAgo := time.Now().Add(-4*time.Hour - time.Minute)
-
-	var recent []models.Record
-	recentStart := start
-	if end.After(fourHoursAgo) {
-		if recentStart.Before(fourHoursAgo) {
-			recentStart = fourHoursAgo
-		}
-		_ = db.Table("records").Where("time >= ? AND time <= ?", recentStart, end).Order("time ASC").Find(&recent).Error
-	}
-
-	var longTerm []models.Record
-	_ = db.Table("records_long_term").Where("time >= ? AND time <= ?", start, end).Order("time ASC").Find(&longTerm).Error
-
-	// if no long term, return all recent
-	if len(longTerm) == 0 {
-		return recent, nil
-	}
-
-	// group recent by client+15min, keep latest in bucket
-	type key struct {
-		c    string
-		slot string
-	}
-	grouped := make(map[key]models.Record)
-	for _, rec := range recent {
-		k := key{c: rec.Client, slot: rec.Time.ToTime().Truncate(15 * time.Minute).Format(time.RFC3339)}
-		if old, ok := grouped[k]; !ok || rec.Time.ToTime().After(old.Time.ToTime()) {
-			grouped[k] = rec
-		}
-	}
-	flat := make([]models.Record, 0, len(grouped))
-	for _, rec := range grouped {
-		flat = append(flat, rec)
-	}
-	sort.Slice(flat, func(i, j int) bool { return flat[i].Time.ToTime().Before(flat[j].Time.ToTime()) })
-	flat = append(flat, longTerm...)
-	return flat, nil
-}
 
 // ---------- downsampling helpers ----------
 

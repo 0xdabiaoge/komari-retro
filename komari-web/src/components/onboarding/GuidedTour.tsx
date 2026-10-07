@@ -142,6 +142,7 @@ export default function GuidedTour({
             <Dialog.Overlay className="km-guide-overlay">
               <div
                 className="km-guide-spotlight"
+                data-highlighted={Boolean(rect)}
                 style={rect ?? { inset: 0, background: "rgba(0, 0, 0, 0.52)" }}
               />
             </Dialog.Overlay>

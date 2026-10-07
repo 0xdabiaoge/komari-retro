@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	komari_utils "github.com/komari-monitor/komari/utils"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
@@ -25,13 +24,13 @@ func NewGormLogger() *GormLogger {
 	return &GormLogger{
 		SlowThreshold:             200 * time.Millisecond,
 		IgnoreRecordNotFoundError: true,
-		LogLevel: func(hash string) gormlogger.LogLevel {
-			if hash == "unknown" {
-				return gormlogger.Info
-			}
-			return gormlogger.Silent
-		}(komari_utils.VersionHash),
+		LogLevel:                  gormlogger.Warn,
 	}
+}
+
+// GORM invokes this before formatting SQL, so bound credentials never reach logs.
+func (l *GormLogger) ParamsFilter(_ context.Context, sql string, _ ...interface{}) (string, []interface{}) {
+	return sql, nil
 }
 
 func (l *GormLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {

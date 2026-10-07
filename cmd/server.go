@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -96,6 +97,15 @@ func RunServer() {
 	}
 
 	r := gin.New()
+	// Direct connections must not be able to forge the login limiter's source IP.
+	trustedProxies := []string(nil)
+	if value := strings.TrimSpace(os.Getenv("KOMARI_TRUSTED_PROXIES")); value != "" {
+		trustedProxies = strings.Split(value, ",")
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		log.Printf("Invalid trusted proxies: %v", err)
+		return
+	}
 	r.Use(logutil.GinLogger())
 	r.Use(logutil.GinRecovery())
 
@@ -111,6 +121,7 @@ func RunServer() {
 	})
 	r.Use(security.CorsMiddleware(conf.CorsOriginCheckEnabled, conf.CorsAllowedOrigins))
 
+	r.Use(api.RequestLimits())
 	r.Use(api.IdentityMiddleware())
 	r.Use(api.PrivateSiteMiddleware())
 
@@ -124,8 +135,11 @@ func RunServer() {
 	router.Register(r)
 
 	srv := &http.Server{
-		Addr:    flags.Listen,
-		Handler: r,
+		Addr:              flags.Listen,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 	log.Printf("Starting server on %s ...", flags.Listen)
 	go func() {
@@ -143,6 +157,9 @@ func RunServer() {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
+	if err := dbcore.Close(); err != nil {
+		log.Printf("Database close failed: %v", err)
+	}
 
 }
 
@@ -153,7 +170,10 @@ func InitDatabase() {
 		if err != nil {
 			panic(err)
 		}
-		log.Println("Default admin account created. Username:", user, ", Password:", passwd)
+		if err := os.WriteFile("./data/initial-admin.txt", []byte("Username: "+user+"\nPassword: "+passwd+"\n"), 0600); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Default admin account created. Initial credentials are in data/initial-admin.txt (mode 0600); remove this file after changing the password.")
 	}
 }
 

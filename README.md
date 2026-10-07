@@ -6,7 +6,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/0xdabiaoge/komari-retro?color=blue&style=flat-square)](https://github.com/0xdabiaoge/komari-retro/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](./LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.27.1-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
 [![React Version](https://img.shields.io/badge/React-19.x-61DAFB.svg?style=flat-square&logo=react)](https://react.dev)
 
 [简体中文](./README.md) | [Documentation](./komari-document) | [GitHub 仓库](https://github.com/0xdabiaoge/komari-retro)
@@ -29,8 +29,8 @@
 
 | 组件名称 | 目录位置 | 基于上游版本 | 技术栈与特性 |
 | :--- | :--- | :--- | :--- |
-| **Komari Server (服务端)** | 根目录 `/` | **v1.2.5** | Go 1.24 / Gin / GORM / SQLite & MySQL / JSON-RPC 2.0 / WebSocket v2 / 静态资源内嵌 |
-| **Komari Agent (客户端探针)** | `/komari-agent` | **最新稳定版 (v1.1.x+)** | Go 1.24 / gopsutil / 支持多网卡、GPU 监控、自定义 DNS、Web SSH 远程终端、自动重连 |
+| **Komari Server (服务端)** | 根目录 `/` | **v1.2.5** | Go 1.25+ / Gin / GORM / SQLite / JSON-RPC 2.0 / WebSocket v2 / 静态资源内嵌 |
+| **Komari Agent (客户端探针)** | `/komari-agent` | **最新稳定版 (v1.1.x+)** | Go 1.25+ / gopsutil / 支持多网卡、GPU 监控、自定义 DNS、Web SSH 远程终端、自动重连 |
 | **Komari Web (前端仪表盘)** | `/komari-web` | **最新版 (React 19)** | React 19 / TypeScript / Vite 6 / Radix UI / Monaco Editor / PWA 支持 / 多语言适配 |
 | **Komari Document (官方文档)** | `/komari-document` | **最新版** | VitePress 1.6+ / 完整中英双语部署与开发接口文档 |
 
@@ -43,7 +43,7 @@
 ```text
 komari-retro/
 ├── cmd/                        # 服务端命令行指令 (server, chpasswd, disable-2fa 等)
-├── database/                   # 数据库持久化层与模型定义 (SQLite / MySQL)
+├── database/                   # 数据库持久化层与模型定义 (SQLite)
 ├── pkg/                        # 核心通用依赖与 RPC 路由中间件
 ├── protocol/                   # 探针通信协议定义
 ├── utils/                      # 工具函数库与 GeoIP 解析
@@ -95,7 +95,7 @@ sudo ./install-komari.sh
    ./komari server -l 0.0.0.0:25774
    ```
 3. 浏览器访问：`http://<服务器IP>:25774`。
-4. 初始管理员账号为 `admin`，初始密码可在启动日志中获取，或使用命令行直接重置：
+4. 初始管理员账号为 `admin`，初始密码保存在 `data/initial-admin.txt`（权限 0600，改密后删除），或使用命令行直接重置：
    ```bash
    ./komari chpasswd -p <你的新密码>
    ```
@@ -107,12 +107,12 @@ sudo ./install-komari.sh
 #### 方式 A：Docker 命令直接运行
 ```bash
 # 创建数据存储目录
-mkdir -p ./data
+mkdir -p ./data/docker
 
 # 启动容器
 docker run -d \
   -p 25774:25774 \
-  -v $(pwd)/data:/app/data \
+  -v $(pwd)/data/docker:/app/data \
   --name komari \
   --restart unless-stopped \
   ghcr.io/0xdabiaoge/komari-retro:latest
@@ -123,7 +123,7 @@ docker run -d \
 # 启动服务
 docker compose up -d
 
-# 后续拉取手动构建的最新镜像并无缝更新
+# 后续拉取镜像并重新创建容器（会短暂中断连接）
 docker compose pull && docker compose up -d
 ```
 
@@ -148,9 +148,9 @@ Invoke-Expression (Invoke-RestMethod "https://raw.githubusercontent.com/0xdabiao
 ## 🛠️ 本地从源码构建 (Build from Source)
 
 环境要求：
-- **Go**: 1.24 及以上
-- **Node.js**: 20 及以上 (仅前端需要重新打包时)
-- **pnpm**: 9+ 或 12+
+- **Go**: 模块最低 1.25，发布与安全验证固定使用 1.27.1
+- **Node.js**: 22 LTS (仅前端需要重新打包时)
+- **npm**: 使用提交的 `package-lock.json` 与 `npm ci`
 
 ### 方式 A：直接编译服务端（免 Node 环境）
 由于仓库内已预置编译好的最新前端资源（位于 `web/public/defaultTheme`），您可以直接编译 Go 二进制：
@@ -162,8 +162,8 @@ go build -o komari .
 ```bash
 # 1. 构建前端静态资源
 cd komari-web
-pnpm install
-pnpm run build
+npm ci
+npm run build
 cd ..
 
 # 2. 同步静态文件到服务端内嵌目录
@@ -183,7 +183,9 @@ go build -ldflags "-s -w" -o komari-agent .
 
 ## 🚀 自动化构建与镜像发布 (CI / CD)
 
-本项目将 GitHub Actions 工作流精简为两套核心流程（支持全中文交互）：
+GitHub Actions 包含质量门禁和两套发布流程：
+
+0. **质量门禁 (`quality.yml`)**：服务端与探针的 test/vet/race/govulncheck，以及前端 npm ci、audit、测试、lint、构建和浏览器回归；发布必须先通过。
 
 1. **发布版本与跨平台产物到 Releases (`release.yml`)**
    - **触发时机**：当涉及改动并完成版本号提升打 Tag（如 `v1.2.6`）推送至 GitHub、或在 GitHub 发布 Release、或手动调度触发。
@@ -191,9 +193,15 @@ go build -ldflags "-s -w" -o komari-agent .
 
 2. **手动构建并推送 Docker 镜像 (`docker-publish.yml`)**
    - **触发时机**：纯手动按需触发（在仓库 **Actions** 页面选择该工作流并点击 **Run workflow**）。
-   - **参数输入**：支持自定义镜像标签（默认 `latest`，可指定如 `v1.2.5`）以及是否同时关联 `latest` 标签。
-   - **构建内容**：自动完成前端及 Linux 多架构静态二进制编译，打包多架构镜像并推送至 `ghcr.io/0xdabiaoge/komari-retro`。
-   - **更新应用**：使用 Docker / Docker Compose 部署的机器执行 `docker compose pull && docker compose up -d` 即可无缝拉取最新镜像。
+   - **参数输入**：指定已发布的 Release 标签（`latest` 解析为最新 Release）及是否更新 `latest` 镜像；运行工作流的 Git ref 必须与 Release 标签提交一致。
+   - **构建内容**：下载并校验同一 Release 的 Linux amd64/arm64 二进制，直接放入镜像。脚本安装和 Docker 使用同一份服务端产物。
+   - **更新应用**：执行 `docker compose pull && docker compose up -d`；容器重建会短暂中断连接。
+
+脚本升级需要 `flock`（util-linux），先下载、验证 SHA256 和可执行性，再停服务保存二进制及数据快照。新版 `/ping` 健康检查失败时恢复原二进制和数据。新脚本要求 Release 提供 `.sha256` 资产，缺少摘要的历史版本会拒绝安装。
+
+脚本与 Docker 同时运行时，必须使用独立数据目录。Compose 默认挂载 `./data/docker`；不要将两套实例都指向同一 SQLite。程序会阻止同一数据目录或同一数据库被多个新版进程使用。迁移旧部署时需要先确认各自的数据来源，不能直接更换挂载目录后当作数据已迁移。
+
+默认只信任直接连接的来源 IP。反向代理请通过 `KOMARI_TRUSTED_PROXIES` 指定实际代理的 IP/CIDR，转发的协议和 IP 仅对可信代理生效。API 密钥支持 `read-only`（公开/监控查询 RPC）和 `full`（管理操作）；现有密钥默认保留完整权限，管理员可在登录设置中改为只读。
 
 ---
 

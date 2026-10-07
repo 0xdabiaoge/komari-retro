@@ -122,14 +122,27 @@ func GetLatestReport() map[string]*v1.Report {
 	defer mu.RUnlock()
 	reportCopy := make(map[string]*v1.Report)
 	for k, v := range latestReport {
-		reportCopy[k] = v
+		reportCopy[k] = cloneReport(v)
 	}
 	return reportCopy
 }
 func SetLatestReport(uuid string, report *v1.Report) {
 	mu.Lock()
 	defer mu.Unlock()
-	latestReport[uuid] = report
+	latestReport[uuid] = cloneReport(report)
+}
+
+func cloneReport(report *v1.Report) *v1.Report {
+	if report == nil {
+		return nil
+	}
+	copy := *report
+	if report.GPU != nil {
+		gpu := *report.GPU
+		gpu.DetailedInfo = append([]v1.GPUDeviceInfo(nil), report.GPU.DetailedInfo...)
+		copy.GPU = &gpu
+	}
+	return &copy
 }
 func DeleteLatestReport(uuid string) {
 	mu.Lock()

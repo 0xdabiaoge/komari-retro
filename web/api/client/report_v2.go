@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -28,9 +29,18 @@ func readMaybeCompressedBody(r *http.Request) ([]byte, error) {
 			return nil, err
 		}
 		defer zr.Close()
-		return io.ReadAll(zr)
+		return readReportBody(zr)
 	}
-	return io.ReadAll(r.Body)
+	return readReportBody(r.Body)
+}
+
+func readReportBody(reader io.Reader) ([]byte, error) {
+	const limit = 2 << 20
+	body, err := io.ReadAll(io.LimitReader(reader, limit+1))
+	if len(body) > limit {
+		return nil, fmt.Errorf("report exceeds 2 MiB")
+	}
+	return body, err
 }
 
 func bindV2Params[T any](raw any, target *T) error {
@@ -140,6 +150,7 @@ func WebSocketV2RPC(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Failed to upgrade to WebSocket." + err.Error()})
 		return
 	}
+	unsafeConn.SetReadLimit(2 << 20)
 	conn := connection.NewSafeConn(unsafeConn)
 	defer conn.Close()
 

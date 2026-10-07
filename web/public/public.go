@@ -16,7 +16,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
-//go:embed defaultTheme all:nasdaqTheme all:nextTheme
+//go:embed defaultTheme
 var PublicFS embed.FS
 
 // 常量定义
@@ -143,8 +143,6 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	if err != nil {
 		panic("you may forget to put dist of frontend to web/public/defaultTheme/dist")
 	}
-	nasdaqThemeFS, _ := fs.Sub(PublicFS, "nasdaqTheme")
-	nextThemeFS, _ := fs.Sub(PublicFS, "nextTheme")
 
 	getConfig := func() map[string]any {
 		cfg, _ := config.GetMany(map[string]any{
@@ -161,6 +159,9 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	// filePath: 相对于主题根目录的路径 (例如 "theme.json" 或 "dist/assets/a.js")
 	// 返回: content, contentType, exists
 	getFileContent := func(themeID string, relativePath string) ([]byte, string, bool) {
+		if strings.EqualFold(themeID, "next") || strings.EqualFold(themeID, "nasdaq") || strings.HasPrefix(themeID, ".") {
+			themeID = DefaultTheme
+		}
 		cleanPath := strings.TrimPrefix(relativePath, "/")
 
 		cleanPath = filepath.Clean(cleanPath)
@@ -186,34 +187,6 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 						mimeType = getFallbackMimeType(localPath)
 					}
 					return content, mimeType, true
-				}
-			}
-
-			// 如果是内置 nasdaq 金融主题，未在本地自定义时回退读取嵌入文件
-			if themeID == "nasdaq" && nasdaqThemeFS != nil {
-				embedPath := filepath.ToSlash(cleanPath)
-				if !strings.Contains(embedPath, "..") {
-					if content, err := fs.ReadFile(nasdaqThemeFS, embedPath); err == nil {
-						mimeType := mime.TypeByExtension(filepath.Ext(embedPath))
-						if mimeType == "" {
-							mimeType = getFallbackMimeType(embedPath)
-						}
-						return content, mimeType, true
-					}
-				}
-			}
-
-			// 如果是内置 next 主题，未在本地自定义时回退读取嵌入文件
-			if themeID == "next" && nextThemeFS != nil {
-				embedPath := filepath.ToSlash(cleanPath)
-				if !strings.Contains(embedPath, "..") {
-					if content, err := fs.ReadFile(nextThemeFS, embedPath); err == nil {
-						mimeType := mime.TypeByExtension(filepath.Ext(embedPath))
-						if mimeType == "" {
-							mimeType = getFallbackMimeType(embedPath)
-						}
-						return content, mimeType, true
-					}
 				}
 			}
 
@@ -312,6 +285,10 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
 	r.GET("/themes/:id/*path", func(c *gin.Context) {
 		themeID := c.Param("id")
+		if strings.EqualFold(themeID, "next") || strings.EqualFold(themeID, "nasdaq") || strings.HasPrefix(themeID, ".") {
+			c.Status(404)
+			return
+		}
 		// c.Param("path") 包含了开头的 /，getFileContent 会处理
 		filePath := c.Param("path")
 

@@ -1,0 +1,46 @@
+name: Quality checks
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: ['.', 'komari-agent']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: '${{ matrix.module }}/go.sum'
+      - run: go test ./... && go vet ./...
+        working-directory: '${{ matrix.module }}'
+      - run: bash -n install-komari.sh && bash script/install-regression.sh
+        if: matrix.module == '.'
+      - run: go test -race ./...
+        working-directory: '${{ matrix.module }}'
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        working-directory: '${{ matrix.module }}'
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: komari-web/package-lock.json
+      - run: npm ci && npm audit --audit-level=low && npm test && npm run lint && npm run build
+        working-directory: komari-web
+      - run: npx playwright install --with-deps chromium
+        working-directory: komari-web
+      - run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/komari-vite.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5173 >/dev/null && break; sleep 1; done
+          npm run test:onboarding
+        working-directory: komari-web

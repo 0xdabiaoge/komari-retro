@@ -17,9 +17,13 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
   build-frontend:
     name: 构建前端静态资源 (build-frontend)
     runs-on: ubuntu-latest
+    needs: quality
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -34,7 +38,7 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=4096"
         run: |
           cd komari-web
-          npm install
+          npm ci
           npm run build
           cd ..
           mkdir -p web/public/defaultTheme/dist
@@ -112,7 +116,7 @@ jobs:
       - name: 配置 Go 环境
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.27.1"
 
       - name: 安装 Zig 交叉编译工具链
         run: |
@@ -123,13 +127,13 @@ jobs:
           echo "PATH=$PATH:/usr/local/zig-x86_64-linux-0.14.1" >> $GITHUB_ENV
 
       - name: 解析发布标签 (Release Tag)
+        env:
+          RAW_TAG: ${{ inputs.tag_name || github.event.release.tag_name || github.ref_name }}
         run: |
-          RAW_TAG="${{ github.event.release.tag_name || github.ref_name || inputs.tag_name }}"
           TAG="${RAW_TAG#refs/tags/}"
-          if [ -z "$TAG" ] || [ "$TAG" = "main" ]; then
-            TAG="v1.2.5"
-          fi
-          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          [[ "$TAG" =~ ^v[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo 'A version tag is required'; exit 1; }
+          [ "$(git rev-parse "$TAG^{commit}")" = "$GITHUB_SHA" ] || { echo 'Workflow ref must match the release tag'; exit 1; }
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
 
       - name: 交叉编译并打包二进制产物
         env:
@@ -151,12 +155,13 @@ jobs:
           go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${VERSION} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}" -o $BINARY_NAME
 
           # Build agent binary
-          (cd komari-agent && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o ../$AGENT_NAME)
+          (cd komari-agent && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari-agent/update.CurrentVersion=${VERSION}" -o ../$AGENT_NAME)
 
           # Package archives
           mkdir -p dist
           cp "$BINARY_NAME" "dist/$BINARY_NAME"
           cp "$AGENT_NAME" "dist/$AGENT_NAME"
+          (cd dist && sha256sum "$BINARY_NAME" > "$BINARY_NAME.sha256" && sha256sum "$AGENT_NAME" > "$AGENT_NAME.sha256")
 
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j "dist/komari-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "$BINARY_NAME"

@@ -298,26 +298,11 @@ install_binary() {
     log_step "创建数据目录: $DATA_DIR"
     mkdir -p "$DATA_DIR"
 
-    local file_name="komari-linux-${arch}"
-    local download_url="https://github.com/0xdabiaoge/komari-retro/releases/latest/download/${file_name}"
-
-    log_step "获取 Komari 二进制文件..."
-    log_info "下载 URL: $download_url"
-
-    if ! curl -f -L -o "$BINARY_PATH" "$download_url"; then
-        log_step "从 GitHub Releases 下载失败，检查本地可用文件..."
-        if [ -f "./komari" ]; then
-            log_info "检测到当前目录存在 ./komari，使用本地文件..."
-            cp "./komari" "$BINARY_PATH"
-        elif [ -f "/root/komari-workspace/komari" ]; then
-            log_info "检测到 /root/komari-workspace/komari，使用本地文件..."
-            cp "/root/komari-workspace/komari" "$BINARY_PATH"
-        else
-            log_error "下载失败且未发现本地二进制文件。"
-            log_info "提示: GitHub Releases 产物生成后可直接下载，或将编译好的 komari 放在当前目录重试。"
-            return 1
-        fi
-    fi
+    local candidate
+    candidate=$(mktemp "$INSTALL_DIR/.komari-download.XXXXXX") || return 1
+    if ! download_verified "$candidate"; then rm -f -- "$candidate"; return 1; fi
+    chmod 0755 "$candidate" || { rm -f -- "$candidate"; return 1; }
+    mv -f -- "$candidate" "$BINARY_PATH" || return 1
 
     chmod +x "$BINARY_PATH"
     log_success "Komari 二进制文件准备就绪: $BINARY_PATH"
@@ -342,9 +327,10 @@ install_binary() {
         
         log_step "正在获取初始密码..."
         sleep 5 
-        local password=$(journalctl -u ${SERVICE_NAME} --since "1 minute ago" | grep "admin account created." | tail -n 1 | sed -e 's/.*admin account created.//')
+        local password=""
+        if [ -f "$DATA_DIR/data/initial-admin.txt" ]; then password=$(cat "$DATA_DIR/data/initial-admin.txt"); fi
         if [ -z "$password" ]; then
-            log_error "未能获取初始密码，请检查日志"
+            log_error "未能获取初始密码，请检查 data/initial-admin.txt"
         fi
         show_access_info "$password" "$LISTEN_PORT"
 
@@ -382,6 +368,8 @@ Type=simple
 ExecStart=${BINARY_PATH} server -l 0.0.0.0:${port}
 WorkingDirectory=${DATA_DIR}
 Restart=always
+UMask=0077
+Environment=KOMARI_TRUSTED_PROXIES=127.0.0.1,::1
 User=root
 
 [Install]
@@ -413,7 +401,42 @@ show_access_info() {
 }
 
 # Upgrade function
-upgrade_komari() {
+download_verified() {
+    local destination="$1" arch tag file_name release_url expected actual checksum
+    arch=$(detect_arch) || return 1
+    tag="${KOMARI_VERSION:-}"
+    if [ -z "$tag" ]; then
+        tag=$(curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout 10 --max-time 30 https://api.github.com/repos/0xdabiaoge/komari-retro/releases/latest | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^" ]*\)".*/\1/p' | head -n 1)
+    fi
+    [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { log_error "无法解析安全的版本标签"; return 1; }
+    file_name="komari-linux-${arch}"
+    release_url="https://github.com/0xdabiaoge/komari-retro/releases/download/${tag}/${file_name}"
+    checksum="${destination}.sha256"
+    if ! curl --proto '=https' --tlsv1.2 -fSL --connect-timeout 10 --max-time 300 --retry 2 -o "$destination" "$release_url" ||
+       ! curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout 10 --max-time 30 -o "$checksum" "${release_url}.sha256"; then
+        rm -f -- "$checksum"; log_error "下载或校验文件获取失败，保留现有安装"; return 1
+    fi
+    expected=$(awk 'NR==1 {print $1}' "$checksum")
+    actual=$(sha256sum "$destination" | awk '{print $1}')
+    rm -f -- "$checksum"
+    [[ "$expected" =~ ^[0-9a-fA-F]{64}$ && "${expected,,}" == "$actual" ]] || { log_error "SHA256 校验失败"; return 1; }
+    log_info "已校验版本 ${tag} (${arch})"
+}
+
+wait_healthy() {
+    local url="${KOMARI_HEALTH_URL:-}" port attempt
+    if [ -z "$url" ]; then
+        port=$(systemctl cat "${SERVICE_NAME}.service" | sed -n 's/.* -l [^ ]*:\([0-9][0-9]*\).*/\1/p' | tail -n 1)
+        url="http://127.0.0.1:${port:-$DEFAULT_PORT}/ping"
+    fi
+    for attempt in {1..30}; do
+        if systemctl is-active --quiet "${SERVICE_NAME}.service" && curl -fsS --max-time 2 "$url" >/dev/null; then return 0; fi
+        sleep 1
+    done
+    return 1
+}
+
+upgrade_komari() (
     log_step "升级 Komari..."
 
     if ! is_installed; then
@@ -426,35 +449,44 @@ upgrade_komari() {
         return 1
     fi
 
-    log_step "停止 Komari 服务..."
-    systemctl stop ${SERVICE_NAME}.service
-
-    log_step "备份当前二进制文件..."
-    cp "$BINARY_PATH" "${BINARY_PATH}.backup.$(date +%Y%m%d_%H%M%S)"
-
-    local arch=$(detect_arch)
-    local file_name="komari-linux-${arch}"
-    local download_url="https://github.com/0xdabiaoge/komari-retro/releases/latest/download/${file_name}"
-
-    log_step "下载最新版本..."
-    if ! curl -f -L -o "$BINARY_PATH" "$download_url"; then
-        log_error "下载失败，正在从备份恢复"
-        mv "${BINARY_PATH}.backup."* "$BINARY_PATH"
-        systemctl start ${SERVICE_NAME}.service
-        return 1
+    local candidate backup finished=false
+    candidate=$(mktemp "$INSTALL_DIR/.komari-upgrade.XXXXXX") || return 1
+    trap 'rm -f -- "$candidate"' EXIT
+    download_verified "$candidate" || return 1
+    chmod 0755 "$candidate" || return 1
+    "$candidate" --help >/dev/null || { log_error "新二进制无法运行"; return 1; }
+    backup=$(mktemp -d "$INSTALL_DIR/.upgrade-backup.XXXXXX") || return 1
+    cp -p -- "$BINARY_PATH" "$backup/komari" || return 1
+    systemctl stop "${SERVICE_NAME}.service" || return 1
+    if [ -d "$DATA_DIR/data" ] && ! cp -a -- "$DATA_DIR/data" "$backup/data"; then
+        systemctl start "${SERVICE_NAME}.service"; log_error "数据快照失败，取消升级"; return 1
     fi
 
-    chmod +x "$BINARY_PATH"
-
-    log_step "重启 Komari 服务..."
-    systemctl start ${SERVICE_NAME}.service
-
-    if systemctl is-active --quiet ${SERVICE_NAME}.service; then
-        log_success "Komari 升级成功"
-    else
-        log_error "服务在升级后未能启动"
-    fi
-}
+    command -v flock >/dev/null 2>&1 || { log_error "升级需要 util-linux 的 flock，请先安装"; return 1; }
+    exec 9>"$INSTALL_DIR/.upgrade.lock" || return 1
+    flock -n 9 || { log_error "另一个升级正在进行"; return 1; }
+    rollback_upgrade() {
+        if [ "$finished" != true ]; then
+            systemctl stop "${SERVICE_NAME}.service"
+            cp -p -- "$backup/komari" "$BINARY_PATH"
+            if [ -d "$backup/data" ]; then
+                if [ -d "$DATA_DIR/data" ]; then mv -- "$DATA_DIR/data" "$backup/failed-data"; fi
+                mv -- "$backup/data" "$DATA_DIR/data"
+            fi
+            systemctl start "${SERVICE_NAME}.service"
+            log_error "升级未通过健康检查，已恢复原二进制及数据。快照: $backup"
+        fi
+        rm -f -- "$candidate"
+    }
+    trap rollback_upgrade EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    mv -f -- "$candidate" "$BINARY_PATH" || return 1
+    systemctl start "${SERVICE_NAME}.service" || return 1
+    wait_healthy || return 1
+    finished=true
+    log_success "升级成功，已通过 HTTP 健康检查。回滚快照: $backup"
+)
 
 # Uninstall function
 uninstall_komari() {
@@ -585,5 +617,7 @@ main_menu() {
 }
 
 # Main execution
-check_root
-main_menu
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    check_root
+    main_menu
+fi

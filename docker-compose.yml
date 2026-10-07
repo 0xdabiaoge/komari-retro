@@ -3,10 +3,16 @@ services:
     image: ghcr.io/0xdabiaoge/komari-retro:latest
     container_name: komari-docker
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--max-time", "3", "http://127.0.0.1:25774/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     ports:
       - "25775:25774"
     volumes:
-      - ./data:/app/data
+      - ./docker-data:/app/data
     environment:
       - GIN_MODE=release
       - KOMARI_DB_TYPE=sqlite

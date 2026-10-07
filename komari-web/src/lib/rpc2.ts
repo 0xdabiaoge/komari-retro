@@ -10,6 +10,7 @@ import type {
 } from "../types/rpc2";
 import { RPC2ConnectionState } from "../types/rpc2";
 import i18n from "../i18n/config";
+import { authorizeFileAccess } from "./sensitive";
 
 /**
  * RPC2 客户端类
@@ -387,6 +388,7 @@ export class RPC2Client {
     options: RPC2CallOptions = {}
   ): Promise<TResult> {
     // 如果启用了自动连接，且当前未连接，尝试建立连接（不阻塞使用 HTTP 回退）
+    if (method.startsWith("admin:file")) await authorizeFileAccess();
     if (this.options.autoConnect &&
         this.connectionState === RPC2ConnectionState.DISCONNECTED) {
       this.autoConnect();
@@ -398,8 +400,9 @@ export class RPC2Client {
     if (this.connectionState === RPC2ConnectionState.CONNECTED) {
       try {
         return await this.callViaWebSocket(method, params, options);
-      } catch {
-        // 回退一次 HTTP
+      } catch (error) {
+        // A lost response does not mean a mutation was not executed.
+        if (!isReadOnlyMethod(method)) throw error;
         return this.callViaHTTP(method, params, options);
       }
     }
@@ -574,6 +577,13 @@ export class RPC2Client {
       });
     }, this.options.reconnectInterval);
   }
+}
+
+export function isReadOnlyMethod(method: string): boolean {
+  if (method === "rpc:ping" || method === "rpc.ping") return true;
+  const [namespace, name] = method.split(":");
+  return ["public", "common", "admin"].includes(namespace) &&
+    /^(get|list|query)[A-Z]/.test(name ?? "");
 }
 
 // 注意：避免在模块级别创建默认实例，以免在多处导入时重复建立 WebSocket 连接。

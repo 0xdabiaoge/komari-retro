@@ -67,6 +67,15 @@ func copyDataToTempExcludingDB(tempDir string) error {
 			return nil
 		}
 
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("backup contains symlink: %s", rel)
+		}
+		if strings.HasPrefix(info.Name(), ".") || rel == "backup.zip" || strings.HasPrefix(rel, "restore-check-") || strings.HasPrefix(rel, "backup-upload-") {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		// 跳过数据库相关文件
 		name := info.Name()
 		if strings.HasSuffix(strings.ToLower(name), ".db") ||
@@ -143,10 +152,14 @@ func DownloadBackup(c *gin.Context) {
 
 	// 4) 开始写出 ZIP（以临时目录为根）
 	backupFileName := fmt.Sprintf("backup-%d.zip", time.Now().UnixMicro())
-	c.Writer.Header().Set("Content-Type", "application/zip")
-	c.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", backupFileName))
-
-	zipWriter := zip.NewWriter(c.Writer)
+	archive, err := os.CreateTemp("", "komari-backup-*.zip")
+	if err != nil {
+		api.RespondError(c, 500, "Cannot create backup archive")
+		return
+	}
+	defer os.Remove(archive.Name())
+	defer archive.Close()
+	zipWriter := zip.NewWriter(archive)
 	defer zipWriter.Close()
 
 	// 写入临时目录里的内容
@@ -207,6 +220,15 @@ func DownloadBackup(c *gin.Context) {
 		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error writing backup markup file: %v", err))
 		return
 	}
+	if err := zipWriter.Close(); err != nil {
+		api.RespondError(c, 500, "Cannot finalize backup archive")
+		return
+	}
+	if err := archive.Close(); err != nil {
+		api.RespondError(c, 500, "Cannot finalize backup file")
+		return
+	}
+	c.FileAttachment(archive.Name(), backupFileName)
 }
 
 // GetDatabaseSize 返回数据库文件大小
@@ -225,3 +247,4 @@ func GetDatabaseSize(c *gin.Context) {
 	})
 }
 
+func nameOfPath(p string) string { return strings.Split(filepath.ToSlash(p), "/")[0] }

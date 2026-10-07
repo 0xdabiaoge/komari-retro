@@ -81,7 +81,7 @@ func sendDownloadStream(args map[string]interface{}) (json.RawMessage, error) {
 	path := resolveFilePath(argString(args, "path"))
 	offset := argInt64(args, "offset")
 	length := argInt64(args, "length")
-	if offset < 0 || length <= 0 || length > maxTransferChunkSize {
+	if offset < 0 || length <= 0 || length > 1<<40 {
 		return nil, fmt.Errorf("download_stream: invalid range offset=%d length=%d", offset, length)
 	}
 	transferURL, err := buildFileTransferURL(args)

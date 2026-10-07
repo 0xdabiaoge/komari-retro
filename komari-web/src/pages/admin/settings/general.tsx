@@ -132,13 +132,7 @@ const ApiCard = ({ settings }: { settings: SettingsResponse }) => {
 
   // 生成32位随机字符串
   const generateRandomString = () => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < 24; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    return Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, "0")).join("");
   };
 
   // 处理生成按钮点击

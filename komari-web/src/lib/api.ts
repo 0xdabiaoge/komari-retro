@@ -1,5 +1,6 @@
 import React from "react";
 import { toast } from "sonner";
+import { authorizeSensitiveAccess } from "./sensitive";
 
 /**
  * API utility functions for settings management
@@ -117,6 +118,9 @@ export async function getSettings(): Promise<SettingsResponse> {
 export async function updateSettings(
   settings: Partial<SettingsResponse>
 ): Promise<SettingsRestart | undefined> {
+  if (Object.keys(settings).some(key => key === "api_key" || key === "api_key_scope" || key.startsWith("o_auth") || key === "disable_password_login" || key === "admin_path" || key.includes("share_token"))) {
+    await authorizeSensitiveAccess();
+  }
   const response = await fetch("/api/admin/settings", {
     method: "POST",
     headers: {

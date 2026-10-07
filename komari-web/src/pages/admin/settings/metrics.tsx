@@ -170,6 +170,8 @@ function metricDescription(
   return system ?? resolveI18nText(custom, language) ?? "";
 }
 
+const experimentalMetricsAvailable = false;
+
 export default function MetricsSettings() {
   const { t } = useTranslation();
   const { settings, loading, error, updateMultipleSettings } = useSettings();
@@ -204,6 +206,8 @@ export default function MetricsSettings() {
     <Flex direction="column" gap="3" className="km-page-admin-settings-metrics">
       <SettingCardLabel>{t("settings.metrics.title")}</SettingCardLabel>
       <DatabaseMaintenanceCard />
+      <Callout.Root color="blue"><Callout.Text>当前监控数据存储于 SQLite。独立指标库、聚合保留策略和跨库迁移尚未接入运行服务，暂不开放配置。</Callout.Text></Callout.Root>
+      {experimentalMetricsAvailable && (<>
 
       {/*<Callout.Root color="blue" variant="surface">
         <Callout.Icon>
@@ -306,6 +310,7 @@ export default function MetricsSettings() {
         {t("settings.metrics.migration_title")}
       </SettingCardLabel>
       <MigrationCard />
+      </>)}
 
     </Flex>
   );

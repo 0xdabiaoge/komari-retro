@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"archive/zip"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/komari-monitor/komari/database/dbcore"
 	"github.com/komari-monitor/komari/web/api"
 )
 
@@ -21,6 +21,10 @@ var restoreMutex sync.Mutex
 
 // UploadBackup 用于接收上传的备份文件并将其内容恢复到原始位置
 func UploadBackup(c *gin.Context) {
+	if !dbcore.RestoreSupported() {
+		api.RespondError(c, 400, "Restore requires the standard ./data/komari.db database path")
+		return
+	}
 	// 尝试获取锁，如果已有恢复操作在进行，则立即返回错误
 	if !restoreMutex.TryLock() {
 		api.RespondError(c, http.StatusConflict, "Another restore operation is already in progress")
@@ -49,7 +53,7 @@ func UploadBackup(c *gin.Context) {
 	}
 
 	// 创建临时文件保存上传的zip（先校验，再落地到固定位置）
-	tempFile, err := os.CreateTemp("", "backup-upload-*.zip")
+	tempFile, err := os.CreateTemp("./data", ".backup-upload-*.zip")
 	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating temporary file: %v", err))
 		return
@@ -66,48 +70,18 @@ func UploadBackup(c *gin.Context) {
 	}
 	tempFile.Close() // 关闭文件以便后续操作
 
-	// 基础校验：检查是否包含标记文件
-	if zr, err := zip.OpenReader(tempFilePath); err == nil {
-		hasMarkup := false
-		for _, f := range zr.File {
-			if f.Name == "komari-backup-markup" {
-				hasMarkup = true
-				break
-			}
-		}
-		zr.Close()
-		if !hasMarkup {
-			api.RespondError(c, http.StatusBadRequest, "Invalid backup file: missing komari-backup-markup file")
-			return
-		}
-	} else {
-		api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error opening zip file: %v", err))
+	if err := dbcore.ValidateBackup(tempFilePath); err != nil {
+		api.RespondError(c, 400, "Invalid backup: "+err.Error())
 		return
 	}
-
-	// 将校验通过的临时文件移动到固定路径 ./data/backup.zip
-	finalPath := filepath.Join(".", "data", "backup.zip")
-	// 如存在旧文件，先删除
-	_ = os.Remove(finalPath)
+	finalPath := filepath.Join("data", "backup.zip")
+	if _, err := os.Stat(finalPath); err == nil {
+		api.RespondError(c, 409, "A backup is already pending")
+		return
+	}
 	if err := os.Rename(tempFilePath, finalPath); err != nil {
-		// fallback：拷贝
-		in, err2 := os.Open(tempFilePath)
-		if err2 != nil {
-			api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error preparing backup file: %v", err))
-			return
-		}
-		defer in.Close()
-		out, err2 := os.Create(finalPath)
-		if err2 != nil {
-			api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error creating target backup file: %v", err2))
-			return
-		}
-		if _, err2 = io.Copy(out, in); err2 != nil {
-			out.Close()
-			api.RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Error writing target backup file: %v", err2))
-			return
-		}
-		out.Close()
+		api.RespondError(c, 500, "Unable to queue backup")
+		return
 	}
 
 	// 返回：已保存备份，重启后将自动恢复

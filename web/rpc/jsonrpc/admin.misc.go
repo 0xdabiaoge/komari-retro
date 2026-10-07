@@ -117,6 +117,13 @@ func adminEditSettings(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 	if err := req.BindParams(&cfg); err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid or missing request body: "+err.Error(), nil)
 	}
+	delete(cfg, "2fa_code")
+	if theme, ok := cfg[config.ThemeKey].(string); ok && (strings.EqualFold(theme, "next") || strings.EqualFold(theme, "nasdaq") || strings.HasPrefix(theme, ".")) {
+		return nil, rpc.MakeError(rpc.InvalidParams, "This theme has been removed", nil)
+	}
+	if scope, ok := cfg[config.ApiKeyScopeKey]; ok && scope != "full" && scope != "read-only" {
+		return nil, rpc.MakeError(rpc.InvalidParams, "api_key_scope must be full or read-only", nil)
+	}
 	if err := config.SetMany(cfg); err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to update settings: "+err.Error(), nil)
 	}

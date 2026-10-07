@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -210,8 +211,11 @@ func GetPingRecords(uuid string, taskId int, start, end time.Time) ([]models.Pin
 	if taskId >= 0 {
 		dbQuery = dbQuery.Where("task_id = ?", uint(taskId))
 	}
-	if err := dbQuery.Where("time >= ? AND time <= ?", start, end).Order("time DESC").Find(&records).Error; err != nil {
+	if err := dbQuery.Where("time >= ? AND time <= ?", start, end).Order("time DESC").Limit(50001).Find(&records).Error; err != nil {
 		return nil, err
+	}
+	if len(records) > 50000 {
+		return nil, fmt.Errorf("query exceeds 50000 rows; narrow the time window")
 	}
 	return records, nil
 }

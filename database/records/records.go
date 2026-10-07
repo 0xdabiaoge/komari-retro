@@ -2,6 +2,7 @@ package records
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -53,7 +54,7 @@ func GetGPURecordsByClientAndTime(uuid string, start, end time.Time) ([]models.G
 			recentStart = fourHoursAgo
 		}
 		err := db.Where("client = ? AND time >= ? AND time <= ?", uuid, recentStart, end).
-			Order("time ASC, device_index ASC").Find(&recentRecords).Error
+			Order("time ASC, device_index ASC").Limit(50001).Find(&recentRecords).Error
 		if err != nil {
 			log.Printf("Error fetching recent GPU records for client %s between %s and %s: %v", uuid, recentStart, end, err)
 			return nil, err
@@ -62,12 +63,15 @@ func GetGPURecordsByClientAndTime(uuid string, start, end time.Time) ([]models.G
 
 	var longTermRecords []models.GPURecord
 	err := db.Table("gpu_records_long_term").Where("client = ? AND time >= ? AND time <= ?", uuid, start, end).
-		Order("time ASC, device_index ASC").Find(&longTermRecords).Error
+		Order("time ASC, device_index ASC").Limit(50001).Find(&longTermRecords).Error
 	if err != nil {
 		log.Printf("Error fetching long-term GPU records for client %s between %s and %s: %v", uuid, start, end, err)
 		return recentRecords, nil
 	}
 
+	if len(recentRecords) > 50000 || len(longTermRecords) > 50000 {
+		return nil, fmt.Errorf("query exceeds 50000 rows; narrow the time window")
+	}
 	// 合并结果 - 不再需要类型转换
 	records = append(records, recentRecords...)
 	records = append(records, longTermRecords...)
@@ -114,7 +118,7 @@ func GetRecordsByClientAndTime(uuid string, start, end time.Time) ([]models.Reco
 		if recentStart.Before(fourHoursAgo) {
 			recentStart = fourHoursAgo
 		}
-		err := db.Where("client = ? AND time >= ? AND time <= ?", uuid, recentStart, end).Order("time ASC").Find(&recentRecords).Error
+		err := db.Where("client = ? AND time >= ? AND time <= ?", uuid, recentStart, end).Order("time ASC").Limit(50001).Find(&recentRecords).Error
 		if err != nil {
 			log.Printf("Error fetching recent records for client %s between %s and %s: %v", uuid, recentStart, end, err)
 			return nil, err
@@ -122,12 +126,15 @@ func GetRecordsByClientAndTime(uuid string, start, end time.Time) ([]models.Reco
 	}
 
 	var long_term []models.Record
-	err := db.Table("records_long_term").Where("client = ? AND time >= ? AND time <= ?", uuid, start, end).Order("time ASC").Find(&long_term).Error
+	err := db.Table("records_long_term").Where("client = ? AND time >= ? AND time <= ?", uuid, start, end).Order("time ASC").Limit(50001).Find(&long_term).Error
 	if err != nil {
 		log.Printf("Error fetching long-term records for client %s between %s and %s: %v", uuid, start, end, err)
 		return recentRecords, nil
 	}
 
+	if len(recentRecords) > 50000 || len(long_term) > 50000 {
+		return nil, fmt.Errorf("query exceeds 50000 rows; narrow the time window")
+	}
 	if len(long_term) == 0 {
 		// 没有查到long_term，返回全部recentRecords
 		records = append(records, recentRecords...)
@@ -163,7 +170,7 @@ func GetAllRecords() ([]models.Record, error) {
 		log.Printf("Error fetching all records: %v", err)
 		return nil, err
 	}
-	err = db.Table("records_long_term").Order("time ASC").Find(&long_term).Error
+	err = db.Table("records_long_term").Order("time ASC").Limit(50001).Find(&long_term).Error
 	if err != nil {
 		log.Printf("Error fetching long-term records: %v", err)
 		return records, nil

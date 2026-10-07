@@ -277,7 +277,7 @@ export default function PluginsPage() {
         <Flex gap="2">
           <Button
             onClick={() => setUploadDialogOpen(true)}
-            disabled={uploading}
+            disabled
           >
             <Upload size={14} />
             {t("plugin.upload", "Upload Plugin")}
@@ -290,6 +290,7 @@ export default function PluginsPage() {
       </Flex>
 
       <Separator size="4" />
+      <Callout.Root color="blue"><Callout.Text>当前服务端尚未实现插件安装与运行，暂不开放上传和管理操作。</Callout.Text></Callout.Root>
 
       {plugins.length === 0 ? (
         <Callout.Root>

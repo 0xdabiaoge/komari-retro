@@ -3,26 +3,31 @@ package geoip_test
 import (
 	"net"
 	"testing"
+ "os"
 
 	"github.com/komari-monitor/komari/utils/geoip"
 )
 
 // 测试GeoIP数据库的初始化和更新功能
 func TestMmdb(t *testing.T) {
+ if os.Getenv("KOMARI_NETWORK_TESTS")!="1" {t.Skip("external network test; set KOMARI_NETWORK_TESTS=1")}
 	geoip.CurrentProvider, _ = geoip.NewMaxMindGeoIPService()
 	testIpAddr(t)
 }
 func TestIpApi(t *testing.T) {
+ if os.Getenv("KOMARI_NETWORK_TESTS")!="1" {t.Skip("external network test; set KOMARI_NETWORK_TESTS=1")}
 	geoip.CurrentProvider, _ = geoip.NewIPAPIService()
 	testIpAddr(t)
 }
 
 func TestGeojs(t *testing.T) {
+ if os.Getenv("KOMARI_NETWORK_TESTS")!="1" {t.Skip("external network test; set KOMARI_NETWORK_TESTS=1")}
 	geoip.CurrentProvider, _ = geoip.NewGeoJSService()
 	testIpAddr(t)
 }
 
 func TestIpInfo(t *testing.T) {
+ if os.Getenv("KOMARI_NETWORK_TESTS")!="1" {t.Skip("external network test; set KOMARI_NETWORK_TESTS=1")}
 	geoip.CurrentProvider, _ = geoip.NewIPInfoService()
 	testIpAddr(t)
 }
@@ -40,7 +45,7 @@ func testIpAddr(t *testing.T) {
 			t.Errorf("Country information is missing for IP %s", ipaddr)
 		}
 	} else {
-		t.Errorf("GeoIP record is nil for IP %s", ipaddr)
+		t.Fatalf("GeoIP record is nil for IP %s", ipaddr)
 	}
 
 	t.Logf("IPv4:[%s]%s - %s", ipaddr, record.ISOCode, record.Name)
@@ -57,7 +62,7 @@ func testIpAddr(t *testing.T) {
 			t.Errorf("Country information is missing for IPv6 %s", ipaddr)
 		}
 	} else {
-		t.Errorf("GeoIP record is nil for IPv6 %s", ipaddr)
+		t.Fatalf("GeoIP record is nil for IPv6 %s", ipaddr)
 	}
 	t.Logf("IPv6:[%s]%s - %s", ipaddr, record.ISOCode, record.Name)
 }

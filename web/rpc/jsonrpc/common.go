@@ -227,6 +227,11 @@ func getNodes(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcEr
 	meta := rpc.MetaFromContext(ctx)
 
 	SendIpAddrToGuest, _ := config.GetAs[bool](config.SendIpAddrToGuestKey)
+	if meta.APIKey && meta.APIKeyScope != "full" {
+		for i := range cinfo {
+			cinfo[i].Token = ""
+		}
+	}
 	if meta.Permission != "admin" {
 		// 过滤 Hidden 节点并隐藏敏感字段
 		filtered := make([]models.Client, 0, len(cinfo))
@@ -323,6 +328,7 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		Time           models.LocalTime    `json:"time"`
 		Cpu            float32             `json:"cpu"`
 		Gpu            float32             `json:"gpu"`
+		GPUDetail      *v1.GPUDetailReport `json:"gpu_detail,omitempty"`
 		Ram            int64               `json:"ram"`
 		RamTotal       int64               `json:"ram_total"`
 		Swap           int64               `json:"swap"`
@@ -359,7 +365,8 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 			Client:         uuid,
 			Time:           models.FromTime(rep.UpdatedAt),
 			Cpu:            float32(rep.CPU.Usage),
-			Gpu:            0,
+			Gpu:            gpuUsage(rep),
+			GPUDetail:      rep.GPU,
 			Ram:            rep.Ram.Used,
 			RamTotal:       rep.Ram.Total,
 			Swap:           rep.Swap.Used,
@@ -375,7 +382,7 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 			NetTotalUp:     rep.Network.TotalUp,
 			NetTotalDown:   rep.Network.TotalDown,
 			Process:        rep.Process,
-			Connections:    rep.Connections.TCP + rep.Connections.UDP,
+			Connections:    rep.Connections.TCP,
 			ConnectionsUdp: rep.Connections.UDP,
 			Online:         onlineSet[uuid],
 			Uptime:         rep.Uptime,
@@ -421,6 +428,12 @@ func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) 
 
 	switch meta.Permission {
 	case "admin":
+		if meta.User == nil {
+			resp.LoggedIn = true
+			resp.Username = "API Key"
+			resp.UUID = meta.UserUUID
+			return resp, nil
+		}
 		resp.TwoFAEnabled = meta.User.TwoFactor != ""
 		resp.LoggedIn = true
 		resp.SSOId = meta.User.SSOID
@@ -531,7 +544,7 @@ func getNodeRecentStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rp
 			Client:         params.UUID,
 			Time:           models.FromTime(r.UpdatedAt),
 			Cpu:            float32(r.CPU.Usage),
-			Gpu:            0,
+			Gpu:            gpuUsage(&r),
 			Ram:            r.Ram.Used,
 			RamTotal:       r.Ram.Total,
 			Swap:           r.Swap.Used,
@@ -545,11 +558,18 @@ func getNodeRecentStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rp
 			NetTotalUp:     r.Network.TotalUp,
 			NetTotalDown:   r.Network.TotalDown,
 			Process:        r.Process,
-			Connections:    r.Connections.TCP + r.Connections.UDP,
+			Connections:    r.Connections.TCP,
 			ConnectionsUdp: r.Connections.UDP,
 		}
 		resp.Records = append(resp.Records, fr)
 	}
 	resp.Count = len(resp.Records)
 	return resp, nil
+}
+
+func gpuUsage(report *v1.Report) float32 {
+	if report.GPU == nil {
+		return 0
+	}
+	return float32(report.GPU.AverageUsage)
 }

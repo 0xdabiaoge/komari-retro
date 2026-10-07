@@ -78,7 +78,8 @@ async function guide(page, title) {
   assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1);
   assert.equal(await page.locator(".km-guide-content").evaluate((el) => el.scrollWidth > el.clientWidth), false);
   const spotlight = await page.locator(".km-guide-spotlight").boundingBox();
-  assert.ok(spotlight && (
+  const highlighted = await page.locator(".km-guide-spotlight").getAttribute("data-highlighted") === "true";
+  assert.ok(!highlighted || spotlight && (
     box.x >= spotlight.x + spotlight.width || box.x + box.width <= spotlight.x ||
     box.y >= spotlight.y + spotlight.height || box.y + box.height <= spotlight.y
   ), "tutorial must not cover its highlighted target");

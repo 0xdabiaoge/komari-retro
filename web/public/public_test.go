@@ -1,6 +1,22 @@
 package public
 
-import "testing"
+import (
+	"io/fs"
+	"testing"
+)
+
+func TestOnlyDefaultThemeIsEmbedded(t *testing.T) {
+	entries, err := fs.ReadDir(PublicFS, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "defaultTheme" {
+		t.Fatalf("unexpected bundled themes: %v", entries)
+	}
+	if _, err := fs.Stat(PublicFS, "defaultTheme/dist/index.html"); err != nil {
+		t.Fatal("default theme missing", err)
+	}
+}
 
 func TestNormalizeHTMLLanguage(t *testing.T) {
 	tests := map[string]struct {

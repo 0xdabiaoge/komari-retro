@@ -43,9 +43,9 @@ func init() {
 	reg("getDatabaseSize", adminGetDatabaseSize, "Get database size")
 	reg("listMetricDefinitions", publicListMetricDefinitions, "List metric definitions")
 	reg("getMetricMigrationStatus", adminGetMetricMigrationStatus, "Get metric migration status")
-	reg("startMetricMigration", adminNoOp, "Start metric migration")
-	reg("cancelMetricMigration", adminNoOp, "Cancel metric migration")
-	reg("updateMetricDefinition", adminNoOp, "Update metric definition")
+	reg("startMetricMigration", adminMetricUnavailable, "Start metric migration")
+	reg("cancelMetricMigration", adminMetricUnavailable, "Cancel metric migration")
+	reg("updateMetricDefinition", adminMetricUnavailable, "Update metric definition")
 	reg("listPlugins", adminListPlugins, "List installed plugins")
 	reg("deletePlugin", adminNoOp, "Delete plugin")
 	reg("setPluginEnabled", adminNoOp, "Set plugin enabled")
@@ -66,7 +66,11 @@ func adminGetDatabaseSize(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.J
 }
 
 func adminGetMetricMigrationStatus(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	return map[string]any{"status": "idle"}, nil
+	return map[string]any{"status": "unavailable", "enabled": false}, nil
+}
+
+func adminMetricUnavailable(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	return nil, rpc.MakeError(rpc.InvalidRequest, "Experimental metric storage is not connected to the running service", nil)
 }
 
 func adminListPlugins(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -74,7 +78,7 @@ func adminListPlugins(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonR
 }
 
 func adminNoOp(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	return nil, nil
+	return nil, rpc.MakeError(rpc.InvalidRequest, "Plugin operations are not implemented by this server", nil)
 }
 
 func adminGetLogs(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -90,11 +94,11 @@ func adminGetLogs(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		params.Page = "1"
 	}
 	limitInt, err := strconv.Atoi(params.Limit)
-	if err != nil || limitInt <= 0 {
+	if err != nil || limitInt <= 0 || limitInt > 1000 {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid limit: "+params.Limit, nil)
 	}
 	pageInt, err := strconv.Atoi(params.Page)
-	if err != nil || pageInt <= 0 {
+	if err != nil || pageInt <= 0 || pageInt > 1000000 {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid page: "+params.Page, nil)
 	}
 	db := dbcore.GetDBInstance()

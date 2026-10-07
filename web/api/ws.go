@@ -26,6 +26,7 @@ func GetClients(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+	conn.SetReadLimit(1 << 20)
 
 	// 初始化用户信息
 	var (
@@ -75,6 +76,21 @@ func GetClients(c *gin.Context) {
 			//log.Println("Error reading message:", err)
 			return
 		}
+		_, sessionErr := accounts.GetUserBySession(session)
+		isLogin = sessionErr == nil
+		if !isLogin {
+			if privateSite, _ := config.GetAs[bool](config.PrivateSiteKey, false); privateSite && !hasTempAccess(c) {
+				return
+			}
+			hiddenMap = map[string]bool{}
+			var hiddenClients []models.Client
+			if err := dbcore.GetDBInstance().Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error; err != nil {
+				return
+			}
+			for _, cli := range hiddenClients {
+				hiddenMap[cli.UUID] = true
+			}
+		}
 		message := string(data)
 
 		uuID := ""
@@ -108,9 +124,6 @@ func GetClients(c *gin.Context) {
 			}
 
 			report.UUID = "" // 不暴露 uuid
-			if report.CPU.Usage == 0 {
-				report.CPU.Usage = 0.01
-			}
 			resp.Data[key] = *report
 		}
 

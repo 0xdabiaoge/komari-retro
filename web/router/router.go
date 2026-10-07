@@ -47,6 +47,9 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.GET("/api/nodes", jsonRpc.Bind("public:getNodesInformation"))
 	r.GET("/api/public", jsonRpc.Bind("public:getPublicSettings"))
 	r.GET("/api/version", jsonRpc.Bind("public:getVersion"))
+	// Accounts are initialized at server startup; the unconnected setup wizard
+	// must not offer an unauthenticated reconfiguration path.
+	r.GET("/api/install/status", func(c *gin.Context) { api.RespondSuccess(c, gin.H{"state": "installed", "required": false}) })
 	r.GET("/api/recent/:uuid", jsonRpc.Bind("public:getClientRecentRecords", jsonRpc.WithPath("uuid")))
 	r.GET("/api/records/load", jsonRpc.Bind("public:getRecordsByUUID", jsonRpc.WithQuery("uuid", "load_type", "hours")))
 	r.GET("/api/records/ping", jsonRpc.Bind("public:getPingRecords", jsonRpc.WithQuery("uuid", "task_id", "hours")))
@@ -89,7 +92,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	g := r.Group("/api/admin", api.RequireRole(api.RoleAdmin))
 
 	// --- 二进制/流/重定向类，保留 REST handler ---
-	g.GET("/download/backup", admin.DownloadBackup)
+	g.GET("/download/backup", api.RequireSensitive2FA(), admin.DownloadBackup)
 	g.POST("/upload/backup", api.RequireSensitive2FA(), admin.UploadBackup)
 	g.GET("/test/geoip", jsonRpc.Bind("admin:testGeoip", jsonRpc.WithQuery("ip")))
 	g.POST("/test/sendMessage", jsonRpc.Bind("admin:testSendMessage"))
@@ -115,6 +118,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	twoFactor := g.Group("/2fa")
 	{
 		twoFactor.GET("/generate", admin.Generate2FA)
+		twoFactor.POST("/verify", api.AuthorizeSensitive)
 		twoFactor.POST("/enable", admin.Enable2FA)
 		twoFactor.POST("/disable", api.RequireSensitive2FA(), admin.Disable2FA)
 	}
@@ -176,8 +180,8 @@ func registerAdminRoutes(r *gin.Engine) {
 		clientGroup.POST("/order", jsonRpc.Bind("admin:orderClients"))
 		clientGroup.GET("/:uuid/terminal", api.RequireSensitive2FA(), terminal.RequestTerminal)
 		// 文件管理器端点
-		clientGroup.GET("/:uuid/file/download", filetransfer.HandleFileDownload)
-		clientGroup.GET("/:uuid/file/preview-token", filetransfer.HandleFilePreviewToken)
+		clientGroup.GET("/:uuid/file/download", api.RequireSensitive2FA(), filetransfer.HandleFileDownload)
+		clientGroup.GET("/:uuid/file/preview-token", api.RequireSensitive2FA(), filetransfer.HandleFilePreviewToken)
 		clientGroup.POST("/:uuid/file/upload", filetransfer.HandleFileUpload)
 	}
 

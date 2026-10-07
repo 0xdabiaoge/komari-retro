@@ -12,6 +12,7 @@ __debug*
 # local development data
 komari.db
 /data
+/docker-data
 /utils/geoip/data
 .vscode/
 /backup

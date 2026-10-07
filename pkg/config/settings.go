@@ -17,9 +17,10 @@ type Settings struct {
 	Theme                  string `json:"theme" default:"default"`                             // 主题名称，默认 'default'
 	PrivateSite            bool   `json:"private_site" default:"false"`                        // 是否为私有站点，默认 false
 	ApiKey                 string `json:"api_key" default:""`                                  // API 密钥，默认空字符串
-	AutoDiscoveryKey       string `json:"auto_discovery_key" default:""`                       // 自动发现密钥
-	ScriptDomain           string `json:"script_domain" default:""`                            // 自定义脚本域名
-	SendIpAddrToGuest      bool   `json:"send_ip_addr_to_guest" default:"false"`               // 是否向访客页面发送 IP 地址，默认 false
+	ApiKeyScope            string `json:"api_key_scope" default:"full"`
+	AutoDiscoveryKey       string `json:"auto_discovery_key" default:""`         // 自动发现密钥
+	ScriptDomain           string `json:"script_domain" default:""`              // 自定义脚本域名
+	SendIpAddrToGuest      bool   `json:"send_ip_addr_to_guest" default:"false"` // 是否向访客页面发送 IP 地址，默认 false
 	EulaAccepted           bool   `json:"eula_accepted" default:"false"`
 	BaseScriptsURLKey      string `json:"base_scripts_url" default:""`
 	// GeoIP 配置
@@ -42,15 +43,15 @@ type Settings struct {
 	LoginNotification          bool    `json:"login_notification" default:"true"`          // 登录通知
 	TrafficLimitPercentage     float64 `json:"traffic_limit_percentage" default:"80.00"`   // 流量限制百分比，默认80.00%
 	// Record
-	RecordEnabled          bool `json:"record_enabled" default:"true"`          // 是否启用记录功能
-	RecordPreserveTime     int  `json:"record_preserve_time" default:"720"`     // 记录保留时间，单位小时，默认30天
-	PingRecordPreserveTime int  `json:"ping_record_preserve_time" default:"24"` // Ping 记录保留时间，单位小时，默认1天
-	AdminPath              string `json:"admin_path" default:""`                 // 后台安全入口路径（例如 /entry-xxxxxx）
-	AdminViewPath          string `json:"admin_view_path" default:""`            // 管理员查看探针前台地址（例如 /view-xxxxxx）
-	TemporyShareToken      string `json:"tempory_share_token" default:""`        // 临时只读分享密钥
-	TemporyShareTokenExpireAt int64 `json:"tempory_share_token_expire_at" default:"0"` // 临时分享过期时间戳
-	PermanentShareToken    string `json:"permanent_share_token" default:""`      // 永久只读分享密钥
-	UpdatedAt              time.Time
+	RecordEnabled             bool   `json:"record_enabled" default:"true"`             // 是否启用记录功能
+	RecordPreserveTime        int    `json:"record_preserve_time" default:"720"`        // 记录保留时间，单位小时，默认30天
+	PingRecordPreserveTime    int    `json:"ping_record_preserve_time" default:"24"`    // Ping 记录保留时间，单位小时，默认1天
+	AdminPath                 string `json:"admin_path" default:""`                     // 后台安全入口路径（例如 /entry-xxxxxx）
+	AdminViewPath             string `json:"admin_view_path" default:""`                // 管理员查看探针前台地址（例如 /view-xxxxxx）
+	TemporyShareToken         string `json:"tempory_share_token" default:""`            // 临时只读分享密钥
+	TemporyShareTokenExpireAt int64  `json:"tempory_share_token_expire_at" default:"0"` // 临时分享过期时间戳
+	PermanentShareToken       string `json:"permanent_share_token" default:""`          // 永久只读分享密钥
+	UpdatedAt                 time.Time
 }
 
 const (
@@ -68,6 +69,7 @@ const (
 	TemporyShareTokenExpireAtKey  = "tempory_share_token_expire_at"
 	PermanentShareTokenKey        = "permanent_share_token"
 	ApiKeyKey                     = "api_key"
+	ApiKeyScopeKey                = "api_key_scope"
 	AutoDiscoveryKeyKey           = "auto_discovery_key"
 	ScriptDomainKey               = "script_domain"
 	SendIpAddrToGuestKey          = "send_ip_addr_to_guest"

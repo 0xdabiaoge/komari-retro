@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import Pages from "vite-plugin-pages";
 import { visualizer } from "rollup-plugin-visualizer";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -60,10 +59,6 @@ export default defineConfig(({ mode }) => {
       localKomariThemePlugin(),
       react(),
       tailwindcss(),
-      Pages({
-        dirs: "src/pages",
-        extensions: ["tsx", "jsx"],
-      }),
       VitePWA({
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "assets/pwa-icon.webp"],
@@ -78,13 +73,13 @@ export default defineConfig(({ mode }) => {
           start_url: base,
           icons: [
             {
-              src: "${base}assets/pwa-icon.webp",
+              src: `${base}assets/pwa-icon.webp`,
               sizes: "192x192",
               type: "image/webp",
               purpose: "maskable any",
             },
             {
-              src: "${base}assets/pwa-icon.webp",
+              src: `${base}assets/pwa-icon.webp`,
               sizes: "512x512",
               type: "image/webp",
               purpose: "maskable any",
@@ -95,24 +90,10 @@ export default defineConfig(({ mode }) => {
           // HTML is rendered dynamically with theme, plugin, and site settings.
           // Cache only immutable assets so every navigation reaches the server.
           globPatterns: ["**/*.{js,css,ico,png,svg}"],
-          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+          globIgnores: ["**/*monaco*", "**/*editor*", "**/*worker*"],
+          maximumFileSizeToCacheInBytes: 1024 * 1024,
           navigateFallback: null,
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/api\./i,
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "api-cache",
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-          ],
+          runtimeCaching: [],
         },
       }),
       visualizer({

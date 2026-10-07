@@ -3,6 +3,8 @@ package log
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,8 +14,8 @@ import (
 func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
+		path := safeLogPath(c.Request.URL.Path)
+		query := safeLogQuery(c.Request.URL.Query())
 
 		// 处理请求
 		c.Next()
@@ -60,12 +62,30 @@ func GinLogger() gin.HandlerFunc {
 	}
 }
 
+// Only non-secret routing and pagination fields are useful in access logs.
+func safeLogQuery(values url.Values) string {
+	clean := make(url.Values)
+	for _, key := range []string{"page", "limit", "hours", "operation", "chunk_index"} {
+		if value := values.Get(key); value != "" && len(value) <= 32 {
+			clean.Set(key, value)
+		}
+	}
+	return clean.Encode()
+}
+
+func safeLogPath(path string) string {
+	if strings.HasPrefix(path, "/s/") {
+		return "/s/[redacted]"
+	}
+	return path
+}
+
 // GinRecovery 返回一个 gin.HandlerFunc，用于恢复 panic
 func GinRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				msg := fmt.Sprintf("panic recovered: %v | %s %s", err, c.Request.Method, c.Request.URL.Path)
+				msg := fmt.Sprintf("panic recovered: %v | %s %s", err, c.Request.Method, safeLogPath(c.Request.URL.Path))
 				handler := slog.Default().Handler()
 				r := slog.NewRecord(time.Now(), slog.LevelError, msg, 0)
 				r.AddAttrs(slog.String("_group", "GIN"))
