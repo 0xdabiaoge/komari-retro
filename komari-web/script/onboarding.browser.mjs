@@ -147,7 +147,12 @@ try {
   await phone.getByRole("button", { name: "打开工作台", exact: true }).click();
   const terminal = await popupPromise;
   await terminal.waitForURL("**/terminal");
-  await terminal.waitForTimeout(1000);
+  // Wait for the settings write itself. Cold lazy chunks and CI CPU load can
+  // delay the terminal guide beyond an arbitrary one-second sleep.
+  const workbenchDeadline = Date.now() + 15000;
+  while (!settings[key].workbenchOpened && Date.now() < workbenchDeadline) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   assert.equal(settings[key].workbenchOpened, true);
   assert.equal(await terminal.locator(".km-guide-content").count(), 0);
   await terminal.goto(`${base}/terminal?uuid=node-0`);
