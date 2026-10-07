@@ -1654,5 +1654,24 @@
   ],
   "binary_sha256": "c1015c9e131468bdfa456c59b5896863434f0acf303324607f87bd83e9a12370",
   "quality_checks_url": "https://github.com/0xdabiaoge/komari-retro/actions/runs/37593207229",
-  "verified_at": "2026-10-07T16:42:36+08:00"
+  "verified_at": "2026-10-07T16:42:36+08:00",
+  "additional_simulations": [
+    {
+      "category": "calendar schedule next-run calculation",
+      "status": "PASS",
+      "cases": 5,
+      "scenarios": [
+        "daily next-day boundary",
+        "weekly Monday boundary",
+        "weekly next-week rollover",
+        "monthly year rollover",
+        "leap-day month boundary"
+      ],
+      "verification": {
+        "windows": "go test",
+        "linux": "go test -race"
+      },
+      "scope": "Deterministic schedule calculation only; the production clock and live scheduler dispatch were not waited on."
+    }
+  ]
 }
