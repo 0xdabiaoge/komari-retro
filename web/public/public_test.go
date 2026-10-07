@@ -2,6 +2,9 @@ package public
 
 import (
 	"io/fs"
+	"path"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -22,6 +25,25 @@ func TestBuiltinThemesAreEmbedded(t *testing.T) {
 		}
 		if _, ok := ReadBuiltinThemeFile(theme.id, "komari-theme.json"); !ok {
 			t.Fatalf("%s theme metadata missing", theme.id)
+		}
+	}
+}
+
+func TestRetroThemeEmbedsEveryNextAssetReferencedByIndex(t *testing.T) {
+	index, ok := ReadBuiltinThemeFile(RetroTheme, "dist/index.html")
+	if !ok {
+		t.Fatal("retro theme index is missing")
+	}
+
+	assetReferences := regexp.MustCompile(`(src|href)="(/_next/static/[^"]+)"`).FindAllSubmatch(index, -1)
+	if len(assetReferences) == 0 {
+		t.Fatal("retro theme index does not reference any Next.js assets")
+	}
+
+	for _, reference := range assetReferences {
+		assetPath := path.Join("dist", strings.TrimPrefix(string(reference[2]), "/"))
+		if _, ok := ReadBuiltinThemeFile(RetroTheme, assetPath); !ok {
+			t.Errorf("retro theme index references an asset that is not embedded: %s", assetPath)
 		}
 	}
 }

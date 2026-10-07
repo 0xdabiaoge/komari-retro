@@ -16,7 +16,9 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
-//go:embed defaultTheme retroTheme
+// Next.js stores its exported theme assets under `_next`, which `go:embed`
+// skips when recursively embedding a directory unless the subtree uses `all:`.
+//go:embed defaultTheme retroTheme all:retroTheme/dist/_next
 var PublicFS embed.FS
 
 // 常量定义
