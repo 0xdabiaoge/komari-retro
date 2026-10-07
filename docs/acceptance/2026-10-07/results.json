@@ -1,0 +1,1658 @@
+{
+  "code_commit": "823448e1aa94035602471c73d8bbbb1031fcd9dc",
+  "runtime_version": "v1.2.5+retro.823448e",
+  "total": 200,
+  "pass": 200,
+  "fail": 0,
+  "runtime_cases": [
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "health-version",
+      "status": "PASS",
+      "seconds": 0.009
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "public:getMe",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "public:getNodesInformation",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "public:getPublicSettings",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "public:getPublicPingTasks",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "public:getPingMetricStats",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "public:queryMetrics",
+      "status": "PASS",
+      "seconds": 0.146
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "common:getNodes",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "common:getNodesLatestStatus",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "common:getPublicInfo",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "common:getVersion",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:listClients",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getSettings",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getSessions",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getLogs",
+      "status": "PASS",
+      "seconds": 0.009
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getAllPingTasks",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getTasks",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:listOfflineNotifications",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:listTrafficReportNotifications",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getAllLoadNotifications",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:listClipboard",
+      "status": "PASS",
+      "seconds": 0.012
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getDatabaseSize",
+      "status": "PASS",
+      "seconds": 0.011
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getXtermjsSettings",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getMessageSenderProvider",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:listNotificationChannels",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getOidcProvider",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getCloudflaredStatus",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:listPlugins",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "admin:getMetricMigrationStatus",
+      "status": "PASS",
+      "seconds": 0.01
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/me",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/nodes",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/public",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/task/ping",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/install/status",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/admin/client/list",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/admin/settings",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/admin/settings/xtermjs",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/admin/theme/list",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "REST /api/admin/logs?limit=2&page=1",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "anonymous-permissions",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "rpc-batch-notification",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "rpc-websocket",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "consistent-backup-download",
+      "status": "PASS",
+      "seconds": 0.135
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "client-crud-before-delete",
+      "status": "PASS",
+      "seconds": 0.018
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "rpc-void-success-wire-contract",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "clipboard-full-crud",
+      "status": "PASS",
+      "seconds": 0.035
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "probe-hardware-telemetry",
+      "status": "PASS",
+      "seconds": 2.018
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "node-history",
+      "status": "PASS",
+      "seconds": 0.015
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-ram",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-swap",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-load",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-temp",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-disk",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-network",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-process",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-connections",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-all",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "history-filter-gpu",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "remote-exec-roundtrip",
+      "status": "PASS",
+      "seconds": 1.032
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "file-upload-download-range-empty",
+      "status": "PASS",
+      "seconds": 0.12
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "file-management-operations",
+      "status": "PASS",
+      "seconds": 0.056
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "file-preview-token",
+      "status": "PASS",
+      "seconds": 0.008
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "terminal-real-pty",
+      "status": "PASS",
+      "seconds": 0.025
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "ping-icmp-tcp-http-crud-and-report",
+      "status": "PASS",
+      "seconds": 2.072
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "load-notification-rule-crud",
+      "status": "PASS",
+      "seconds": 0.016
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "geoip-lookup",
+      "status": "PASS",
+      "seconds": 0.208
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "disabled-feature admin:deletePlugin",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "script",
+      "case": "disabled-feature admin:startMetricMigration",
+      "status": "PASS",
+      "seconds": 0.002
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "health-version",
+      "status": "PASS",
+      "seconds": 0.009
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "public:getMe",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "public:getNodesInformation",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "public:getPublicSettings",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "public:getPublicPingTasks",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "public:getPingMetricStats",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "public:queryMetrics",
+      "status": "PASS",
+      "seconds": 0.117
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "common:getNodes",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "common:getNodesLatestStatus",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "common:getPublicInfo",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "common:getVersion",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:listClients",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getSettings",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getSessions",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getLogs",
+      "status": "PASS",
+      "seconds": 0.013
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getAllPingTasks",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getTasks",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:listOfflineNotifications",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:listTrafficReportNotifications",
+      "status": "PASS",
+      "seconds": 0.009
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getAllLoadNotifications",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:listClipboard",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getDatabaseSize",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getXtermjsSettings",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getMessageSenderProvider",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:listNotificationChannels",
+      "status": "PASS",
+      "seconds": 0.012
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getOidcProvider",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getCloudflaredStatus",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:listPlugins",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "admin:getMetricMigrationStatus",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/me",
+      "status": "PASS",
+      "seconds": 0.002
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/nodes",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/public",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/task/ping",
+      "status": "PASS",
+      "seconds": 0.002
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/install/status",
+      "status": "PASS",
+      "seconds": 0.002
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/admin/client/list",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/admin/settings",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/admin/settings/xtermjs",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/admin/theme/list",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "REST /api/admin/logs?limit=2&page=1",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "anonymous-permissions",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "rpc-batch-notification",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "rpc-websocket",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "consistent-backup-download",
+      "status": "PASS",
+      "seconds": 0.065
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "client-crud-before-delete",
+      "status": "PASS",
+      "seconds": 0.016
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "rpc-void-success-wire-contract",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "clipboard-full-crud",
+      "status": "PASS",
+      "seconds": 0.034
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "probe-hardware-telemetry",
+      "status": "PASS",
+      "seconds": 2.028
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "node-history",
+      "status": "PASS",
+      "seconds": 0.028
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-ram",
+      "status": "PASS",
+      "seconds": 0.011
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-swap",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-load",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-temp",
+      "status": "PASS",
+      "seconds": 0.008
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-disk",
+      "status": "PASS",
+      "seconds": 0.008
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-network",
+      "status": "PASS",
+      "seconds": 0.008
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-process",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-connections",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-all",
+      "status": "PASS",
+      "seconds": 0.011
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "history-filter-gpu",
+      "status": "PASS",
+      "seconds": 0.008
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "remote-exec-roundtrip",
+      "status": "PASS",
+      "seconds": 0.038
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "file-upload-download-range-empty",
+      "status": "PASS",
+      "seconds": 0.186
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "file-management-operations",
+      "status": "PASS",
+      "seconds": 0.095
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "file-preview-token",
+      "status": "PASS",
+      "seconds": 0.017
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "terminal-real-pty",
+      "status": "PASS",
+      "seconds": 0.029
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "ping-icmp-tcp-http-crud-and-report",
+      "status": "PASS",
+      "seconds": 2.078
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "load-notification-rule-crud",
+      "status": "PASS",
+      "seconds": 0.022
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "geoip-lookup",
+      "status": "PASS",
+      "seconds": 0.208
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "disabled-feature admin:deletePlugin",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "production",
+      "runtime": "docker",
+      "case": "disabled-feature admin:startMetricMigration",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "fresh-install-login",
+      "status": "PASS",
+      "seconds": 0.002
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "wrong-password-refusal",
+      "status": "PASS",
+      "seconds": 0.121
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "settings-save-and-read",
+      "status": "PASS",
+      "seconds": 0.036
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "terminal-settings",
+      "status": "PASS",
+      "seconds": 0.015
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "api-key-scopes",
+      "status": "PASS",
+      "seconds": 0.016
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "private-site-secure-view",
+      "status": "PASS",
+      "seconds": 0.012
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "notification-delivery-sink",
+      "status": "PASS",
+      "seconds": 0.023
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "offline-and-traffic-notification-config",
+      "status": "PASS",
+      "seconds": 0.046
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "generic-oauth-roundtrip",
+      "status": "PASS",
+      "seconds": 0.041
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "theme-lifecycle-and-malformed-archive",
+      "status": "PASS",
+      "seconds": 0.037
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "favicon-lifecycle",
+      "status": "PASS",
+      "seconds": 0.006
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "account-update",
+      "status": "PASS",
+      "seconds": 0.23
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "session-revocation",
+      "status": "PASS",
+      "seconds": 0.127
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "two-factor-and-sensitive-grant",
+      "status": "PASS",
+      "seconds": 0.338
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "logout",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "isolated",
+      "runtime": "script",
+      "case": "isolated-destructive-maintenance",
+      "status": "PASS",
+      "seconds": 0.017
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "fresh-install-login",
+      "status": "PASS",
+      "seconds": 0.002
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "wrong-password-refusal",
+      "status": "PASS",
+      "seconds": 0.134
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "settings-save-and-read",
+      "status": "PASS",
+      "seconds": 0.04
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "terminal-settings",
+      "status": "PASS",
+      "seconds": 0.027
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "api-key-scopes",
+      "status": "PASS",
+      "seconds": 0.024
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "private-site-secure-view",
+      "status": "PASS",
+      "seconds": 0.018
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "notification-delivery-sink",
+      "status": "PASS",
+      "seconds": 0.028
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "offline-and-traffic-notification-config",
+      "status": "PASS",
+      "seconds": 0.039
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "generic-oauth-roundtrip",
+      "status": "PASS",
+      "seconds": 0.036
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "theme-lifecycle-and-malformed-archive",
+      "status": "PASS",
+      "seconds": 0.039
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "favicon-lifecycle",
+      "status": "PASS",
+      "seconds": 0.009
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "account-update",
+      "status": "PASS",
+      "seconds": 0.241
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "session-revocation",
+      "status": "PASS",
+      "seconds": 0.123
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "two-factor-and-sensitive-grant",
+      "status": "PASS",
+      "seconds": 0.277
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "logout",
+      "status": "PASS",
+      "seconds": 0.003
+    },
+    {
+      "group": "isolated",
+      "runtime": "docker",
+      "case": "isolated-destructive-maintenance",
+      "status": "PASS",
+      "seconds": 0.02
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "auto-discovery-registration",
+      "status": "PASS",
+      "seconds": 0.013
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "read-only-sharing-expiry",
+      "status": "PASS",
+      "seconds": 0.034
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "compressed-http-report-auth-binding",
+      "status": "PASS",
+      "seconds": 0.007
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "offline-online-trigger-delivery",
+      "status": "PASS",
+      "seconds": 36.153
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "cloudflared-no-token-controls",
+      "status": "PASS",
+      "seconds": 0.137
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "theme-import-ssrf-enforcement",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "scheduled-load-alert-delivery",
+      "status": "PASS",
+      "seconds": 60.155
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "scheduled-traffic-limit-alert-delivery",
+      "status": "PASS",
+      "seconds": 24.088
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "mjpeg-real-multipart-two-frames",
+      "status": "PASS",
+      "seconds": 2.051
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "maxmind-real-database-download-update-lookup",
+      "status": "PASS",
+      "seconds": 17.277
+    },
+    {
+      "group": "extended",
+      "runtime": "script",
+      "case": "backup-upload-restart-restore",
+      "status": "PASS",
+      "seconds": 0.004
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "auto-discovery-registration",
+      "status": "PASS",
+      "seconds": 0.029
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "read-only-sharing-expiry",
+      "status": "PASS",
+      "seconds": 0.041
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "compressed-http-report-auth-binding",
+      "status": "PASS",
+      "seconds": 0.019
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "offline-online-trigger-delivery",
+      "status": "PASS",
+      "seconds": 37.152
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "cloudflared-no-token-controls",
+      "status": "PASS",
+      "seconds": 0.133
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "theme-import-ssrf-enforcement",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "scheduled-load-alert-delivery",
+      "status": "PASS",
+      "seconds": 60.165
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "scheduled-traffic-limit-alert-delivery",
+      "status": "PASS",
+      "seconds": 24.098
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "mjpeg-real-multipart-two-frames",
+      "status": "PASS",
+      "seconds": 2.062
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "maxmind-real-database-download-update-lookup",
+      "status": "PASS",
+      "seconds": 17.591
+    },
+    {
+      "group": "extended",
+      "runtime": "docker",
+      "case": "backup-upload-restart-restore",
+      "status": "PASS",
+      "seconds": 0.005
+    },
+    {
+      "group": "metrics",
+      "runtime": "script",
+      "case": "chart-node-time-range-and-point-limit",
+      "status": "PASS",
+      "seconds": 12.068
+    },
+    {
+      "group": "metrics",
+      "runtime": "script",
+      "case": "chart-nine-aggregations-and-invalid-input",
+      "status": "PASS",
+      "seconds": 0.066
+    },
+    {
+      "group": "metrics",
+      "runtime": "docker",
+      "case": "chart-node-time-range-and-point-limit",
+      "status": "PASS",
+      "seconds": 0.039
+    },
+    {
+      "group": "metrics",
+      "runtime": "docker",
+      "case": "chart-nine-aggregations-and-invalid-input",
+      "status": "PASS",
+      "seconds": 0.068
+    },
+    {
+      "group": "files",
+      "runtime": "script",
+      "case": "large-file-30MiB-roundtrip",
+      "status": "PASS",
+      "seconds": 1.315
+    },
+    {
+      "group": "files",
+      "runtime": "script",
+      "case": "upload-cancel-and-incomplete-commit",
+      "status": "PASS",
+      "seconds": 0.012
+    },
+    {
+      "group": "files",
+      "runtime": "script",
+      "case": "text-utf8-gbk-roundtrip",
+      "status": "PASS",
+      "seconds": 0.046
+    },
+    {
+      "group": "files",
+      "runtime": "docker",
+      "case": "large-file-30MiB-roundtrip",
+      "status": "PASS",
+      "seconds": 1.41
+    },
+    {
+      "group": "files",
+      "runtime": "docker",
+      "case": "upload-cancel-and-incomplete-commit",
+      "status": "PASS",
+      "seconds": 0.017
+    },
+    {
+      "group": "files",
+      "runtime": "docker",
+      "case": "text-utf8-gbk-roundtrip",
+      "status": "PASS",
+      "seconds": 0.069
+    }
+  ],
+  "public_edge": [
+    {
+      "domain": "kmro.1687.de5.net",
+      "https_status": 403,
+      "server": "cloudflare"
+    },
+    {
+      "domain": "kmro-docker.1687.de5.net",
+      "https_status": 403,
+      "server": "cloudflare"
+    }
+  ],
+  "browser_pages": [
+    {
+      "runtime": "script",
+      "path": "/admin/dashboard",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/servers",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/ping",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/exec",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/sessions",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/notification/channels",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/notification/general",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/notification/offline",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/themes",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/theme_managed",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/settings/site",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/settings/general",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/settings/sign-on",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/logs",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/account",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "script",
+      "path": "/admin/about",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/dashboard",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/servers",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/ping",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/exec",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/sessions",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/notification/channels",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/notification/general",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/notification/offline",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/themes",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/theme_managed",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/settings/site",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/settings/general",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/settings/sign-on",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/logs",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/account",
+      "version": "823448e",
+      "status": "PASS"
+    },
+    {
+      "runtime": "docker",
+      "path": "/admin/about",
+      "version": "823448e",
+      "status": "PASS"
+    }
+  ],
+  "cleanup": [
+    {
+      "runtime": "script",
+      "nodes": 4,
+      "online": 4,
+      "database_integrity": "ok",
+      "existing_credentials": "unchanged",
+      "existing_settings_and_providers": "unchanged",
+      "deleted_fixture_rows": {
+        "records": 9,
+        "records_long_term": 12,
+        "gpu_records": 0,
+        "gpu_records_long_term": 0,
+        "ping_records": 27,
+        "offline_notifications": 1,
+        "traffic_report_notifications": 0,
+        "task_results": 9,
+        "tasks": 9
+      }
+    },
+    {
+      "runtime": "docker",
+      "nodes": 4,
+      "online": 0,
+      "database_integrity": "ok",
+      "existing_credentials": "unchanged",
+      "existing_settings_and_providers": "unchanged",
+      "deleted_fixture_rows": {
+        "records": 106,
+        "records_long_term": 0,
+        "gpu_records": 0,
+        "gpu_records_long_term": 0,
+        "ping_records": 27,
+        "offline_notifications": 1,
+        "traffic_report_notifications": 0,
+        "task_results": 9,
+        "tasks": 9
+      }
+    }
+  ],
+  "binary_sha256": "c1015c9e131468bdfa456c59b5896863434f0acf303324607f87bd83e9a12370",
+  "quality_checks_url": "https://github.com/0xdabiaoge/komari-retro/actions/runs/37593207229",
+  "verified_at": "2026-10-07T16:42:36+08:00"
+}
