@@ -167,14 +167,17 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 		expression = `(1-` + fraction + `)*MAX(CASE WHEN value_rank=` + lower + ` THEN value END)+` + fraction + `*COALESCE(MAX(CASE WHEN value_rank=` + lower + `+1 THEN value END),MAX(CASE WHEN value_rank=` + lower + ` THEN value END))`
 	}
 	sql := `WITH source AS (` + source + `), bucketed AS (
- SELECT *,CAST((CAST(strftime('%s',time) AS INTEGER)-CAST(strftime('%s',?) AS INTEGER))/? AS INTEGER) AS bucket FROM source
+	 SELECT *,CAST(((CAST(strftime('%s',substr(time,1,19)) AS INTEGER)-CAST(strftime('%s',substr(?,1,19)) AS INTEGER))*10000000
+	 +CAST(substr(substr(time,21,7)||'0000000',1,7) AS INTEGER)-?)/(?*10000000) AS INTEGER) AS bucket FROM source
  ), ranked AS (
  SELECT *,ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time) AS time_rank,
  ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time DESC) AS reverse_rank,
  ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY value) AS value_rank,
  COUNT(*) OVER (PARTITION BY client,tags,bucket) AS sample_count FROM bucketed
  ) SELECT client,tags,bucket,` + expression + ` AS value FROM ranked GROUP BY client,tags,bucket ORDER BY client,tags,bucket LIMIT 100001`
-	args = append(args, models.FromTime(start), interval)
+	// LocalTime persists seven fractional digits. Preserve them when assigning
+	// buckets, otherwise a row just before end can create an extra final bucket.
+	args = append(args, models.FromTime(start), start.Nanosecond()/100, interval)
 	type metricRow struct {
 		Client string
 		Tags   string

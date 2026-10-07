@@ -138,6 +138,17 @@ func checkMetricQueryContract(t *testing.T) {
 	if response.Error != nil {
 		t.Fatal(response.Error)
 	}
+	// The last row is inside the window, but truncating timestamps to seconds
+	// would put it in bucket 1 and exceed max_points=1 when filling empty buckets.
+	if err := db.Create(&models.Record{Client: "metric-fixture", Time: models.FromTime(end.Add(100 * time.Millisecond)), Cpu: 40}).Error; err != nil {
+		t.Fatal(err)
+	}
+	response = query(map[string]any{"entity_id": "metric-fixture", "start": start.Add(200 * time.Millisecond).Format(time.RFC3339Nano), "end": end.Add(200 * time.Millisecond).Format(time.RFC3339Nano), "metric_keys": []string{"cpu.usage"}, "max_points": 1, "fill_empty": true}, rpc.RoleAdmin)
+	payload, _ = json.Marshal(response.Result)
+	_ = json.Unmarshal(payload, &result)
+	if response.Error != nil || len(result.Series) != 1 || len(result.Series[0].Points) != 1 || result.Series[0].Points[0].Value == nil {
+		t.Fatalf("fractional final bucket exceeds point limit: %s %v", payload, response.Error)
+	}
 	for _, bad := range []map[string]any{{"hours": -1}, {"hours": 745}, {"start": "invalid"}, {"max_points": 10001}, {"aggregation": "injected"}, {"metric_keys": []string{"injected"}}} {
 		if query(bad, rpc.RoleAdmin).Error == nil {
 			t.Fatalf("invalid query accepted: %v", bad)
