@@ -71,7 +71,13 @@ func restorePendingBackup(dataDir string) error {
 	} else if err != nil {
 		return err
 	}
-	staged, err := os.MkdirTemp(filepath.Dir(dataDir), "restore-staged-")
+	// Docker's data directory is a bind mount. Stage inside its protected
+	// runtime directory so activation uses same-filesystem atomic renames.
+	runtimeDir := filepath.Join(dataDir, ".runtime")
+	if err := os.MkdirAll(runtimeDir, 0700); err != nil {
+		return err
+	}
+	staged, err := os.MkdirTemp(runtimeDir, "restore-staged-")
 	if err != nil {
 		return err
 	}
