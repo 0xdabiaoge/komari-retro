@@ -453,6 +453,39 @@ func TestRunUpdateCheckSkipsInContainer(t *testing.T) {
 	}
 }
 
+func TestRunUpdateCheckUpgradesLegacyVersionAcrossReleaseLines(t *testing.T) {
+	oldVersion := CurrentVersion
+	CurrentVersion = "0.0.1"
+	t.Cleanup(func() { CurrentVersion = oldVersion })
+
+	assetName := expectedAssetName(runtime.GOOS, runtime.GOARCH)
+	releases := []githubRelease{
+		testRelease("v0.0.2", false, false, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), assetName),
+		testRelease("v1.2.7", false, false, time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC), assetName),
+	}
+	installed := ""
+	deps := updateDeps{
+		list: func(owner, repo string) ([]githubRelease, error) {
+			if owner+"/"+repo != Repo {
+				t.Fatalf("release repository = %s/%s, want %s", owner, repo, Repo)
+			}
+			return releases, nil
+		},
+		isContainer: func() bool { return false },
+		install: func(candidate releaseCandidate) error {
+			installed = candidate.TagName
+			return ErrRestartRequired
+		},
+	}
+
+	if err := runUpdateCheck(deps); !errors.Is(err, ErrRestartRequired) {
+		t.Fatalf("runUpdateCheck() error = %v, want ErrRestartRequired", err)
+	}
+	if installed != "v1.2.7" {
+		t.Fatalf("installed release = %q, want v1.2.7", installed)
+	}
+}
+
 func TestRunUpdateCheckIgnoresUnparsableVersion(t *testing.T) {
 	oldVersion := CurrentVersion
 	CurrentVersion = "dev-build"

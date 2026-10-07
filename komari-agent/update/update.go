@@ -670,14 +670,18 @@ func runUpdateCheck(deps updateDeps) error {
 		return nil
 	}
 
+	// Stable releases increment across major and minor lines. Tracking only the
+	// current major.minor line strands agents built with legacy placeholder
+	// versions (for example 0.0.1) and prevents them from reaching current
+	// releases. Follow the newest stable release by default; explicit version
+	// line requests remain available through CheckAndUpdateForVersionLine.
 	return checkAndUpdateStable(&current, updateTarget{
-		kind:    targetCurrentLine,
-		version: current,
-		input:   current.String(),
+		kind:  targetStableLatest,
+		input: "latest",
 	}, deps)
 }
 
-// CheckAndUpdate checks for a newer patch release within the current major.minor line.
+// CheckAndUpdate checks for the newest stable release, including newer major and minor lines.
 // Snapshot builds track the newest Snapshot-* release instead.
 func CheckAndUpdate() error {
 	updateCheckMu.Lock()
