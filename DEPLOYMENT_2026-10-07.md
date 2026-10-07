@@ -4,22 +4,22 @@
 
 ## 版本与部署位置
 
-代码提交：`3d88d6eabf4aae7470634edebc8bfb575a0e02e0`。运行版本：`v1.2.5+retro.3d88d6e`。
+最终代码提交：`b7ee955087e509c5ec6243dfc6b2c1117424d1a4`。运行版本：`v1.2.5+retro.b7ee955`。首次审计修复提交为 `3d88d6eabf4aae7470634edebc8bfb575a0e02e0`。
 
 | 入口 | 运行方式 | 数据目录 | 验证后的在线节点 |
 | --- | --- | --- | --- |
 | `25774` / `kmro.1687.de5.net` | `komari.service`，`/root/komari-workspace/komari` | `/root/komari-workspace/data` | 4 |
-| `25775` / `kmro-docker.1687.de5.net` | `komari-docker`，本机镜像 `komari-retro:3d88d6e` | `/root/komari-workspace/docker-data` | 0 |
+| `25775` / `kmro-docker.1687.de5.net` | `komari-docker`，本机镜像 `komari-retro:b7ee955` | `/root/komari-workspace/docker-data` | 0 |
 
 两套服务原本共用同一 SQLite 文件，本次在同时停机、校验和备份后，将 Docker 数据复制到独立目录。原有账户、4 个节点配置及历史数据均保留。当前探针连接脚本入口；Docker 更新前也没有在线探针，分库不会自动复制进程内的在线状态。此后两套服务的配置与数据会独立变化。
 
 脚本程序和容器内程序的 SHA256 完全相同：
 
 ```text
-1d95664de01da23381267f491f50b369475f7ae47530742644b9f1de55b55c9a
+4c16d76adf00d5d3fc0ee4c8dd9616055797440a163f501720317df5144a3a4a
 ```
 
-本机 `komari-agent.service` 同步更新；没有连接其他节点的操作系统或替换其探针程序，其他探针仍需后续更新。
+本机 `komari-agent.service` 同步更新至 `v1.2.5+retro.3d88d6e`；后续 `b7ee955` 仅改变前端构建/内嵌资源，探针源码不变。没有连接其他节点的操作系统或替换其探针程序，其他探针仍需后续更新。
 
 ## 已完成验证
 
@@ -39,14 +39,16 @@
 
 ## 回滚与运行配置
 
-最终更新前的备份位于服务器 `/root/komari-deploy-3d88d6e/rollback-3`，包含原程序、原数据、源代码和服务/容器配置。旧容器 `komari-docker-rollback-3d88d6e` 保持停止、自动重启关闭。不要在新服务运行时启动该旧容器并写入原数据库。
+最初审计修复前的备份位于服务器 `/root/komari-deploy-3d88d6e/rollback-3`，包含原程序、原数据、源代码和服务/容器配置。旧容器 `komari-docker-rollback-3d88d6e` 保持停止、自动重启关闭。不要在新服务运行时启动该旧容器并写入原数据库。
+
+最后一次前端重建的回滚程序、Compose 配置及两库一致性快照保存在 `/root/komari-deploy-b7ee955/rollback`。该次更新按两个独立入口顺序替换程序，没有重新迁移或回退数据库。
 
 前两次替换因验证条件问题触发回滚：首次把私有站点正常的匿名 `404` 拒绝误判为失败；第二次默认 CA 不信任既有自签证书，且 Compose 复用保留容器导致回滚端口冲突。已恢复原容器网络、确认两端旧服务健康和数据库完整，再修正验证规则并完成最终更新。相关快照保留在同一部署目录，没有将它们误记为成功发布。
 
 服务器 `docker-compose.override.yml` 固定本机镜像、生产 Compose 项目和专用网络，已加入服务器 Git 的本地排除文件。正常 `docker compose up -d` 会自动读取它，避免拉取旧的 `latest` 覆盖本次更新。此次没有发布新的 GitHub Release 或 GHCR 镜像；未来发布应走仓库质量门禁，再更新该版本固定配置。
 
-完整 GitHub CI/发布架构矩阵的结果须另行确认；不能用本机/服务器测试代替尚未结束的 GitHub 工作流。首次本地修复的详细限制见 `AUDIT_FIXES.md`。
+代码提交 `b7ee955` 的 [GitHub 质量工作流](https://github.com/0xdabiaoge/komari-retro/actions/runs/37580282517) 已全部通过（服务端、探针、前端及浏览器）。Release 架构矩阵和 GHCR 发布尚未执行。首次本地修复的详细限制见 `AUDIT_FIXES.md`。
 
 ## Linux 前端构建规则修正
 
-首次 GitHub CI 中，探针检查通过，前端 PWA 构建因 Linux 大小写敏感而漏掉 `FileEditorDialog`，触发缓存体积限制。已将编辑器、Monaco 和 worker 的排除规则改为明确匹配大小写，并重新生成内嵌资源；没有提高缓存上限。Windows 重建后的预缓存仍为约 5.4 MiB。新构建须更新两套服务，并由后续 CI 确认 Linux 构建和浏览器回归结果。
+首次 GitHub CI 中，探针检查通过，前端 PWA 构建因 Linux 大小写敏感而漏掉 `FileEditorDialog`，触发缓存体积限制。已将编辑器、Monaco 和 worker 的排除规则改为明确匹配大小写，并重新生成内嵌资源；没有提高缓存上限。Windows 重建后的预缓存仍为约 5.4 MiB。新构建已更新两套服务，再次完成主题、备份、会话、源站 HTTPS、数据库及节点重连检查；后续 CI 的 Linux 构建和浏览器回归也已通过。
