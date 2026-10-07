@@ -183,18 +183,15 @@ go build -ldflags "-s -w" -o komari-agent .
 
 ## 🚀 自动化构建与镜像发布 (CI / CD)
 
-GitHub Actions 包含质量门禁和两套发布流程：
+GitHub Actions 包含质量门禁和统一的发布流程：
 
 0. **质量门禁 (`quality.yml`)**：服务端与探针的 test/vet/race/govulncheck，以及前端 npm ci、audit、测试、lint、构建和浏览器回归；发布必须先通过。
 
-1. **发布版本与跨平台产物到 Releases (`release.yml`)**
-   - **触发时机**：当涉及改动并完成版本号提升打 Tag（如 `v1.2.6`）推送至 GitHub、或在 GitHub 发布 Release、或手动调度触发。
-   - **构建内容**：一次性构建前端静态资产，并利用 Zig 交叉编译 7 个系统平台架构（Linux amd64/arm64/386/riscv64、Windows amd64/arm64/386）的服务端与客户端探针，自动打包并挂载至 GitHub Releases。
-
-2. **手动构建并推送 Docker 镜像 (`docker-publish.yml`)**
-   - **触发时机**：纯手动按需触发（在仓库 **Actions** 页面选择该工作流并点击 **Run workflow**）。
-   - **参数输入**：指定已发布的 Release 标签（`latest` 解析为最新 Release）及是否更新 `latest` 镜像；运行工作流的 Git ref 必须与 Release 标签提交一致。
-   - **构建内容**：下载并校验同一 Release 的 Linux amd64/arm64 二进制，直接放入镜像。脚本安装和 Docker 使用同一份服务端产物。
+1. **自动递增版本并发布 (`build-release.yml`)**
+   - **触发时机**：在 GitHub Actions 中手动运行；必须选择 `main` 分支。质量门禁通过后，工作流读取仓库中最高的稳定版标签并自动生成下一版本，无需手填版本号。
+   - **递增规则**：版本格式为 `v主版本.次版本.修订号`，各段范围为 1–99；修订号到 99 后从 1 开始并向前进位，例如 `v1.2.99` 后为 `v1.3.1`。
+   - **构建内容**：构建服务端和 Agent 的同版本跨平台产物，并将该版本写入 Release、Docker 版本标签及镜像元数据；同时发布 `linux/amd64` 和 `linux/arm64` 镜像。可选择是否更新 Docker `latest` 标签。
+   - **质量检查不占版本号**：普通 push/PR 的质量门禁不会发布产品，也不会递增版本。未通过发布工作流构建的源码版本显示为 `dev`；只有正式发布产物才嵌入自动生成的版本号。
    - **更新应用**：执行 `docker compose pull && docker compose up -d`；容器重建会短暂中断连接。
 
 脚本升级需要 `flock`（util-linux），先下载、验证 SHA256 和可执行性，再停服务保存二进制及数据快照。新版 `/ping` 健康检查失败时恢复原二进制和数据。新脚本要求 Release 提供 `.sha256` 资产，缺少摘要的历史版本会拒绝安装。

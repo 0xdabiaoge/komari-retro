@@ -3,15 +3,15 @@ name: 手动构建发布（二进制 + Docker 镜像）
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: '新版本号，例如 v1.2.6；必须从 main 分支构建'
-        required: true
-        type: string
       push_latest:
         description: '同时更新 Docker latest 标签'
         required: true
         type: boolean
         default: true
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -22,7 +22,7 @@ jobs:
     uses: ./.github/workflows/quality.yml
 
   validate-release:
-    name: 校验发布版本
+    name: 校验分支并自动生成版本号
     needs: quality
     runs-on: ubuntu-latest
     outputs:
@@ -33,33 +33,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 校验分支和版本标签
+      - name: 校验分支并计算下一个产品版本
         id: validate
-        env:
-          RELEASE_TAG: ${{ inputs.tag_name }}
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
             echo "请在 GitHub 的 Use workflow from 中选择 main 分支。" >&2
             exit 1
           fi
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "版本号格式无效，请使用 v主版本.次版本.修订号，例如 v1.2.6。" >&2
-            exit 1
-          fi
-
-          tag_ref="refs/tags/$RELEASE_TAG"
-          tag_refs="$(git ls-remote --tags origin "$tag_ref" "$tag_ref^{}")"
-          if [[ -n "$tag_refs" ]]; then
-            existing_commit="$(printf '%s\n' "$tag_refs" | awk -v peeled="$tag_ref^{}" -v plain="$tag_ref" '$2 == peeled { print $1; found = 1; exit } $2 == plain { commit = $1 } END { if (!found && commit != "") print commit }')"
-            if [[ "$existing_commit" != "$GITHUB_SHA" ]]; then
-              echo "版本标签 $RELEASE_TAG 已指向其他提交；为避免覆盖旧版本，本次构建已停止。" >&2
-              echo "现有提交：$existing_commit；本次提交：$GITHUB_SHA" >&2
-              exit 1
-            fi
-          fi
+          git fetch --force --tags origin
+          RELEASE_TAG="$(python3 .github/scripts/next_release_version.py)"
 
           echo "tag_name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "本次自动生成的产品版本：**${RELEASE_TAG}**。版本基于最新稳定版递增；每段范围为 1–99，达到 99 后向前一段进位。" >> "$GITHUB_STEP_SUMMARY"
 
   build-frontend:
     name: 构建前端静态资源
@@ -230,16 +216,6 @@ jobs:
           test -f release-assets/komari-linux-riscv64
           echo "准备发布 ${RELEASE_TAG}，包含 $(find release-assets -maxdepth 1 -type f | wc -l) 个文件。" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 创建或更新 GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ needs.validate-release.outputs.tag_name }}
-          target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          overwrite_files: true
-          files: release-assets/*
-
       - name: 准备 Docker 构建输入
         run: |
           cp release-assets/komari-linux-amd64 ./komari-linux-amd64
@@ -278,3 +254,18 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.title=Komari Retro
+            org.opencontainers.image.version=${{ needs.validate-release.outputs.tag_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.validate-release.outputs.tag_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          files: release-assets/*
