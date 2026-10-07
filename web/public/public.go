@@ -16,7 +16,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 )
 
-//go:embed defaultTheme
+//go:embed defaultTheme retroTheme
 var PublicFS embed.FS
 
 // 常量定义
@@ -25,12 +25,46 @@ const (
 	ThemesDir          = "theme"
 	FaviconFile        = "favicon.ico"
 	DefaultTheme       = "default"
+	RetroTheme         = "retro"
 	LanguageCookieName = "language"
 
 	// 主题内部结构定义
 	DistDir   = "dist"       // 静态资源存放目录
 	IndexFile = "index.html" // 相对于 DistDir
 )
+
+var builtinThemeDirs = map[string]string{
+	DefaultTheme: "defaultTheme",
+	RetroTheme:   "retroTheme",
+}
+
+// BuiltinThemeIDs returns the built-in themes in display order.
+func BuiltinThemeIDs() []string {
+	return []string{DefaultTheme, RetroTheme}
+}
+
+// IsBuiltinTheme reports whether short identifies an embedded theme.
+func IsBuiltinTheme(short string) bool {
+	_, ok := builtinThemeDirs[strings.ToLower(strings.TrimSpace(short))]
+	return ok
+}
+
+// ReadBuiltinThemeFile reads a file relative to an embedded theme root.
+func ReadBuiltinThemeFile(short, relativePath string) ([]byte, bool) {
+	root, ok := builtinThemeDirs[strings.ToLower(strings.TrimSpace(short))]
+	if !ok {
+		return nil, false
+	}
+
+	cleanPath := path.Clean(strings.ReplaceAll(relativePath, "\\", "/"))
+	cleanPath = strings.TrimPrefix(cleanPath, "/")
+	if cleanPath == "." || cleanPath == ".." || strings.HasPrefix(cleanPath, "../") {
+		return nil, false
+	}
+
+	content, err := fs.ReadFile(PublicFS, path.Join(root, cleanPath))
+	return content, err == nil
+}
 
 func init() {
 	_ = os.MkdirAll("./data/theme", 0755)
@@ -138,10 +172,17 @@ func isSafePath(basePath, targetPath string) bool {
 
 // Static 注册静态资源和 SPA 路由处理
 func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
-	// 初始化嵌入式文件系统，指向 defaultTheme 根目录
-	defaultThemeFS, err := fs.Sub(PublicFS, "defaultTheme")
-	if err != nil {
-		panic("you may forget to put dist of frontend to web/public/defaultTheme/dist")
+	// 初始化各内置主题的嵌入式文件系统。
+	embeddedThemes := make(map[string]fs.FS, len(builtinThemeDirs))
+	for themeID, root := range builtinThemeDirs {
+		themeFS, err := fs.Sub(PublicFS, root)
+		if err != nil {
+			panic("missing embedded theme filesystem: " + themeID)
+		}
+		embeddedThemes[themeID] = themeFS
+		if _, err := fs.Stat(themeFS, path.Join(DistDir, IndexFile)); err != nil {
+			panic("missing embedded theme entry point: " + themeID)
+		}
 	}
 
 	getConfig := func() map[string]any {
@@ -166,7 +207,16 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 		cleanPath = filepath.Clean(cleanPath)
 
-		if themeID != DefaultTheme {
+		if IsBuiltinTheme(themeID) {
+			if content, ok := ReadBuiltinThemeFile(themeID, cleanPath); ok {
+				mimeType := mime.TypeByExtension(filepath.Ext(cleanPath))
+				if mimeType == "" {
+					mimeType = getFallbackMimeType(cleanPath)
+				}
+				return content, mimeType, true
+			}
+			themeID = DefaultTheme
+		} else if themeID != DefaultTheme {
 			if strings.Contains(themeID, "..") || strings.Contains(themeID, "/") || strings.Contains(themeID, "\\") {
 				return nil, "", false
 			}
@@ -201,7 +251,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			return nil, "", false
 		}
 
-		if content, err := fs.ReadFile(defaultThemeFS, embedPath); err == nil {
+		if content, err := fs.ReadFile(embeddedThemes[DefaultTheme], embedPath); err == nil {
 			mimeType := mime.TypeByExtension(filepath.Ext(embedPath))
 			if mimeType == "" {
 				mimeType = getFallbackMimeType(embedPath)

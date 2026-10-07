@@ -47,9 +47,14 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: komari-web/package-lock.json
+          cache-dependency-path: |
+            komari-web/package-lock.json
+            komari-next/package-lock.json
       - run: npm ci && npm audit --audit-level=low && npm test && npm run lint && npm run build
         working-directory: komari-web
+      - name: Build and audit the Komari Retro theme
+        run: npm ci && npm audit --audit-level=high && npm run lint && npm run build
+        working-directory: komari-next
       - run: npx playwright install --with-deps chromium
         working-directory: komari-web
       - run: |

@@ -5,16 +5,32 @@ import (
 	"testing"
 )
 
-func TestOnlyDefaultThemeIsEmbedded(t *testing.T) {
+func TestBuiltinThemesAreEmbedded(t *testing.T) {
 	entries, err := fs.ReadDir(PublicFS, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 1 || entries[0].Name() != "defaultTheme" {
+	if len(entries) != 2 || entries[0].Name() != "defaultTheme" || entries[1].Name() != "retroTheme" {
 		t.Fatalf("unexpected bundled themes: %v", entries)
 	}
-	if _, err := fs.Stat(PublicFS, "defaultTheme/dist/index.html"); err != nil {
-		t.Fatal("default theme missing", err)
+	for _, theme := range []struct {
+		id   string
+		root string
+	}{{DefaultTheme, "defaultTheme"}, {RetroTheme, "retroTheme"}} {
+		if _, err := fs.Stat(PublicFS, theme.root+"/dist/index.html"); err != nil {
+			t.Fatalf("%s theme missing: %v", theme.id, err)
+		}
+		if _, ok := ReadBuiltinThemeFile(theme.id, "komari-theme.json"); !ok {
+			t.Fatalf("%s theme metadata missing", theme.id)
+		}
+	}
+}
+
+func TestReadBuiltinThemeFileRejectsTraversal(t *testing.T) {
+	for _, name := range []string{"../defaultTheme/komari-theme.json", `..\defaultTheme\komari-theme.json`} {
+		if _, ok := ReadBuiltinThemeFile(RetroTheme, name); ok {
+			t.Fatalf("unexpectedly read path outside the embedded theme: %q", name)
+		}
 	}
 }
 

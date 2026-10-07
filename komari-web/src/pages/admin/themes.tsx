@@ -35,6 +35,7 @@ import UploadDialog from "@/components/UploadDialog";
 import type { ChunkUploadTask } from "@/lib/chunkUpload";
 import {
   getThemeConfigurationType,
+  isBuiltinThemeShort,
   THEME_CONFIGURATION_MANAGED,
 } from "@/utils/themeConfiguration";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
@@ -678,7 +679,7 @@ const ThemePage = () => {
                 {t("theme.set_active")}
               </Button>
             )}
-            {selectedTheme && selectedTheme.short !== "default" && (
+            {selectedTheme && !isBuiltinThemeShort(selectedTheme.short) && (
               <Button
                 variant="soft"
                 color="blue"
@@ -692,7 +693,7 @@ const ThemePage = () => {
                 {t("theme.update")}
               </Button>
             )}
-            {selectedTheme && selectedTheme.short !== "default" && (
+            {selectedTheme && !isBuiltinThemeShort(selectedTheme.short) && (
               <Button
                 size="2"
                 variant="solid"

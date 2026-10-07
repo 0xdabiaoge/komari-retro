@@ -2,6 +2,11 @@ export const THEME_CONFIGURATION_MANAGED = "managed";
 export const THEME_CONFIGURATION_RAW = "raw";
 export const THEME_CONFIGURATION_REDIRECT = "redirect";
 
+const BUILTIN_THEME_IDS = new Set(["default", "retro"]);
+
+export const isBuiltinThemeShort = (short?: string | null) =>
+  typeof short === "string" && BUILTIN_THEME_IDS.has(short.trim().toLowerCase());
+
 export interface ThemeConfiguration {
   type?: string;
   icon?: string;

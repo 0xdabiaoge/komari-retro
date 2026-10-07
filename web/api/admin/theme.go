@@ -90,9 +90,12 @@ func ListThemes(c *gin.Context) {
 	var themes []models.Theme
 	seen := make(map[string]bool)
 
-	// 内置默认主题
-	defaultTheme, err := public.PublicFS.ReadFile("defaultTheme/komari-theme.json")
-	if err == nil {
+	// 加载所有内置主题配置。
+	for _, themeID := range public.BuiltinThemeIDs() {
+		defaultTheme, ok := public.ReadBuiltinThemeFile(themeID, "komari-theme.json")
+		if !ok {
+			continue
+		}
 		dt := models.Theme{}
 		if err := json.Unmarshal(defaultTheme, &dt); err == nil {
 			themes = append(themes, dt)
@@ -101,11 +104,14 @@ func ListThemes(c *gin.Context) {
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") && !strings.EqualFold(entry.Name(), "next") && !strings.EqualFold(entry.Name(), "nasdaq") {
+		if entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") && !public.IsBuiltinTheme(entry.Name()) && !strings.EqualFold(entry.Name(), "next") && !strings.EqualFold(entry.Name(), "nasdaq") {
 			themeConfigPath := filepath.Join(dataDir, entry.Name(), "komari-theme.json")
 			if themeInfo, err := loadThemeConfig(themeConfigPath); err == nil {
+				if public.IsBuiltinTheme(themeInfo.Short) {
+					continue
+				}
 				if seen[themeInfo.Short] {
-					// 外部自定义目录覆盖内置配置
+					// Keep the first registered theme when duplicate IDs are found.
 					for i, t := range themes {
 						if t.Short == themeInfo.Short {
 							themes[i] = themeInfo
@@ -164,12 +170,13 @@ func SetTheme(c *gin.Context) {
 		return
 	}
 
-	if themeName != "default" && !isValidThemeShort(themeName) {
+	isBuiltin := public.IsBuiltinTheme(themeName)
+	if !isBuiltin && !isValidThemeShort(themeName) {
 		api.RespondError(c, 400, "Invalid theme name")
 		return
 	}
-	// 默认主题无需检查外部目录
-	if themeName != "default" {
+	// 内置主题由程序嵌入；上传主题必须存在于数据目录。
+	if !isBuiltin {
 		themeDir := filepath.Join("./data/theme", themeName)
 		themeConfigPath := filepath.Join(themeDir, "komari-theme.json")
 
@@ -286,7 +293,7 @@ func loadThemeConfig(configPath string) (models.Theme, error) {
 
 // isValidThemeShort 验证主题short字段格式
 func isValidThemeShort(short string) bool {
-	if short == "" || strings.EqualFold(short, "default") || strings.EqualFold(short, "next") || strings.EqualFold(short, "nasdaq") || len(short) > 64 {
+	if short == "" || public.IsBuiltinTheme(short) || strings.EqualFold(short, "next") || strings.EqualFold(short, "nasdaq") || len(short) > 64 {
 		return false
 	}
 

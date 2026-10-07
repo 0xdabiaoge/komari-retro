@@ -60,11 +60,14 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: komari-web/package-lock.json
+          cache-dependency-path: |
+            komari-web/package-lock.json
+            komari-next/package-lock.json
 
       - name: 编译前端静态资源
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag_name }}
         run: |
           cd komari-web
           npm ci
@@ -78,12 +81,25 @@ jobs:
           if [ -f komari-web/perview.png ]; then cp -f komari-web/perview.png web/public/defaultTheme/; fi
           if [ -f web/public/defaultTheme/preview.png ] && [ ! -f web/public/defaultTheme/perview.png ]; then cp -f web/public/defaultTheme/preview.png web/public/defaultTheme/perview.png; fi
           if [ -f web/public/defaultTheme/perview.png ] && [ ! -f web/public/defaultTheme/preview.png ]; then cp -f web/public/defaultTheme/perview.png web/public/defaultTheme/preview.png; fi
+          cd komari-next
+          npm ci
+          NEXT_PUBLIC_THEME_VERSION="$RELEASE_TAG" npm run build
+          cd ..
+          mkdir -p web/public/retroTheme
+          rm -rf web/public/retroTheme/dist
+          cp -r komari-next/dist web/public/retroTheme/dist
+          cp -f komari-next/komari-theme.json web/public/retroTheme/
+          cp -f komari-next/preview.svg web/public/retroTheme/
+          cp -f komari-next/LICENSE web/public/retroTheme/LICENSE.komari-next
+          node -e 'const fs=require("node:fs"); for (const file of process.argv.slice(1)) { const theme=JSON.parse(fs.readFileSync(file,"utf8")); theme.version=process.env.RELEASE_TAG; fs.writeFileSync(file, `${JSON.stringify(theme,null,2)}\n`); }' web/public/defaultTheme/komari-theme.json web/public/retroTheme/komari-theme.json
 
       - name: 上传前端产物
         uses: actions/upload-artifact@v4
         with:
           name: frontend-assets
-          path: web/public/defaultTheme/
+          path: |
+            web/public/defaultTheme/
+            web/public/retroTheme/
           if-no-files-found: error
 
   build-binaries:
@@ -135,7 +151,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-assets
-          path: web/public/defaultTheme/
+          path: web/public/
 
       - name: 配置 Go 环境
         uses: actions/setup-go@v5
