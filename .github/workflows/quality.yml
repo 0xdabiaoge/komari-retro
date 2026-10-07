@@ -52,6 +52,10 @@ jobs:
         working-directory: komari-web
       - run: |
           npm run dev -- --host 127.0.0.1 > /tmp/komari-vite.log 2>&1 &
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5173 >/dev/null && break; sleep 1; done
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5173 >/dev/null; then break; fi
+            if [ "$attempt" -eq 30 ]; then cat /tmp/komari-vite.log; exit 1; fi
+            sleep 1
+          done
           npm run test:onboarding
         working-directory: komari-web
