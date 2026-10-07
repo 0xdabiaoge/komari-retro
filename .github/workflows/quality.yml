@@ -7,6 +7,17 @@ on:
 permissions:
   contents: read
 jobs:
+  workflow-lint:
+    name: 检查 GitHub Actions 工作流
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+      - name: 校验工作流语法与表达式
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml
+
   go:
     runs-on: ubuntu-latest
     strategy:

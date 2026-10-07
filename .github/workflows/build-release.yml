@@ -1,0 +1,280 @@
+name: 手动构建发布（二进制 + Docker 镜像）
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '新版本号，例如 v1.2.6；必须从 main 分支构建'
+        required: true
+        type: string
+      push_latest:
+        description: '同时更新 Docker latest 标签'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  validate-release:
+    name: 校验发布版本
+    needs: quality
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.validate.outputs.tag_name }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 校验分支和版本标签
+        id: validate
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "请在 GitHub 的 Use workflow from 中选择 main 分支。" >&2
+            exit 1
+          fi
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "版本号格式无效，请使用 v主版本.次版本.修订号，例如 v1.2.6。" >&2
+            exit 1
+          fi
+
+          tag_ref="refs/tags/$RELEASE_TAG"
+          tag_refs="$(git ls-remote --tags origin "$tag_ref" "$tag_ref^{}")"
+          if [[ -n "$tag_refs" ]]; then
+            existing_commit="$(printf '%s\n' "$tag_refs" | awk -v peeled="$tag_ref^{}" -v plain="$tag_ref" '$2 == peeled { print $1; found = 1; exit } $2 == plain { commit = $1 } END { if (!found && commit != "") print commit }')"
+            if [[ "$existing_commit" != "$GITHUB_SHA" ]]; then
+              echo "版本标签 $RELEASE_TAG 已指向其他提交；为避免覆盖旧版本，本次构建已停止。" >&2
+              echo "现有提交：$existing_commit；本次提交：$GITHUB_SHA" >&2
+              exit 1
+            fi
+          fi
+
+          echo "tag_name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+  build-frontend:
+    name: 构建前端静态资源
+    needs: validate-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: komari-web/package-lock.json
+
+      - name: 编译前端静态资源
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          cd komari-web
+          npm ci
+          npm run build
+          cd ..
+          mkdir -p web/public/defaultTheme/dist
+          rm -rf web/public/defaultTheme/dist/*
+          cp -r komari-web/dist/* web/public/defaultTheme/dist/
+          cp -f komari-web/komari-theme.json web/public/defaultTheme/
+          if [ -f komari-web/preview.png ]; then cp -f komari-web/preview.png web/public/defaultTheme/; fi
+          if [ -f komari-web/perview.png ]; then cp -f komari-web/perview.png web/public/defaultTheme/; fi
+          if [ -f web/public/defaultTheme/preview.png ] && [ ! -f web/public/defaultTheme/perview.png ]; then cp -f web/public/defaultTheme/preview.png web/public/defaultTheme/perview.png; fi
+          if [ -f web/public/defaultTheme/perview.png ] && [ ! -f web/public/defaultTheme/preview.png ]; then cp -f web/public/defaultTheme/perview.png web/public/defaultTheme/preview.png; fi
+
+      - name: 上传前端产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-assets
+          path: web/public/defaultTheme/
+          if-no-files-found: error
+
+  build-binaries:
+    name: 构建 ${{ matrix.goos }}-${{ matrix.goarch }}
+    needs: [validate-release, build-frontend]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [windows, linux]
+        goarch: [amd64, arm64, 386, riscv64]
+        include:
+          - goos: windows
+            goarch: amd64
+            zig_target_triple: x86_64-windows-gnu
+            binary_extension: .exe
+          - goos: windows
+            goarch: arm64
+            zig_target_triple: aarch64-windows-gnu
+            binary_extension: .exe
+          - goos: windows
+            goarch: 386
+            zig_target_triple: x86-windows-gnu
+            binary_extension: .exe
+          - goos: linux
+            goarch: amd64
+            zig_target_triple: x86_64-linux-musl
+            binary_extension: ''
+          - goos: linux
+            goarch: arm64
+            zig_target_triple: aarch64-linux-musl
+            binary_extension: ''
+          - goos: linux
+            goarch: 386
+            zig_target_triple: x86-linux-musl
+            binary_extension: ''
+          - goos: linux
+            goarch: riscv64
+            zig_target_triple: riscv64-linux-musl
+            binary_extension: ''
+        exclude:
+          - goos: windows
+            goarch: riscv64
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载前端产物
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-assets
+          path: web/public/defaultTheme/
+
+      - name: 配置 Go 环境
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+
+      - name: 安装 Zig 交叉编译工具链
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl zip
+          curl --fail --location --retry 3 --output zig.tar.xz https://ziglang.org/download/0.14.1/zig-x86_64-linux-0.14.1.tar.xz
+          sudo tar -C /usr/local -Jxf zig.tar.xz
+          echo "$PATH:/usr/local/zig-x86_64-linux-0.14.1" >> "$GITHUB_PATH"
+
+      - name: 交叉编译并打包
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '1'
+          CC: zig cc -target ${{ matrix.zig_target_triple }}
+          GIN_MODE: release
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag_name }}
+          VERSION_HASH: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          BINARY_NAME="komari-${GOOS}-${GOARCH}"
+          AGENT_NAME="komari-agent-${GOOS}-${GOARCH}"
+          if [ -n "${{ matrix.binary_extension }}" ]; then
+            BINARY_NAME="${BINARY_NAME}${{ matrix.binary_extension }}"
+            AGENT_NAME="${AGENT_NAME}${{ matrix.binary_extension }}"
+          fi
+
+          go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari/utils.CurrentVersion=${RELEASE_TAG} -X github.com/komari-monitor/komari/utils.VersionHash=${VERSION_HASH}" -o "$BINARY_NAME" .
+          (cd komari-agent && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/komari-monitor/komari-agent/update.CurrentVersion=${RELEASE_TAG}" -o "../$AGENT_NAME" .)
+
+          mkdir -p dist
+          cp "$BINARY_NAME" "$AGENT_NAME" dist/
+          (cd dist && sha256sum "$BINARY_NAME" > "$BINARY_NAME.sha256" && sha256sum "$AGENT_NAME" > "$AGENT_NAME.sha256")
+          if [ "$GOOS" = windows ]; then
+            zip -j "dist/komari-${GOOS}-${GOARCH}.zip" "$BINARY_NAME"
+            zip -j "dist/komari-agent-${GOOS}-${GOARCH}.zip" "$AGENT_NAME"
+          else
+            (cd dist && tar -czf "komari-${GOOS}-${GOARCH}.tar.gz" "$BINARY_NAME")
+            (cd dist && tar -czf "komari-agent-${GOOS}-${GOARCH}.tar.gz" "$AGENT_NAME")
+          fi
+
+      - name: 上传二进制产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish-release-and-docker:
+    name: 发布 Release 与 Docker 镜像
+    needs: [validate-release, build-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 汇总所有平台二进制
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-assets-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: 校验发布文件
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          test -s release-assets/komari-linux-amd64
+          test -s release-assets/komari-linux-arm64
+          test -s release-assets/komari-agent-linux-amd64
+          test -s release-assets/komari-agent-linux-arm64
+          test -f release-assets/komari-linux-riscv64
+          echo "准备发布 ${RELEASE_TAG}，包含 $(find release-assets -maxdepth 1 -type f | wc -l) 个文件。" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 创建或更新 GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.validate-release.outputs.tag_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          files: release-assets/*
+
+      - name: 准备 Docker 构建输入
+        run: |
+          cp release-assets/komari-linux-amd64 ./komari-linux-amd64
+          cp release-assets/komari-linux-arm64 ./komari-linux-arm64
+
+      - name: 配置 QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: 配置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置 Docker 镜像标签
+        id: tags
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag_name }}
+          PUSH_LATEST: ${{ inputs.push_latest }}
+        run: |
+          set -euo pipefail
+          IMAGE="${IMAGE,,}"
+          TAGS="$IMAGE:$RELEASE_TAG"
+          if [ "$PUSH_LATEST" = true ]; then TAGS="$TAGS,$IMAGE:latest"; fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: 构建并发布多架构 Docker 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
