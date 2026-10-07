@@ -20,6 +20,8 @@ func TestScheduledExpiryAndTrafficCallbacksDeliverToIsolatedSink(t *testing.T) {
 	t.Chdir(t.TempDir())
 	flags.DatabaseType = "sqlite"
 	flags.DatabaseFile = filepath.Join(t.TempDir(), "notifications.db")
+	// Server account initialization sets the timezone before serving requests.
+	models.GetAppLocation()
 	db := dbcore.GetDBInstance()
 	t.Cleanup(func() { dbcore.Close() })
 	events := make(chan string, 16)
