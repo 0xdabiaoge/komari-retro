@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "node ./script/generate-brand-assets.mjs && next build && node ./script/protect-komari-placeholders.mjs",
+    "build": "node ./script/generate-brand-assets.mjs && next build && node ./script/protect-komari-placeholders.mjs && node ./script/verify-theme-export.mjs",
     "start": "next start",
-    "lint": "eslint next.config.ts script/generate-brand-assets.mjs src/components/BrandMark.tsx src/components/DashboardContent.tsx src/components/Footer.tsx src/components/NavBar.tsx src/components/ThemeSwitcher.tsx src/contexts/LiveDataContext.tsx src/contexts/ThemeContext.tsx src/utils/unitHelper.ts src/app/layout.tsx",
+    "lint": "eslint next.config.ts script/generate-brand-assets.mjs script/verify-theme-export.mjs src/components/BrandMark.tsx src/components/DashboardContent.tsx src/components/Footer.tsx src/components/NavBar.tsx src/components/ThemeSwitcher.tsx src/contexts/LiveDataContext.tsx src/contexts/ThemeContext.tsx src/utils/unitHelper.ts src/app/layout.tsx",
     "preview": "next start",
     "i18n:sync": "node ./script/i18n-sync.mjs",
     "i18n:sync:dry": "node ./script/i18n-sync.mjs --dry-run"

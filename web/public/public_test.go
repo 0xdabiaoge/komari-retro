@@ -35,13 +35,17 @@ func TestRetroThemeEmbedsEveryNextAssetReferencedByIndex(t *testing.T) {
 		t.Fatal("retro theme index is missing")
 	}
 
-	assetReferences := regexp.MustCompile(`(src|href)="(/_next/static/[^"]+)"`).FindAllSubmatch(index, -1)
+	if strings.Contains(string(index), `"/_next/static/`) {
+		t.Fatal("retro theme index still references Next.js assets from the root path")
+	}
+
+	assetReferences := regexp.MustCompile(`(src|href)="(/themes/retro/dist/_next/static/[^"]+)"`).FindAllSubmatch(index, -1)
 	if len(assetReferences) == 0 {
 		t.Fatal("retro theme index does not reference any Next.js assets")
 	}
 
 	for _, reference := range assetReferences {
-		assetPath := path.Join("dist", strings.TrimPrefix(string(reference[2]), "/"))
+		assetPath := path.Join("dist", strings.TrimPrefix(string(reference[2]), "/themes/retro/dist/"))
 		if _, ok := ReadBuiltinThemeFile(RetroTheme, assetPath); !ok {
 			t.Errorf("retro theme index references an asset that is not embedded: %s", assetPath)
 		}
