@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "i18n:sync": "node ./script/i18n-sync.mjs",
     "i18n:sync:dry": "node ./script/i18n-sync.mjs --dry-run",
-    "test": "node --test script/rpc2.test.mjs script/backup-upload.test.mjs"
+    "test": "node --test script/rpc2.test.mjs script/backup-upload.test.mjs script/uninstall-command.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

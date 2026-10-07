@@ -206,6 +206,11 @@
       "searchByName": "查詢伺服器",
       "serviceName": "服務名稱",
       "serviceName_placeholder": "服務名稱，為空則使用預設名稱(komari-agent)",
+      "uninstallNameLabel": "服務名稱 / 容器名稱",
+      "uninstallTip": "面板刪除只會移除節點記錄，不會遠端執行命令。請複製命令並在受監控主機上執行；自訂安裝需填寫相同的服務名稱和安裝目錄。",
+      "uninstallNamePlaceholder": "留空使用預設名稱 komari-agent",
+      "uninstallInstallDirLabel": "安裝目錄（選填）",
+      "uninstallInstallDirPlaceholder": "留空清理預設目錄；自訂安裝請填寫原安裝目錄",
       "setToLongTerm": "設定為長期",
       "submit": "提交",
       "submitting": "等待"

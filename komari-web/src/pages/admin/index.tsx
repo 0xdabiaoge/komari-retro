@@ -3,6 +3,7 @@ import {
   quoteShellArg,
   quoteShellArgs,
 } from "@/utils/shellQuote";
+import { createUninstallCommand } from "@/utils/uninstallCommand.mjs";
 import React, { useEffect, useState } from "react";
 import {
   NodeDetailsProvider,
@@ -1467,6 +1468,10 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   const { refresh } = useNodeDetails();
   const [open, setOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [uninstallServiceName, setUninstallServiceName] = React.useState("");
+  const [uninstallInstallDir, setUninstallInstallDir] = React.useState("");
+  const uninstallNameFieldId = React.useId();
+  const uninstallDirFieldId = React.useId();
 
   const detectPlatform = (osStr?: string): "linux" | "windows" | "macos" | "docker" => {
     if (!osStr) return "linux";
@@ -1484,21 +1489,16 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   React.useEffect(() => {
     if (open) {
       setPlatform(detectPlatform(node.os));
+      setUninstallServiceName("");
+      setUninstallInstallDir("");
     }
   }, [open, node.os]);
 
   const getUninstallCommand = () => {
-    switch (platform) {
-      case "docker":
-        return `docker stop komari-agent 2>/dev/null; docker rm -f komari-agent 2>/dev/null; docker rmi ghcr.io/0xdabiaoge/komari-retro-agent:latest 2>/dev/null; rm -f .komari-auto-discovery.json`;
-      case "windows":
-        return `Stop-Service -Name komari-agent -Force -ErrorAction SilentlyContinue; sc.exe delete komari-agent; Remove-Item -Recurse -Force "$Env:ProgramFiles\\Komari" -ErrorAction SilentlyContinue`;
-      case "macos":
-        return `sudo launchctl unload /Library/LaunchDaemons/komari-agent.plist 2>/dev/null; sudo rm -f /Library/LaunchDaemons/komari-agent.plist; launchctl unload ~/Library/LaunchAgents/komari-agent.plist 2>/dev/null; rm -f ~/Library/LaunchAgents/komari-agent.plist; sudo rm -rf /usr/local/komari ~/.komari`;
-      case "linux":
-      default:
-        return `sudo systemctl stop komari-agent 2>/dev/null; sudo systemctl disable komari-agent 2>/dev/null; sudo rm -f /etc/systemd/system/komari-agent.service ~/.config/systemd/user/komari-agent.service; sudo systemctl daemon-reload 2>/dev/null; sudo rc-service komari-agent stop 2>/dev/null; sudo rc-update del komari-agent 2>/dev/null; sudo rm -f /etc/init.d/komari-agent; sudo rm -rf /opt/komari /etc/komari ~/.komari`;
-    }
+    return createUninstallCommand(platform, {
+      serviceName: uninstallServiceName,
+      installDir: uninstallInstallDir,
+    });
   };
 
   const copyCommand = async () => {
@@ -1574,9 +1574,44 @@ function DeleteButton({ node }: { node: NodeDetail }) {
             </Button>
           </div>
 
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor={uninstallNameFieldId} className="text-xs text-neutral-400">
+                {t("admin.nodeTable.uninstallNameLabel", "服务名 / 容器名")}
+              </label>
+              <TextField.Root
+                id={uninstallNameFieldId}
+                size="2"
+                value={uninstallServiceName}
+                placeholder={t(
+                  "admin.nodeTable.uninstallNamePlaceholder",
+                  "留空使用默认名称 komari-agent"
+                )}
+                onChange={(event) => setUninstallServiceName(event.target.value)}
+              />
+            </div>
+            {platform !== "docker" && (
+              <div className="space-y-1">
+                <label htmlFor={uninstallDirFieldId} className="text-xs text-neutral-400">
+                  {t("admin.nodeTable.uninstallInstallDirLabel", "安装目录（可选）")}
+                </label>
+                <TextField.Root
+                  id={uninstallDirFieldId}
+                  size="2"
+                  value={uninstallInstallDir}
+                  placeholder={t(
+                    "admin.nodeTable.uninstallInstallDirPlaceholder",
+                    "留空清理默认目录；自定义安装请填写原安装目录"
+                  )}
+                  onChange={(event) => setUninstallInstallDir(event.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
           <TextArea
             readOnly
-            rows={3}
+            rows={6}
             className="font-mono text-xs select-all resize-none"
             value={getUninstallCommand()}
           />

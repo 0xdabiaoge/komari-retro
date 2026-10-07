@@ -139,6 +139,11 @@
       "searchByName": "Cari server",
       "serviceName": "Nama Layanan",
       "serviceName_placeholder": "Nama layanan, biarkan kosong untuk menggunakan nama default (komari-agent)",
+      "uninstallNameLabel": "Nama layanan / kontainer",
+      "uninstallTip": "Penghapusan di panel hanya menghapus catatan node dan tidak menjalankan perintah dari jarak jauh. Salin dan jalankan perintah pada host yang dipantau. Untuk instalasi khusus, isi nama layanan dan direktori instalasi yang sama.",
+      "uninstallNamePlaceholder": "Kosongkan untuk memakai nama default: komari-agent",
+      "uninstallInstallDirLabel": "Direktori instalasi (opsional)",
+      "uninstallInstallDirPlaceholder": "Kosongkan untuk direktori default; isi jalur asli untuk instalasi khusus",
       "setToLongTerm": "Atur ke Jangka Panjang",
       "submit": "Kirim",
       "submitting": "Menunggu..."

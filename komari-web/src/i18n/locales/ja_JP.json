@@ -139,6 +139,11 @@
       "searchByName": "サーバーを検索",
       "serviceName": "サービス名",
       "serviceName_placeholder": "サービス名、空の場合はデフォルト名（komari-agent）を使用",
+      "uninstallNameLabel": "サービス名 / コンテナ名",
+      "uninstallTip": "パネルでの削除はノード記録のみを削除し、コマンドをリモート実行しません。コマンドをコピーして対象ホストで実行してください。独自のインストールでは同じサービス名とインストール先を入力してください。",
+      "uninstallNamePlaceholder": "空欄の場合は komari-agent を使用",
+      "uninstallInstallDirLabel": "インストール先（任意）",
+      "uninstallInstallDirPlaceholder": "空欄の場合は既定の場所を削除します。独自の場所にインストールした場合は元のパスを入力してください",
       "setToLongTerm": "長期に設定",
       "submit": "送信",
       "submitting": "待機中"
