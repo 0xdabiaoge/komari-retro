@@ -72,6 +72,21 @@ func checkMetricQueryContract(t *testing.T) {
 		}
 	}
 	params["aggregation"] = "avg"
+	// Offset timestamps describe the same instants and must not shift the SQL window.
+	zone := time.FixedZone("test-offset", 8*60*60)
+	params["start"] = start.In(zone).Format(time.RFC3339)
+	params["end"] = end.In(zone).Format(time.RFC3339)
+	responseOffset := query(params, rpc.RoleAdmin)
+	payloadOffset, _ := json.Marshal(responseOffset.Result)
+	var offsetResult struct {
+		Series []jsonrpc.MetricSeriesItem `json:"series"`
+	}
+	_ = json.Unmarshal(payloadOffset, &offsetResult)
+	if responseOffset.Error != nil || len(offsetResult.Series) != 1 || *offsetResult.Series[0].Points[0].Value != 20 {
+		t.Fatalf("offset timestamp query: %s %v", payloadOffset, responseOffset.Error)
+	}
+	params["start"] = start.Format(time.RFC3339)
+	params["end"] = end.Format(time.RFC3339)
 	params["aggregation_by_metric"] = map[string]string{"cpu.usage": "sum"}
 	response := query(params, rpc.RoleAdmin)
 	payload, _ := json.Marshal(response.Result)
@@ -96,7 +111,7 @@ func checkMetricQueryContract(t *testing.T) {
 	}
 	params["fill_empty"] = false
 	params["max_points"] = 1
-	params["metric_keys"] = []string{"gpu.device.usage", "ping.latency", "memory.total", "load.average", "net.in.rate", "disk.used", "swap.used", "connections.udp"}
+	params["metric_keys"] = []string{"gpu.device.usage", "ping.latency_ms", "memory.total", "load.average", "net.in.rate", "disk.used", "swap.used", "connections.udp"}
 	response = query(params, rpc.RoleAdmin)
 	payload, _ = json.Marshal(response.Result)
 	_ = json.Unmarshal(payload, &result)
@@ -107,7 +122,7 @@ func checkMetricQueryContract(t *testing.T) {
 		if series.EntityID != "metric-fixture" {
 			t.Fatal("cross-node series")
 		}
-		if series.MetricKey == "ping.latency" && (series.Tags["task_id"] != "123456" || *series.Points[0].Value != 20) {
+		if series.MetricKey == "ping.latency_ms" && (series.Tags["task_id"] != "123456" || *series.Points[0].Value != 20) {
 			t.Fatalf("ping loss/tags: %+v", series)
 		}
 	}
@@ -128,7 +143,7 @@ func checkMetricQueryContract(t *testing.T) {
 			t.Fatalf("invalid query accepted: %v", bad)
 		}
 	}
-	stats := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Method: "public:getPingMetricStats", ID: 1, Params: map[string]any{"entity_id": "metric-fixture", "start": start.Format(time.RFC3339), "end": end.Format(time.RFC3339), "hours": 10.0 / 60}})
+	stats := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Method: "public:getPingMetricStats", ID: 1, Params: map[string]any{"entity_id": "metric-fixture", "start": start.In(zone).Format(time.RFC3339), "end": end.In(zone).Format(time.RFC3339), "hours": 10.0 / 60}})
 	payload, _ = json.Marshal(stats.Result)
 	var statsResult struct {
 		Stats []struct {

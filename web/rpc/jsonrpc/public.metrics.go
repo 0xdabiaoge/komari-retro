@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/komari-monitor/komari/database/dbcore"
+	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
@@ -30,7 +31,7 @@ var metricProjections = map[string]metricProjection{
 	"connections.udp":  {"connections_udp", "count", "load"},
 	"gpu.device.usage": {"utilization", "%", "gpu"}, "gpu.memory.used": {"mem_used", "bytes", "gpu"},
 	"gpu.memory.total": {"mem_total", "bytes", "gpu"}, "gpu.temperature": {"temperature", "degC", "gpu"},
-	"ping.latency": {"value", "ms", "ping"},
+	"ping.latency_ms": {"value", "ms", "ping"}, "ping.latency": {"value", "ms", "ping"},
 }
 
 var metricAggregations = map[string]bool{"avg": true, "min": true, "max": true, "sum": true,
@@ -41,7 +42,7 @@ func publicListMetricDefinitions(_ context.Context, _ *rpc.JsonRpcRequest) (any,
 	days := math.Min(31, math.Max(0, float64(hours)/24))
 	keys := make([]string, 0, len(metricProjections))
 	for key := range metricProjections {
-		if key != "net.in" && key != "net.out" {
+		if key != "net.in" && key != "net.out" && key != "ping.latency" {
 			keys = append(keys, key)
 		}
 	}
@@ -140,7 +141,7 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.Time, interval int64, aggregation string, fill bool, maxPoints int) ([]MetricSeriesItem, error) {
 	projection := metricProjections[key]
 	filter := ` r.time>=? AND r.time<? AND (?='' OR r.client=?) AND (? OR c.hidden=0)`
-	args := []any{start, end, entity, entity, isLoginFromCtx(ctx)}
+	args := []any{models.FromTime(start), models.FromTime(end), entity, entity, isLoginFromCtx(ctx)}
 	var source string
 	switch projection.source {
 	case "gpu":
@@ -153,8 +154,8 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 		boundary := time.Now().Add(-4*time.Hour - time.Minute)
 		base := `SELECT r.client,r.time,r.` + projection.column + ` AS value,'' AS tags FROM %s r JOIN clients c ON c.uuid=r.client WHERE` + filter
 		source = fmt.Sprintf(base, "records") + ` AND r.time>=? UNION ALL ` + fmt.Sprintf(base, "records_long_term") + ` AND r.time<?`
-		args = append(args, boundary)
-		args = append(args, start, end, entity, entity, isLoginFromCtx(ctx), boundary)
+		args = append(args, models.FromTime(boundary))
+		args = append(args, models.FromTime(start), models.FromTime(end), entity, entity, isLoginFromCtx(ctx), models.FromTime(boundary))
 	}
 	expression := map[string]string{"avg": "AVG(value)", "min": "MIN(value)", "max": "MAX(value)", "sum": "SUM(value)",
 		"first": "MAX(CASE WHEN time_rank=1 THEN value END)", "last": "MAX(CASE WHEN reverse_rank=1 THEN value END)", "stddev": "AVG(value*value)-AVG(value)*AVG(value)"}[aggregation]
@@ -166,14 +167,14 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 		expression = `(1-` + fraction + `)*MAX(CASE WHEN value_rank=` + lower + ` THEN value END)+` + fraction + `*COALESCE(MAX(CASE WHEN value_rank=` + lower + `+1 THEN value END),MAX(CASE WHEN value_rank=` + lower + ` THEN value END))`
 	}
 	sql := `WITH source AS (` + source + `), bucketed AS (
- SELECT *,CAST((CAST(strftime('%s',time) AS INTEGER)-?)/? AS INTEGER) AS bucket FROM source
+ SELECT *,CAST((CAST(strftime('%s',time) AS INTEGER)-CAST(strftime('%s',?) AS INTEGER))/? AS INTEGER) AS bucket FROM source
  ), ranked AS (
  SELECT *,ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time) AS time_rank,
  ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time DESC) AS reverse_rank,
  ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY value) AS value_rank,
  COUNT(*) OVER (PARTITION BY client,tags,bucket) AS sample_count FROM bucketed
  ) SELECT client,tags,bucket,` + expression + ` AS value FROM ranked GROUP BY client,tags,bucket ORDER BY client,tags,bucket LIMIT 100001`
-	args = append(args, start.Unix(), interval)
+	args = append(args, models.FromTime(start), interval)
 	type metricRow struct {
 		Client string
 		Tags   string

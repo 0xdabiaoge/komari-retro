@@ -517,7 +517,7 @@ func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any
         MAX(CASE WHEN f.recency=1 AND f.value>=0 THEN f.value END) AS latest
         FROM filtered f JOIN ping_tasks t ON t.id=f.task_id GROUP BY f.client,f.task_id,t.name
         ORDER BY f.client,f.task_id`
-	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(query, startTime, endTime, isLoginFromCtx(ctx), params.EntityID, params.EntityID).Scan(&stats).Error; err != nil {
+	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(query, models.FromTime(startTime), models.FromTime(endTime), isLoginFromCtx(ctx), params.EntityID, params.EntityID).Scan(&stats).Error; err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to query ping statistics", nil)
 	}
 	return map[string]any{"start": startTime.Format(time.RFC3339), "end": endTime.Format(time.RFC3339), "stats": stats, "count": len(stats)}, nil
