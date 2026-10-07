@@ -14,6 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/komari-monitor/komari/database/clients"
+	"github.com/komari-monitor/komari/database/models"
+	"github.com/komari-monitor/komari/database/tasks"
 	v2 "github.com/komari-monitor/komari/protocol/v2"
 	"github.com/komari-monitor/komari/utils/notifier"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
@@ -89,6 +91,32 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 			}
 		}
 		ingestPingResult(uuid, params.TaskID, params.Value, finishedAt)
+		return v2.Success(req.ID, gin.H{"status": "success"})
+	case v2.MethodAgentTaskResult:
+		var params struct {
+			TaskID     string `json:"task_id"`
+			Result     string `json:"result"`
+			ExitCode   int    `json:"exit_code"`
+			FinishedAt string `json:"finished_at"`
+		}
+		if err := bindV2Params(req.Params, &params); err != nil || params.TaskID == "" {
+			return v2.Error(req.ID, -32602, "invalid task result params", nil)
+		}
+		// An agent may only complete a task assigned to its authenticated UUID.
+		if _, err := tasks.GetSpecificTaskResult(params.TaskID, uuid); err != nil {
+			return v2.Error(req.ID, -32602, "task is not assigned to this client", nil)
+		}
+		finishedAt := time.Now()
+		if params.FinishedAt != "" {
+			parsed, err := time.Parse(time.RFC3339Nano, params.FinishedAt)
+			if err != nil {
+				return v2.Error(req.ID, -32602, "invalid finished_at", nil)
+			}
+			finishedAt = parsed
+		}
+		if err := tasks.SaveTaskResult(params.TaskID, uuid, params.Result, params.ExitCode, models.FromTime(finishedAt)); err != nil {
+			return v2.Error(req.ID, -32000, "failed to save task result", nil)
+		}
 		return v2.Success(req.ID, gin.H{"status": "success"})
 	case v2.MethodAgentPull:
 		var params v2.PullParams

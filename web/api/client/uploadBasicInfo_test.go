@@ -85,4 +85,5 @@ func TestV2BasicInfoFillsRegionFromGeoIP(t *testing.T) {
 	if got.Region != want {
 		t.Fatalf("expected GeoIP region to be saved, got %q", got.Region)
 	}
+	t.Run("PresenceAndTaskResult", checkV2PresenceAndTaskResult)
 }

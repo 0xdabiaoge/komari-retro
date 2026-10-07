@@ -205,6 +205,21 @@ func TestSecurityRegressions(t *testing.T) {
 			}
 		}
 	})
+	t.Run("LegacyGPUHistoryFilter", func(t *testing.T) {
+		db := dbcore.GetDBInstance()
+		if err := db.Create(&models.Record{Client: "gpu-filter", Time: models.FromTime(time.Now()), Gpu: 42}).Error; err != nil {
+			t.Fatal(err)
+		}
+		defer db.Where("client = ?", "gpu-filter").Delete(&models.Record{})
+		response := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Method: "public:getRecordsByUUID", ID: 1, Params: map[string]any{"uuid": "gpu-filter", "hours": "1", "load_type": "gpu"}})
+		if response.Error != nil {
+			t.Fatal(response.Error)
+		}
+		encoded, err := json.Marshal(response.Result)
+		if err != nil || !strings.Contains(string(encoded), `"gpu":42`) {
+			t.Fatalf("GPU history missing: %s, %v", encoded, err)
+		}
+	})
 	t.Run("RevokedSessionLosesWebSocketAdmin", func(t *testing.T) {
 		h := http.Header{}
 		h.Set("Cookie", "session_token="+token)

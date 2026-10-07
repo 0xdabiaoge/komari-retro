@@ -162,7 +162,7 @@ func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, 
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid hours parameter", nil)
 	}
 	validLoadTypes := map[string]bool{
-		"cpu": true, "ram": true, "swap": true,
+		"cpu": true, "gpu": true, "ram": true, "swap": true,
 		"load": true, "temp": true, "disk": true, "network": true,
 		"process": true, "connections": true, "all": true, "": true,
 	}
