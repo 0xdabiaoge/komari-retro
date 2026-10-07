@@ -2,6 +2,7 @@ package renewal
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/komari-monitor/komari/database/auditlog"
@@ -24,7 +25,7 @@ func CheckAndAutoRenewal(client models.Client) {
 		return
 	}
 	// 不在线则不续费
-	if _, ok := agent_runtime.GetConnectedClients()[client.UUID]; !ok {
+	if !slices.Contains(agent_runtime.GetAllOnlineUUIDs(), client.UUID) {
 		return
 	}
 
