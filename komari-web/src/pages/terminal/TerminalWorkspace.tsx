@@ -19,7 +19,6 @@ export interface TerminalWorkspaceProps {
   clientsLoading: boolean;
   activeTabId: string | null;
   sessionsReady: boolean;
-  twoFaEnabled: boolean;
   disconnectMessage: string;
   searchOpen: boolean;
   searchTerm: string;
@@ -62,7 +61,6 @@ const TerminalWorkspace = ({
   clientsLoading,
   activeTabId,
   sessionsReady,
-  twoFaEnabled,
   disconnectMessage,
   searchOpen,
   searchTerm,
@@ -117,7 +115,6 @@ const TerminalWorkspace = ({
                 key={tab.id}
                 uuid={tab.uuid}
                 active={tab.id === activeTabId}
-                twoFaEnabled={twoFaEnabled}
                 disconnectMessage={disconnectMessage}
                 onApiChange={(api) => onApiChange(tab.id, api)}
               />

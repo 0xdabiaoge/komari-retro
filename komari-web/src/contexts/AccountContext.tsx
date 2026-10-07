@@ -7,7 +7,6 @@ type Account = {
   sso_type: string;
   username: string;
   uuid: string;
-  "2fa_enabled": boolean;
 };
 
 // Context

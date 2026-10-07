@@ -42,7 +42,7 @@
 
 ```text
 komari-retro/
-├── cmd/                        # 服务端命令行指令 (server, chpasswd, disable-2fa 等)
+├── cmd/                        # 服务端命令行指令 (server, chpasswd 等)
 ├── database/                   # 数据库持久化层与模型定义 (SQLite / MySQL)
 ├── pkg/                        # 核心通用依赖与 RPC 路由中间件
 ├── protocol/                   # 探针通信协议定义

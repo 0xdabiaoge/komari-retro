@@ -25,7 +25,6 @@ interface TerminalSessionProps {
   active: boolean;
   fontSize?: number;
   padding?: number;
-  twoFaEnabled: boolean;
   disconnectMessage: string;
   onApiChange: (api: TerminalSessionApi | null) => void;
 }
@@ -44,7 +43,6 @@ const TerminalSession = ({
   active,
   fontSize = DEFAULT_TERMINAL_OPTIONS.fontSize,
   padding = DEFAULT_TERMINAL_PADDING,
-  twoFaEnabled,
   disconnectMessage,
   onApiChange,
 }: TerminalSessionProps) => {
@@ -104,9 +102,6 @@ const TerminalSession = ({
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectDeadline: number | null = null;
-    let otpBuffer = "";
-    let awaitingOtp = false;
-    let currentOtp: string | null = null;
 
     term.loadAddon(fitAddon);
     term.loadAddon(searchAddon);
@@ -184,20 +179,6 @@ const TerminalSession = ({
       }
     };
 
-    const promptOtpLine = "\r\n\x1b[1m" + t("terminal.2fa_prompt", "Two-factor authentication required.") + "\x1b[0m\r\n" + t("terminal.2fa_code_prompt", "Enter 2FA code: ");
-
-    const startOtpPrompt = (isRetry: boolean) => {
-      awaitingOtp = true;
-      otpBuffer = "";
-      if (isRetry) {
-        term.write("\r\n\x1b[31m" + t("terminal.otp_invalid", "Invalid or expired 2FA code.") + "\x1b[0m");
-      } else {
-        term.clear();
-      }
-      term.write(promptOtpLine);
-      term.focus();
-    };
-
     term.attachCustomKeyEventHandler((event) => {
       if (event.type !== "keydown") {
         return true;
@@ -228,13 +209,7 @@ const TerminalSession = ({
           if (term.hasSelection() || ctrlAlt) {
             void copySelection();
           } else {
-            if (!awaitingOtp) {
-              send(new Uint8Array([3]));
-            } else {
-              otpBuffer = "";
-              term.write("^C\r\n");
-              term.write(t("terminal.2fa_code_prompt", "Enter 2FA code: "));
-            }
+            send(new Uint8Array([3]));
           }
           return false;
         }
@@ -302,14 +277,8 @@ const TerminalSession = ({
       toast.dismiss(toastId);
     };
 
-    const connect = (otp: string | null) => {
+    const connect = () => {
       const params = new URLSearchParams();
-      // 2FA is required only for the initial session creation. Reattach is
-      // authorized by the server-side session owner and must not reuse an
-      // expired TOTP value.
-      if (otp && !requestID) {
-        params.set("2fa_code", otp);
-      }
       if (requestID) {
         params.set("request_id", requestID);
       }
@@ -389,12 +358,7 @@ const TerminalSession = ({
           return;
         }
         if (!requestID) {
-          if (twoFaEnabled) {
-            hideReconnectingToast();
-            startOtpPrompt(true);
-          } else {
-            scheduleReconnect();
-          }
+          scheduleReconnect();
           return;
         }
         scheduleReconnect();
@@ -423,42 +387,13 @@ const TerminalSession = ({
       );
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null;
-        // Reuse the verified code while reattaching the existing request.
-        // A fresh OTP prompt is shown when the initial authenticated connect
-        // fails before a request ID is issued.
-        connect(twoFaEnabled ? currentOtp : null);
+        connect();
       }, RECONNECT_INTERVAL);
     };
 
-    if (twoFaEnabled) {
-      startOtpPrompt(false);
-    } else {
-      connect(null);
-    }
+    connect();
 
-    const termDataDisposable = term.onData((data) => {
-      if (awaitingOtp) {
-        if (data === "\r") {
-          awaitingOtp = false;
-          term.write("\r\n");
-          if (!otpBuffer) {
-            startOtpPrompt(false);
-            return;
-          }
-          currentOtp = otpBuffer;
-          otpBuffer = "";
-          connect(currentOtp);
-        } else if (data === "\x7f" || data === "\b") {
-          if (otpBuffer.length > 0) {
-            otpBuffer = otpBuffer.slice(0, -1);
-          }
-        } else if (data.length === 1 && data >= " " && data <= "~") {
-          otpBuffer += data;
-        }
-        return;
-      }
-      send(data);
-    });
+    const termDataDisposable = term.onData(send);
     const api: TerminalSessionApi = {
       terminal: term,
       searchAddon,
@@ -511,7 +446,7 @@ const TerminalSession = ({
       }
       term.dispose();
     };
-  }, [fontSize, twoFaEnabled, toastId, t, uuid]);
+  }, [fontSize, toastId, t, uuid]);
 
   const style = {
     "--xterm-padding": `${padding}px`,

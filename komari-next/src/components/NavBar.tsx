@@ -1,7 +1,7 @@
 "use client";
 
 import LanguageSwitch from "./Language";
-import LoginDialog from "./Login";
+import dynamic from "next/dynamic";
 import ThemeSwitcher from "./ThemeSwitcher";
 import DarkModeToggle from "./DarkModeToggle";
 import SpaLink from "./SpaLink";
@@ -12,6 +12,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { dispatchOpenRemainingValueCalculatorEvent } from "@/lib/remainingValueEvents";
 import BrandMark from "./BrandMark";
+
+const LoginDialog = dynamic(() => import("./Login"), { ssr: false });
 
 const NavBar = () => {
   const { publicInfo } = usePublicInfo();
@@ -56,14 +58,16 @@ const NavBar = () => {
           )}
           <LanguageSwitch />
 
-          {publicInfo?.private_site ? (
-            <LoginDialog
-              autoOpen={publicInfo?.private_site}
-              info={t('common.private_site')}
-              onLoginSuccess={() => { window.location.reload(); }}
-            />
-          ) : (
-            <LoginDialog />
+          {publicInfo && !publicInfo.is_share_view && (
+            publicInfo.private_site ? (
+              <LoginDialog
+                autoOpen={publicInfo.private_site}
+                info={t('common.private_site')}
+                onLoginSuccess={() => { window.location.reload(); }}
+              />
+            ) : (
+              <LoginDialog />
+            )
           )}
         </div>
       </div>

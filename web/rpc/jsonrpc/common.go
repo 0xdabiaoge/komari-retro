@@ -416,12 +416,11 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 
 func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var resp struct {
-		TwoFAEnabled bool   `json:"2fa_enabled"`
-		LoggedIn     bool   `json:"logged_in"`
-		SSOId        string `json:"sso_id"`
-		SSOType      string `json:"sso_type"`
-		Username     string `json:"username"`
-		UUID         string `json:"uuid"`
+		LoggedIn bool   `json:"logged_in"`
+		SSOId    string `json:"sso_id"`
+		SSOType  string `json:"sso_type"`
+		Username string `json:"username"`
+		UUID     string `json:"uuid"`
 	}
 
 	meta := rpc.MetaFromContext(ctx)
@@ -434,7 +433,6 @@ func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) 
 			resp.UUID = meta.UserUUID
 			return resp, nil
 		}
-		resp.TwoFAEnabled = meta.User.TwoFactor != ""
 		resp.LoggedIn = true
 		resp.SSOId = meta.User.SSOID
 		resp.SSOType = meta.User.SSOType

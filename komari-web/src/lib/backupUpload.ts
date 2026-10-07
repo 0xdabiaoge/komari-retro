@@ -1,4 +1,3 @@
-import { authorizeSensitiveAccess } from "./sensitive";
 import type { ChunkUploadTask } from "./chunkUpload";
 
 // The current server exposes a multipart backup endpoint, not chunk/merge APIs.
@@ -9,7 +8,6 @@ export function createBackupUploadTask(): ChunkUploadTask {
     cancel() { cancelled = true; current?.abort(); },
     async upload<T>(purpose: string, file: File, onProgress: (value: number) => void): Promise<T | undefined> {
       if (purpose !== "backup" || file.size <= 0 || file.size >= 1024 ** 3) throw new Error("备份必须为小于 1 GiB 的非空 ZIP 文件");
-      await authorizeSensitiveAccess();
       if (cancelled) throw new DOMException("Upload cancelled", "AbortError");
       try {
         return await new Promise<T | undefined>((resolve, reject) => {

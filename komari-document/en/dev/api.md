@@ -60,7 +60,7 @@ API key authentication requires Komari 1.0.3 or later.
 
 #### Session Cookie
 
-Browser clients use the `session_token` cookie returned by `/api/login`. Unless an endpoint specifically handles login, logout, OAuth, or 2FA, examples in this document use API key authentication.
+Browser clients use the `session_token` cookie returned by `/api/login`. Unless an endpoint specifically handles login, logout, or OAuth, examples in this document use API key authentication.
 
 ### 1.3 Client Token
 
@@ -120,7 +120,7 @@ Streaming, binary, redirect, and custom-auth endpoints do not use this envelope.
 | `200` | Success |
 | `302` | Redirect |
 | `400` | Invalid request or parameters |
-| `401` | Not signed in, invalid identity, or failed 2FA |
+| `401` | Not signed in or invalid identity |
 | `403` | Permission denied or feature disabled |
 | `404` | Resource not found |
 | `409` | Resource conflict or operation already running |
@@ -144,25 +144,7 @@ When `private_site` is enabled, unauthenticated visitors receive:
 
 The login flow can still use `/api/login`, `/api/me`, `/api/public`, `/api/version`, and `/api/oauth`.
 
-### 2.4 Two-Factor Authentication
-
-These endpoints may require an administrator 2FA code:
-
-- `POST /api/admin/task/exec`
-- `POST /api/admin/update/user` when changing a password
-- `POST /api/admin/2fa/disable`
-- Creating a new terminal session with `GET /api/admin/client/:uuid/terminal`
-
-Komari reads the code in this order:
-
-1. `2fa_code`, `two_factor_code`, or `otp` in the JSON body
-2. The `X-2FA-Code` header
-3. The `X-Two-Factor-Code` header
-4. The `2fa_code`, `two_factor_code`, or `otp` query parameter
-
-API key requests do not require a separate 2FA code. Accounts without 2FA are also exempt.
-
-### 2.5 Common Types
+### 2.4 Common Types
 
 #### Client
 
@@ -251,7 +233,6 @@ curl -s "$BASE/ping"
 | --- | --- | --- | --- |
 | `username` | `string` | Yes | Administrator username. |
 | `password` | `string` | Yes | Administrator password. |
-| `2fa_code` | `string` | No | Required when the account has 2FA enabled. |
 
 ```bash
 curl -s -D - \
@@ -259,8 +240,7 @@ curl -s -D - \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "YourPassword123",
-    "2fa_code": "123456"
+    "password": "YourPassword123"
   }'
 ```
 
@@ -318,8 +298,7 @@ curl -s "$BASE/api/me"
   "logged_in": true,
   "uuid": "8b55e7f0-6f9c-4b1a-a5f2-63f09c04bca4",
   "sso_type": "",
-  "sso_id": "",
-  "2fa_enabled": true
+  "sso_id": ""
 }
 ```
 
@@ -487,7 +466,6 @@ curl -s -X POST "$BASE/api/admin/client/add" \
 ```bash
 curl -s -X POST "$BASE/api/admin/task/exec" \
   -H "Authorization: Bearer $KOMARI_API_KEY" \
-  -H "X-2FA-Code: 123456" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "uptime",
@@ -607,7 +585,7 @@ File metadata and mutation operations use RPC. File contents use streaming HTTP 
 
 **Protocol:** WebSocket.
 
-Creating a new terminal session requires 2FA. Reconnecting with the existing `request_id` is authorized against the original session owner.
+The endpoint requires an administrator session or an API key with the required permissions. Reconnecting with the existing `request_id` is authorized against the original session owner.
 
 See [Terminal Reconnection](#_15-6-terminal-frames) for the frame protocol and reconnection flow.
 
@@ -619,13 +597,10 @@ The new session returns:
 }
 ```
 
-### 5.10 2FA and OAuth
+### 5.10 OAuth Account Binding
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/api/admin/2fa/generate` | Generate a TOTP secret and QR PNG. |
-| `POST` | `/api/admin/2fa/enable?code=` | Enable 2FA. |
-| `POST` | `/api/admin/2fa/disable` | Disable 2FA. |
 | `GET` | `/api/admin/oauth2/bind` | Bind an external account. |
 | `POST` | `/api/admin/oauth2/unbind` | Unbind an external account. |
 
@@ -850,9 +825,9 @@ public:getVersion
 
 A valid temporary share cookie also allows anonymous `public:*` calls.
 
-### 9.4 Sensitive Methods
+### 9.4 Administrator Permissions
 
-`admin:exec` is sensitive. Administrators must provide a valid 2FA code unless they authenticate with an API key or do not have 2FA enabled.
+All `admin:*` JSON-RPC methods, including remote command execution, require administrator identity and the corresponding permissions. This version has no separate 2FA step-up check.
 
 ## 10. Error Codes
 
@@ -978,7 +953,7 @@ All methods in this section require the `admin` role.
 | `admin:getTasksByClientId` | `{ uuid }` |
 | `admin:getTaskResultsByTaskId` | `{ task_id }` |
 | `admin:getSpecificTaskResult` | `{ task_id, uuid }` |
-| `admin:exec` | `{ command, clients, 2fa_code? }` |
+| `admin:exec` | `{ command, clients }` |
 
 ### 14.4 Ping Tasks
 

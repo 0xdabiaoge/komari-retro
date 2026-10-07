@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import ts from 'typescript';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-let source=fs.readFileSync(new URL('../src/lib/backupUpload.ts',import.meta.url),'utf8').replace('import { authorizeSensitiveAccess } from "./sensitive";','const authorizeSensitiveAccess=async()=>{};');
+let source=fs.readFileSync(new URL('../src/lib/backupUpload.ts',import.meta.url),'utf8');
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;
 const {createBackupUploadTask}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 

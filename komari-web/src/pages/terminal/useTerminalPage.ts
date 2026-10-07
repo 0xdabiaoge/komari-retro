@@ -57,8 +57,7 @@ export const useTerminalPage = () => {
   const [httpsCalloutOpen, setHttpsCalloutOpen] = useState(
     window.location.protocol !== "https:",
   );
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
-  const [twoFaResolved, setTwoFaResolved] = useState(false);
+  const [authResolved, setAuthResolved] = useState(false);
   const [onboardingAuthenticated, setOnboardingAuthenticated] = useState(false);
 
   // Search state
@@ -155,20 +154,18 @@ export const useTerminalPage = () => {
     let mounted = true;
     fetch("/api/me")
       .then((response) => response.json())
-      .then((data: { "2fa_enabled"?: boolean; logged_in?: boolean }) => {
+      .then((data: { logged_in?: boolean }) => {
         if (!mounted) {
           return;
         }
-        const enabled = Boolean(data?.["2fa_enabled"]);
-        setTwoFaEnabled(enabled);
-        setTwoFaResolved(true);
+        setAuthResolved(true);
         setOnboardingAuthenticated(data.logged_in === true);
       })
       .catch(() => {
         if (!mounted) {
           return;
         }
-        setTwoFaResolved(true);
+        setAuthResolved(true);
       });
 
     return () => {
@@ -791,7 +788,7 @@ export const useTerminalPage = () => {
     toggleFullscreen,
   ]);
 
-  const sessionsReady = twoFaResolved;
+  const sessionsReady = authResolved;
 
   return {
     onboardingAuthenticated,
@@ -807,7 +804,6 @@ export const useTerminalPage = () => {
     isSidebarOpen,
     leftWidth,
     httpsCalloutOpen,
-    twoFaEnabled,
     searchOpen,
     searchTerm,
     searchResultIndex,

@@ -54,7 +54,7 @@ Authorization: Bearer <api-key>
 
 #### Cookie
 
-浏览器登录后使用 `session_token` Cookie。除登录、退出、OAuth 和 2FA 流程外，本文的管理员示例统一使用 API Key。
+浏览器登录后使用 `session_token` Cookie。除登录、退出和 OAuth 流程外，本文的管理员示例统一使用 API Key。
 
 ### 1.3 使用 Client Token
 
@@ -114,7 +114,7 @@ JSON 请求体也可使用：
 | `200`  | 请求成功                        |
 | `302`  | 重定向                          |
 | `400`  | 请求格式或参数错误              |
-| `401`  | 未登录、身份无效或 2FA 校验失败 |
+| `401`  | 未登录或身份无效 |
 | `403`  | 权限不足或功能关闭              |
 | `404`  | 资源不存在                      |
 | `409`  | 资源冲突或操作正在进行          |
@@ -138,25 +138,7 @@ JSON 请求体也可使用：
 
 登录页所需的 `/api/login`、`/api/me`、`/api/public`、`/api/version`、`/api/oauth` 等接口仍可访问。
 
-### 2.4 敏感操作 2FA
-
-以下 HTTP 接口可能要求管理员 2FA：
-
-- `POST /api/admin/task/exec`
-- `POST /api/admin/update/user`，仅在修改密码时
-- `POST /api/admin/2fa/disable`
-- 新建 `GET /api/admin/client/:uuid/terminal` WebSocket 会话时
-
-2FA code 的来源顺序：
-
-1. JSON body 的 `2fa_code`、`two_factor_code` 或 `otp`
-2. `X-2FA-Code` 请求头
-3. `X-Two-Factor-Code` 请求头
-4. Query 参数 `2fa_code`、`two_factor_code` 或 `otp`
-
-使用 API Key 调用时不需要重复提供 2FA code；未启用 2FA 的管理员也不需要。
-
-### 2.5 常用类型
+### 2.4 常用类型
 
 #### Client
 
@@ -247,7 +229,6 @@ curl -s "$BASE/ping"
 | ---------- | -------- | ---- | ----------------- |
 | `username` | `string` | 是   | 管理员用户名      |
 | `password` | `string` | 是   | 管理员密码        |
-| `2fa_code` | `string` | 否   | 已启用 2FA 时必填 |
 
 ```bash
 curl -s -D - \
@@ -255,8 +236,7 @@ curl -s -D - \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "YourPassword123",
-    "2fa_code": "123456"
+    "password": "YourPassword123"
   }'
 ```
 
@@ -327,8 +307,7 @@ OAuth Provider 回调地址。登录成功或绑定成功后重定向到 `/admin
   "logged_in": true,
   "uuid": "8b55e7f0-6f9c-4b1a-a5f2-63f09c04bca4",
   "sso_type": "",
-  "sso_id": "",
-  "2fa_enabled": true
+  "sso_id": ""
 }
 ```
 
@@ -864,14 +843,11 @@ curl -s \
 
 **接口：** `POST /api/admin/task/exec`
 
-**敏感操作：** 是，可能要求 2FA。
-
 ```bash
 curl -s \
   -H "Authorization: Bearer $KOMARI_API_KEY" \
   -X POST "$BASE/api/admin/task/exec" \
   -H "Content-Type: application/json" \
-  -H "X-2FA-Code: 123456" \
   -d '{
     "command": "uptime",
     "clients": ["d4c8d9a1-4ec5-4c1b-9b95-4c1c8f930b0d"]
@@ -1625,14 +1601,11 @@ GET /api/clients/terminal?id=<request_id>
 
 #### 5.16.1 新建会话
 
-新建会话时不能提供 `request_id`，并且需要通过 2FA 校验。2FA code 可放在 Query、`X-2FA-Code` 请求头或 `X-Two-Factor-Code` 请求头中。
+新建会话时不能提供 `request_id`。该接口由管理员会话或具备权限的 API Key 保护。
 
 ```js
-const params = new URLSearchParams();
-params.set("2fa_code", "123456");
-
 const ws = new WebSocket(
-  `${location.origin.replace(/^http/, "ws")}/api/admin/client/${uuid}/terminal?${params}`,
+  `${location.origin.replace(/^http/, "ws")}/api/admin/client/${uuid}/terminal`,
 );
 
 ws.onmessage = (event) => {
@@ -1679,13 +1652,13 @@ ws.onmessage = (event) => {
 
 重连规则：
 
-- 浏览器重连不要求新的 2FA code。
+- 浏览器重连必须由原会话所有者或具备相应权限的 API Key 发起。
 - 普通管理员只能重连自己创建的会话；API Key 可以重连匹配 `uuid` 的任意会话。
 - 重连成功后会再次收到 `{ "request_id": "<request_id>" }`。
 - 服务端会重新通知 Agent 回连；Agent 尚未连接时返回 `等待被控端连接 waiting for agent...`。
 - 浏览器和 Agent 都重新连接后，取消清理定时器并继续转发。
 
-如果 `request_id` 不存在或已经超过 5 分钟，接口返回 `404` 和 `Terminal session not found`。此时不要继续使用旧 ID，需要重新创建会话并重新完成 2FA。
+如果 `request_id` 不存在或已经超过 5 分钟，接口返回 `404` 和 `Terminal session not found`。此时不要继续使用旧 ID，需要重新创建会话。
 
 #### 5.16.3 Agent 重连
 
@@ -1715,45 +1688,7 @@ GET /api/clients/terminal?id=<request_id>
 - 关闭浏览器和 Agent 两侧连接。
 - 原 `request_id` 失效，后续重连返回 `404`。
 
-### 5.17 2FA
-
-#### 5.17.1 生成密钥与二维码
-
-**接口：** `GET /api/admin/2fa/generate`
-
-返回 PNG 二维码，并设置 `2fa_secret` Cookie，有效期 30 分钟。
-
-```bash
-curl -s \
-  -H "Authorization: Bearer $KOMARI_API_KEY" \
-  -o qr.png \
-  "$BASE/api/admin/2fa/generate"
-```
-
-#### 5.17.2 启用 2FA
-
-**接口：** `POST /api/admin/2fa/enable?code=`
-
-```bash
-curl -s \
-  -H "Authorization: Bearer $KOMARI_API_KEY" \
-  -X POST "$BASE/api/admin/2fa/enable?code=123456"
-```
-
-#### 5.17.3 停用 2FA
-
-**接口：** `POST /api/admin/2fa/disable`
-
-需要通过敏感操作 2FA 校验。
-
-```bash
-curl -s \
-  -H "Authorization: Bearer $KOMARI_API_KEY" \
-  -X POST "$BASE/api/admin/2fa/disable" \
-  -H "X-2FA-Code: 123456"
-```
-
-### 5.18 OAuth 绑定
+### 5.17 OAuth 绑定
 
 | 方法   | 接口                       | 说明                        |
 | ------ | -------------------------- | --------------------------- |
@@ -1766,9 +1701,9 @@ curl -s \
   -X POST "$BASE/api/admin/oauth2/unbind"
 ```
 
-### 5.19 用户与 GeoIP
+### 5.18 用户与 GeoIP
 
-#### 5.19.1 更新用户
+#### 5.18.1 更新用户
 
 **接口：** `POST /api/admin/update/user`
 
@@ -1783,7 +1718,7 @@ curl -s \
   }'
 ```
 
-修改密码时额外提供 `password` 与 `2fa_code`：
+修改密码时提供新 `password`：
 
 ```bash
 curl -s \
@@ -1792,12 +1727,11 @@ curl -s \
   -H "Content-Type: application/json" \
   -d '{
     "uuid": "<user-uuid>",
-    "password": "NewPassword123",
-    "2fa_code": "123456"
+    "password": "NewPassword123"
   }'
 ```
 
-#### 5.19.2 更新 GeoIP 数据库
+#### 5.18.2 更新 GeoIP 数据库
 
 **接口：** `POST /api/admin/update/mmdb`
 
@@ -1807,7 +1741,7 @@ curl -s \
   -X POST "$BASE/api/admin/update/mmdb"
 ```
 
-#### 5.19.3 Favicon
+#### 5.18.3 Favicon
 
 | 方法   | 接口                        | 说明                           |
 | ------ | --------------------------- | ------------------------------ |
@@ -1825,9 +1759,9 @@ curl -s \
   -X POST "$BASE/api/admin/update/favicon"
 ```
 
-### 5.20 数据库维护
+### 5.19 数据库维护
 
-#### 5.20.1 数据库容量
+#### 5.19.1 数据库容量
 
 **接口：** `GET /api/admin/database/size`
 
@@ -1863,7 +1797,7 @@ curl -s \
 }
 ```
 
-#### 5.20.2 压缩数据库
+#### 5.19.2 压缩数据库
 
 **接口：** `POST /api/admin/database/vacuum`
 
@@ -1873,7 +1807,7 @@ curl -s \
   -X POST "$BASE/api/admin/database/vacuum"
 ```
 
-### 5.21 诊断 pprof
+### 5.20 诊断 pprof
 
 所有接口要求管理员身份。
 
@@ -2228,37 +2162,9 @@ public:getVersion
 
 持有有效 `temp_key` 的匿名访客可继续调用 `public:*` 方法。
 
-### 9.4 敏感操作
+### 9.4 管理员权限
 
-当前敏感方法：
-
-```text
-admin:exec
-```
-
-管理员调用时还需要有效 2FA code。API Key 调用和未启用 2FA 的管理员账号不需要额外 code。
-
-2FA code 查找顺序：
-
-1. `params.2fa_code`
-2. `params.two_factor_code`
-3. `params.otp`
-4. `X-2FA-Code`
-5. `X-Two-Factor-Code`
-6. Query 参数 `2fa_code`、`two_factor_code` 或 `otp`
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "admin:exec",
-  "params": {
-    "command": "uptime",
-    "clients": ["d4c8d9a1-4ec5-4c1b-9b95-4c1c8f930b0d"],
-    "2fa_code": "123456"
-  },
-  "id": 1
-}
-```
+所有 `admin:*` JSON-RPC 方法（包括远程命令执行）都要求管理员身份和相应权限；当前版本不提供额外的 2FA 二次校验。
 
 ## 10. JSON-RPC 错误码
 
@@ -2528,7 +2434,7 @@ Public 方法对 guest 开放，返回内容会自动过滤 Hidden 节点和敏�
 
 ### 13.1 `public:getMe`
 
-未登录返回 Guest 占位；已登录返回用户名、UUID、SSO 和 2FA 状态。
+未登录返回 Guest 占位；已登录返回用户名、UUID 和 SSO 绑定信息。
 
 ```json
 {
@@ -2930,7 +2836,7 @@ Admin 方法仅管理员可调用。下列示例均可通过 `/api/rpc2`、sessi
 | `admin:getTasksByClientId`     | `{ uuid }`                        | 节点任务列表                           |
 | `admin:getTaskResultsByTaskId` | `{ task_id }`                     | 结果列表                               |
 | `admin:getSpecificTaskResult`  | `{ task_id, uuid }`               | 单条结果                               |
-| `admin:exec`                   | `{ command, clients, 2fa_code? }` | `{ task_id, clients, queued_clients }` |
+| `admin:exec`                   | `{ command, clients }`            | `{ task_id, clients, queued_clients }` |
 
 执行命令：
 
@@ -2940,8 +2846,7 @@ Admin 方法仅管理员可调用。下列示例均可通过 `/api/rpc2`、sessi
   "method": "admin:exec",
   "params": {
     "command": "uptime",
-    "clients": ["d4c8d9a1-4ec5-4c1b-9b95-4c1c8f930b0d"],
-    "2fa_code": "123456"
+    "clients": ["d4c8d9a1-4ec5-4c1b-9b95-4c1c8f930b0d"]
   },
   "id": 1
 }

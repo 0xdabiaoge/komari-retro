@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
-import { authorizeSensitiveAccess } from "@/lib/sensitive";
 import {
   SettingCard,
   SettingCardButton,
@@ -581,10 +580,7 @@ export default function SiteSettings() {
       <SettingCardIconButton
         title={t("settings.site.backup_download")}
         description={t("settings.site.backup_download_description")}
-        onClick={async () => {
-          try { await authorizeSensitiveAccess(); window.location.assign("/api/admin/download/backup"); }
-          catch (error) { toast.error(String(error)); }
-        }}
+        onClick={() => window.location.assign("/api/admin/download/backup")}
         className="km-setting-card"
       >
         <DownloadIcon size={16} />

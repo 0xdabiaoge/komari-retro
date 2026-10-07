@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 let source = fs.readFileSync(new URL('../src/lib/rpc2.ts', import.meta.url), 'utf8');
 source = source.replace('import { RPC2ConnectionState } from "../types/rpc2";', 'const RPC2ConnectionState = { CONNECTED:"connected", DISCONNECTED:"disconnected", CONNECTING:"connecting", ERROR:"error", RECONNECTING:"reconnecting" };');
 source = source.replace('import i18n from "../i18n/config";', 'const i18n = { t: s => s };');
-source=source.replace('import { authorizeFileAccess } from "./sensitive";', 'const authorizeFileAccess=async()=>{};');
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
 const { RPC2Client } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 

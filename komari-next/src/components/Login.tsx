@@ -46,10 +46,8 @@ const LoginDialogContent = ({
   const mounted = useMounted();
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [twoFac, setTwoFac] = React.useState("");
   const [errorMsg, setErrorMsg] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
-  const [require2FA, setRequire2FA] = React.useState(false);
   const [open, setOpen] = React.useState(autoOpen);
   const oauthRedirectStarted = React.useRef(false);
 
@@ -105,9 +103,6 @@ const LoginDialogContent = ({
         body: JSON.stringify({
           username,
           password,
-          ...(twoFac && !account?.["2fa_enabled"]
-            ? { "2fa_code": twoFac }
-            : {}),
         }),
       });
       const data = await res.json();
@@ -119,10 +114,6 @@ const LoginDialogContent = ({
         }
         window.open("/admin", "_self");
       } else {
-        if (data.message === "2FA code is required") {
-          setRequire2FA(true);
-          return;
-        }
         setErrorMsg(data.message || "Login failed");
       }
     } catch (err) {
@@ -232,19 +223,6 @@ const LoginDialogContent = ({
                     onKeyDown={handleKeyDown}
                     type="password"
                     placeholder={t("login.password_placeholder")}
-                    disabled={isLoading}
-                  />
-                </label>
-                <label hidden={!require2FA}>
-                  <Text as="div" size="2" weight="bold">
-                    {t("login.two_factor")}
-                  </Text>
-                  <Input
-                    value={twoFac}
-                    onChange={(e) => setTwoFac(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    type="text"
-                    placeholder="000000"
                     disabled={isLoading}
                   />
                 </label>

@@ -117,7 +117,6 @@ func adminEditSettings(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 	if err := req.BindParams(&cfg); err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid or missing request body: "+err.Error(), nil)
 	}
-	delete(cfg, "2fa_code")
 	if theme, ok := cfg[config.ThemeKey].(string); ok && (strings.EqualFold(theme, "next") || strings.EqualFold(theme, "nasdaq") || strings.HasPrefix(theme, ".")) {
 		return nil, rpc.MakeError(rpc.InvalidParams, "This theme has been removed", nil)
 	}

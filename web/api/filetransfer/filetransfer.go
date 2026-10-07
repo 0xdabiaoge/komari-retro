@@ -19,7 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/clients"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
-	"github.com/komari-monitor/komari/web/api"
 )
 
 const (
@@ -381,10 +380,6 @@ func HandleFileUpload(c *gin.Context) {
 
 	switch operation {
 	case "init", "start":
-		if err := api.VerifySensitive2FA(c); err != nil {
-			api.RespondError(c, 401, err.Error())
-			return
-		}
 		handleUploadInit(c, uuid)
 	case "chunk":
 		handleUploadChunk(c, uuid)

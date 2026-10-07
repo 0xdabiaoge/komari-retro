@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/komari-monitor/komari/cmd/flags"
@@ -13,15 +20,7 @@ import (
 	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	"github.com/komari-monitor/komari/web/api"
-	"github.com/komari-monitor/komari/web/api/admin"
 	jsonrpc "github.com/komari-monitor/komari/web/rpc/jsonrpc"
-	"github.com/pquerna/otp/totp"
-	"net/http"
-	"net/http/httptest"
-	"path/filepath"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestSecurityRegressions(t *testing.T) {
@@ -45,7 +44,6 @@ func TestSecurityRegressions(t *testing.T) {
 	engine.Use(api.IdentityMiddleware())
 	engine.GET("/api/rpc2", jsonrpc.OnRpcRequest)
 	engine.POST("/api/rpc2", jsonrpc.OnRpcRequest)
-	engine.POST("/enable", api.RequireRole(api.RoleAdmin), admin.Enable2FA)
 	engine.GET("/ip", func(c *gin.Context) { c.String(200, c.ClientIP()) })
 	engine.GET("/api/admin/test", api.RequireRole(api.RoleAdmin), func(c *gin.Context) { c.Status(200) })
 	srv := httptest.NewServer(engine)
@@ -60,31 +58,6 @@ func TestSecurityRegressions(t *testing.T) {
 			t.Fatalf("unexpected result %s", w.Body.String())
 		}
 	})
-	t.Run("Existing2FACannotBeReplacedWithoutOldCode", func(t *testing.T) {
-		if err := accounts.Enable2Fa(user.UUID, "JBSWY3DPEHPK3PXP"); err != nil {
-			t.Fatal(err)
-		}
-		key, err := totp.Generate(totp.GenerateOpts{Issuer: "audit", AccountName: "audit"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		code, err := totp.GenerateCode(key.Secret(), time.Now())
-		if err != nil {
-			t.Fatal(err)
-		}
-		r := httptest.NewRequest("POST", "/enable?code="+code, nil)
-		r.AddCookie(&http.Cookie{Name: "session_token", Value: token})
-		r.AddCookie(&http.Cookie{Name: "2fa_secret", Value: key.Secret()})
-		w := httptest.NewRecorder()
-		engine.ServeHTTP(w, r)
-		changed, err := accounts.GetUserByUUID(user.UUID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if changed.TwoFactor == key.Secret() || w.Code == 200 {
-			t.Fatalf("replacement not reproduced: status=%d", w.Code)
-		}
-	})
 	t.Run("OneItemBatchReturnsArray", func(t *testing.T) {
 		r := httptest.NewRequest("POST", "/api/rpc2", bytes.NewBufferString(`[{"jsonrpc":"2.0","id":1,"method":"rpc:ping"}]`))
 		w := httptest.NewRecorder()
@@ -93,30 +66,14 @@ func TestSecurityRegressions(t *testing.T) {
 			t.Fatal("not reproduced")
 		}
 	})
-	t.Run("SensitiveSettingsAndReadOnlyKeys", func(t *testing.T) {
-		current, err := accounts.GetUserByUUID(user.UUID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		meta := &rpc.ContextMeta{Permission: rpc.RoleAdmin, User: &current, UserUUID: user.UUID, SessionToken: token}
+	t.Run("AdminSettingsAndReadOnlyKeys", func(t *testing.T) {
+		meta := &rpc.ContextMeta{Permission: rpc.RoleAdmin, User: &user, UserUUID: user.UUID, SessionToken: token}
 		req := &rpc.JsonRpcRequest{Method: "admin:editSettings", ID: 1, Params: map[string]any{"api_key_scope": "read-only"}}
-		if jsonrpc.Dispatch(context.Background(), meta, req).Error == nil {
-			t.Fatal("sensitive settings changed without step-up")
-		}
-		code, err := totp.GenerateCode(current.TwoFactor, time.Now())
-		if err != nil {
-			t.Fatal(err)
-		}
-		req.Params = map[string]any{"api_key_scope": "read-only", "2fa_code": code}
 		if response := jsonrpc.Dispatch(context.Background(), meta, req); response.Error != nil {
 			t.Fatal(response.Error)
 		}
-		all, err := config.GetAll()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, exists := all["2fa_code"]; exists {
-			t.Fatal("OTP persisted in configuration")
+		if scope, err := config.GetAs[string](config.ApiKeyScopeKey, ""); err != nil || scope != "read-only" {
+			t.Fatalf("admin setting was not applied: scope=%q err=%v", scope, err)
 		}
 		config.Set(config.ApiKeyKey, "isolated-read-only-key")
 		defer config.Set(config.ApiKeyKey, "")

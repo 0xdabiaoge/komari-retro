@@ -23,8 +23,6 @@ const AdminLoginPage = () => {
   const { publicInfo, isLoading: publicInfoLoading } = usePublicInfo();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [twoFactor, setTwoFactor] = useState("");
-  const [requireTwoFactor, setRequireTwoFactor] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const redirect = resolveLoginRedirect(searchParams.get("redirect"));
@@ -56,14 +54,10 @@ const AdminLoginPage = () => {
         body: JSON.stringify({
           username,
           password,
-          ...(twoFactor ? { "2fa_code": twoFactor } : {}),
         }),
       });
       const payload = (await response.json()) as LoginResponse;
       if (!response.ok) {
-        if (payload.message === "2FA code is required") {
-          setRequireTwoFactor(true);
-        }
         throw new Error(payload.message || `HTTP ${response.status}`);
       }
       await refresh();
@@ -136,23 +130,6 @@ const AdminLoginPage = () => {
                     disabled={busy}
                   />
                 </label>
-                {requireTwoFactor && (
-                  <label className="block">
-                    <Text as="div" size="2" weight="bold" mb="1">
-                      {t("login.two_factor")}
-                    </Text>
-                    <TextField.Root
-                      className="km-login-input"
-                      value={twoFactor}
-                      onChange={(event) => setTwoFactor(event.target.value)}
-                      name="2fa_code"
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                      placeholder="000000"
-                      disabled={busy}
-                    />
-                  </label>
-                )}
                 {error && (
                   <Text as="div" size="2" color="red" className="km-login-error">
                     {error}

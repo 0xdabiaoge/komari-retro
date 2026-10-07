@@ -183,11 +183,8 @@ func adminRemoveCloudflaredToken(ctx context.Context, _ *rpc.JsonRpcRequest) (an
 
 func adminExec(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
-		Command       string   `json:"command"`
-		Clients       []string `json:"clients"`
-		TwoFa         string   `json:"2fa_code"`
-		TwoFactorCode string   `json:"two_factor_code"`
-		OTP           string   `json:"otp"`
+		Command string   `json:"command"`
+		Clients []string `json:"clients"`
 	}
 	req.BindParams(&params)
 	if strings.TrimSpace(params.Command) == "" {
@@ -195,27 +192,6 @@ func adminExec(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcE
 	}
 	if len(params.Clients) == 0 {
 		return nil, rpc.MakeError(rpc.InvalidParams, "clients is required", nil)
-	}
-
-	// 敏感操作 2FA 强校验：若当前操作者为管理员且启用了 2FA，必须验证动态口令
-	if meta := rpc.MetaFromContext(ctx); meta != nil && meta.UserUUID != "" && meta.UserUUID != "00000000-0000-0000-0000-000000000000" {
-		user, err := accounts.GetUserByUUID(meta.UserUUID)
-		if err == nil && user.TwoFactor != "" {
-			code := strings.TrimSpace(params.TwoFa)
-			if code == "" {
-				code = strings.TrimSpace(params.TwoFactorCode)
-			}
-			if code == "" {
-				code = strings.TrimSpace(params.OTP)
-			}
-			if code == "" {
-				return nil, rpc.MakeError(rpc.Unauthenticated, "2FA code is required", nil)
-			}
-			valid, err := accounts.Verify2Fa(user.UUID, code)
-			if err != nil || !valid {
-				return nil, rpc.MakeError(rpc.Unauthenticated, "Invalid 2FA code", nil)
-			}
-		}
 	}
 
 	var onlineClients, queuedClients, offlineClients []string

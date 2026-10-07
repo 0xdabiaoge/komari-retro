@@ -92,8 +92,8 @@ func registerAdminRoutes(r *gin.Engine) {
 	g := r.Group("/api/admin", api.RequireRole(api.RoleAdmin))
 
 	// --- 二进制/流/重定向类，保留 REST handler ---
-	g.GET("/download/backup", api.RequireSensitive2FA(), admin.DownloadBackup)
-	g.POST("/upload/backup", api.RequireSensitive2FA(), admin.UploadBackup)
+	g.GET("/download/backup", admin.DownloadBackup)
+	g.POST("/upload/backup", admin.UploadBackup)
 	g.GET("/test/geoip", jsonRpc.Bind("admin:testGeoip", jsonRpc.WithQuery("ip")))
 	g.POST("/test/sendMessage", jsonRpc.Bind("admin:testSendMessage"))
 	g.POST("/update/mmdb", admin.UpdateMmdbGeoIP)
@@ -114,15 +114,6 @@ func registerAdminRoutes(r *gin.Engine) {
 		theme.POST("/settings", admin.UpdateThemeSettings)
 	}
 
-	// 2FA 含二维码 PNG / 敏感操作，保留 REST handler。
-	twoFactor := g.Group("/2fa")
-	{
-		twoFactor.GET("/generate", admin.Generate2FA)
-		twoFactor.POST("/verify", api.AuthorizeSensitive)
-		twoFactor.POST("/enable", admin.Enable2FA)
-		twoFactor.POST("/disable", api.RequireSensitive2FA(), admin.Disable2FA)
-	}
-
 	// oauth2 绑定走重定向，保留 REST handler。
 	oauth2 := g.Group("/oauth2")
 	{
@@ -136,7 +127,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	task := g.Group("/task")
 	{
 		task.GET("/all", jsonRpc.Bind("admin:getTasks"))
-		task.POST("/exec", api.RequireSensitive2FA(), jsonRpc.Bind("admin:exec"))
+		task.POST("/exec", jsonRpc.Bind("admin:exec"))
 		task.GET("/:task_id", jsonRpc.Bind("admin:getTaskById", jsonRpc.WithPath("task_id")))
 		task.GET("/:task_id/result", jsonRpc.Bind("admin:getTaskResultsByTaskId", jsonRpc.WithPath("task_id")))
 		task.GET("/:task_id/result/:uuid", jsonRpc.Bind("admin:getSpecificTaskResult", jsonRpc.WithPath("task_id", "uuid")))
@@ -178,10 +169,10 @@ func registerAdminRoutes(r *gin.Engine) {
 		clientGroup.POST("/:uuid/remove", jsonRpc.Bind("admin:removeClient", jsonRpc.WithPath("uuid")))
 		clientGroup.GET("/:uuid/token", jsonRpc.Bind("admin:getClientToken", jsonRpc.WithPath("uuid"), jsonRpc.WithFlat()))
 		clientGroup.POST("/order", jsonRpc.Bind("admin:orderClients"))
-		clientGroup.GET("/:uuid/terminal", api.RequireSensitive2FA(), terminal.RequestTerminal)
+		clientGroup.GET("/:uuid/terminal", terminal.RequestTerminal)
 		// 文件管理器端点
-		clientGroup.GET("/:uuid/file/download", api.RequireSensitive2FA(), filetransfer.HandleFileDownload)
-		clientGroup.GET("/:uuid/file/preview-token", api.RequireSensitive2FA(), filetransfer.HandleFilePreviewToken)
+		clientGroup.GET("/:uuid/file/download", filetransfer.HandleFileDownload)
+		clientGroup.GET("/:uuid/file/preview-token", filetransfer.HandleFilePreviewToken)
 		clientGroup.POST("/:uuid/file/upload", filetransfer.HandleFileUpload)
 	}
 

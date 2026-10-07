@@ -30,8 +30,6 @@ export default function RestrictedLoginDialog({
   const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [twoFactor, setTwoFactor] = useState("");
-  const [requireTwoFactor, setRequireTwoFactor] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -45,14 +43,10 @@ export default function RestrictedLoginDialog({
         body: JSON.stringify({
           username,
           password,
-          ...(twoFactor ? { "2fa_code": twoFactor } : {}),
         }),
       });
       const payload = (await response.json()) as APIResponse;
       if (!response.ok) {
-        if (payload.message === "2FA code is required") {
-          setRequireTwoFactor(true);
-        }
         throw new Error(payload.message || `HTTP ${response.status}`);
       }
       await onAuthenticated();
@@ -113,22 +107,6 @@ export default function RestrictedLoginDialog({
                 disabled={busy}
               />
             </label>
-            {requireTwoFactor && (
-              <label className="block">
-                <Text as="div" size="2" weight="bold" mb="1">
-                  {t("login.two_factor")}
-                </Text>
-                <TextField.Root
-                  id="restricted-login-2fa-code"
-                  name="2fa_code"
-                  value={twoFactor}
-                  onChange={(event) => setTwoFactor(event.target.value)}
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  disabled={busy}
-                />
-              </label>
-            )}
             {error && (
               <Text as="div" size="2" color="red">
                 {error}

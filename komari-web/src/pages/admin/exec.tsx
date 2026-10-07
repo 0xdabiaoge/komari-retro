@@ -9,7 +9,6 @@ import {
     Text,
     Separator,
     Badge,
-    TextField
 } from "@radix-ui/themes";
 import { Play, AlertCircle, CheckCircle2, Copy, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -101,8 +100,6 @@ const ExecContent = () => {
     const [polling, setPolling] = useState(false);
     const [commandFocused, setCommandFocused] = useState(false);
     const [commandEditorHeight, setCommandEditorHeight] = useState(COMMAND_EDITOR_COLLAPSED_HEIGHT);
-    const [twoFaEnabled, setTwoFaEnabled] = useState(false);
-    const [twoFaCode, setTwoFaCode] = useState("");
 
     // 使用 useRef 来保存轮询相关的引用
     const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -164,17 +161,6 @@ const ExecContent = () => {
         return () => {
             clearPolling();
         };
-    }, []);
-
-    useEffect(() => {
-        fetch("/api/me")
-            .then((response) => response.json())
-            .then((data) => {
-                setTwoFaEnabled(Boolean(data?.["2fa_enabled"]));
-            })
-            .catch(() => {
-                setTwoFaEnabled(false);
-            });
     }, []);
 
     useLayoutEffect(() => {
@@ -284,11 +270,6 @@ const ExecContent = () => {
             return;
         }
 
-        if (twoFaEnabled && !twoFaCode.trim()) {
-            toast.error(t("account.otp_empty_error"));
-            return;
-        }
-
         // 清理之前的轮询
         clearPolling();
 
@@ -306,7 +287,6 @@ const ExecContent = () => {
                     // Remote exec treats whitespace as script content, so preserve the user's exact input.
                     command,
                     clients: selectedNodes,
-                    "2fa_code": twoFaCode,
                 }),
             });
 
@@ -319,12 +299,10 @@ const ExecContent = () => {
 
             if (data.success && data.task_id) {
                 setTaskId(data.task_id);
-                setTwoFaCode("");
                 toast.success(t("exec.taskStarted"));
                 startPolling(data.task_id);
             } else if (data.status === "success" && data.data?.task_id) {
                 setTaskId(data.data.task_id);
-                setTwoFaCode("");
                 toast.success(t("exec.taskStarted"));
                 startPolling(data.data.task_id);
             } else {
@@ -460,18 +438,9 @@ const ExecContent = () => {
                     </div>
 
                     <Flex justify="end" gap="2">
-                        {twoFaEnabled ? (
-                            <TextField.Root
-                                className="w-32"
-                                type="number"
-                                placeholder="2FA"
-                                value={twoFaCode}
-                                onChange={(e) => setTwoFaCode((e.target as HTMLInputElement).value)}
-                            />
-                        ) : null}
                         <Button
                             onClick={executeCommand}
-                            disabled={executing || !command.trim() || selectedNodes.length === 0 || (twoFaEnabled && !twoFaCode.trim())}
+                            disabled={executing || !command.trim() || selectedNodes.length === 0}
                         >
                             {executing ? (
                                 <>

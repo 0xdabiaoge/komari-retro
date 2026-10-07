@@ -6,22 +6,14 @@
     "readme_open_in_new_tab": "新しいタブで開く"
   },
   "account": {
-    "2fa_disabled": "二要素認証は無効になっています",
-    "2fa_enabled": "二要素認証が有効になりました",
-    "2fa_otp_input_prompt": "認証アプリが生成したワンタイムパスワードを入力してください",
-    "2fa_qr_code_hint": "このQRコードを認証アプリでスキャンして二要素認証を設定してください",
     "change_password_button": "パスワードを変更",
     "change_password_title": "パスワードを変更",
     "change_username_button": "ユーザー名を変更",
     "change_username_title": "ユーザー名を変更",
-    "disable_2fa": "無効にする",
-    "disable_2fa_confirmation": "本当に2FAを無効にしますか？",
-    "enable_2fa": "二要素認証を有効にする",
     "greeting": "{{username}}さん、今日は何をしますか？",
     "menu": "アカウント",
     "new_password": "新しいパスワード",
     "new_password_repeat": "新しいパスワードを再入力",
-    "otp_empty_error": "空の確認コード",
     "password_empty_error": "空のパスワードは許可されていません",
     "password_mismatch_error": "2回入力したパスワードが一致しません",
     "password_strength_error": "パスワードには大文字、小文字、数字を含める必要があります",
@@ -686,7 +678,6 @@
     "password_placeholder": "パスワードを入力してください",
     "request_failed": "ログインに失敗しました。もう一度お試しください。",
     "title": "ログイン",
-    "two_factor": "二要素認証",
     "username": "ユーザー名"
   },
   "logs": {
@@ -1505,8 +1496,6 @@
     "title": "システム"
   },
   "terminal": {
-    "2fa_code_prompt": "2FAコードを入力してください: ",
-    "2fa_prompt": "二要素認証が必要です。",
     "clients_load_failed": "サーバーの読み込みに失敗しました",
     "close_others": "その他",
     "close_tab": "タブを閉じる",
@@ -1520,7 +1509,6 @@
     "export_text": "テキストをエクスポート",
     "find": "検索",
     "no_active_connection": "アクティブな接続はありません",
-    "otp_invalid": "2FAコードが無効または期限切れです",
     "reconnecting": "接続が切断されました。再接続しています...",
     "rename_tab": "タブ名を変更",
     "resource_monitor": {

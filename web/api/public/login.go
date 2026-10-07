@@ -22,7 +22,6 @@ import (
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	TwoFa    string `json:"2fa_code"`
 }
 
 const sessionCookieMaxAge = 2592000
@@ -139,7 +138,7 @@ func Login(c *gin.Context) {
 		api.RespondError(c, http.StatusBadRequest, "Invalid request body: Username and password are required")
 		return
 	}
-	if len(data.Username) > 255 || len(data.Password) > 4096 || len(data.TwoFa) > 64 {
+	if len(data.Username) > 255 || len(data.Password) > 4096 {
 		api.RespondError(c, 400, "Invalid credential length")
 		return
 	}
@@ -156,22 +155,6 @@ func Login(c *gin.Context) {
 		recordLoginFailure(accountKey)
 		api.RespondError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
-	}
-	// 2FA
-	user, _ := accounts.GetUserByUUID(uuid)
-	if user.TwoFactor != "" { // 开启了2FA
-		if data.TwoFa == "" {
-			recordLoginFailure(clientIP)
-			recordLoginFailure(accountKey)
-			api.RespondError(c, http.StatusUnauthorized, "2FA code is required")
-			return
-		}
-		if ok, err := accounts.Verify2Fa(uuid, data.TwoFa); err != nil || !ok {
-			recordLoginFailure(clientIP)
-			recordLoginFailure(accountKey)
-			api.RespondError(c, http.StatusUnauthorized, "Invalid 2FA code")
-			return
-		}
 	}
 	recordLoginSuccess(clientIP)
 	recordLoginSuccess(accountKey)

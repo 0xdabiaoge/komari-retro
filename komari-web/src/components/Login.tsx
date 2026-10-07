@@ -26,10 +26,8 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
     const [t] = useTranslation();
     const [username, setUsername] = React.useState("");
     const [password, setPassword] = React.useState("");
-    const [twoFac, setTwoFac] = React.useState("");
     const [errorMsg, setErrorMsg] = React.useState("");
     const [isLoading, setIsLoading] = React.useState(false);
-    const [require2FA, setRequire2FA] = React.useState(false);
     const [open, setOpen] = React.useState(autoOpen || false);
     const fieldId = React.useId().replace(/:/g, "");
     const {publicInfo} = usePublicInfo();
@@ -63,7 +61,6 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
           body: JSON.stringify({
             username,
             password,
-            ...(twoFac && !account?.["2fa_enabled"] ? { "2fa_code": twoFac } : {}),
           }),
         });
         const data = await res.json();
@@ -75,10 +72,6 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
           }
           window.open("/admin/dashboard", "_self");
         } else {
-          if (data.message === "2FA code is required") {
-            setRequire2FA(true);
-            return;
-          }
           setErrorMsg(data.message || "Login failed");
         }
       } catch (err) {
@@ -202,23 +195,6 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
                       type="password"
                       autoComplete="current-password"
                       placeholder={t("login.password_placeholder")}
-                      disabled={isLoading}
-                    />
-                  </label>
-                  <label hidden={!require2FA}>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      {t("login.two_factor")}
-                    </Text>
-                    <TextField.Root
-                      className="km-login-input"
-                      value={twoFac}
-                      onChange={(e) => setTwoFac(e.target.value)}
-                      id={`login-2fa-code-${fieldId}`}
-                      name="2fa_code"
-                      type="text"
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                      placeholder="000000"
                       disabled={isLoading}
                     />
                   </label>

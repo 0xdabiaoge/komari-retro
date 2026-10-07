@@ -28,6 +28,33 @@ func openTestDB(t *testing.T, name string) *gorm.DB {
 	return db
 }
 
+func TestRunRemovesLegacyTwoFactorSecrets(t *testing.T) {
+	db := openTestDB(t, "migrations_remove_two_factor")
+	if err := db.AutoMigrate(&legacyUserTwoFactor{}); err != nil {
+		t.Fatalf("create legacy users table: %v", err)
+	}
+	if err := db.Create(&legacyUserTwoFactor{UUID: "legacy-user", TwoFactor: "legacy-totp-secret"}).Error; err != nil {
+		t.Fatalf("seed legacy two-factor secret: %v", err)
+	}
+
+	if err := Run(Context{DB: db}); err != nil {
+		t.Fatalf("remove legacy two-factor column: %v", err)
+	}
+	if hasTableColumn(db, "users", "two_factor") {
+		t.Fatal("legacy two-factor column still exists")
+	}
+	if err := Run(Context{DB: db}); err != nil {
+		t.Fatalf("repeat migrations: %v", err)
+	}
+	var count int64
+	if err := db.Table("users").Where("uuid = ?", "legacy-user").Count(&count).Error; err != nil {
+		t.Fatalf("verify user row remains: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("user row was not preserved: count=%d", count)
+	}
+}
+
 func TestHasLegacyConfigTable(t *testing.T) {
 	t.Run("config item table", func(t *testing.T) {
 		db := openTestDB(t, "migrations_config_item")

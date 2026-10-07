@@ -92,6 +92,13 @@ type legacyPingTask struct {
 	Clients string `gorm:"column:clients"`
 }
 
+type legacyUserTwoFactor struct {
+	UUID      string `gorm:"column:uuid;primaryKey"`
+	TwoFactor string `gorm:"column:two_factor"`
+}
+
+func (legacyUserTwoFactor) TableName() string { return "users" }
+
 type Context struct {
 	DB *gorm.DB
 }
@@ -101,6 +108,9 @@ func Run(ctx Context) error {
 	db := ctx.DB
 	if db == nil {
 		return fmt.Errorf("migration database is nil")
+	}
+	if err := removeLegacyTwoFactor(db); err != nil {
+		return err
 	}
 
 	legacyConfigTable := hasLegacyConfigTable(db)
@@ -129,6 +139,17 @@ func Run(ctx Context) error {
 		}
 	}
 
+	return nil
+}
+
+func removeLegacyTwoFactor(db *gorm.DB) error {
+	if !db.Migrator().HasTable("users") || !hasTableColumn(db, "users", "two_factor") {
+		return nil
+	}
+	if err := db.Migrator().DropColumn(&legacyUserTwoFactor{}, "TwoFactor"); err != nil {
+		return fmt.Errorf("remove legacy user two-factor secret: %w", err)
+	}
+	log.Println("Removed legacy user two-factor secrets")
 	return nil
 }
 

@@ -47,7 +47,7 @@ async function context(viewport = { width: 1440, height: 960 }, dark = false) {
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     let body = {};
-    if (url.pathname === "/api/me") body = { logged_in: true, uuid: "test-admin", username: "admin", "2fa_enabled": true };
+    if (url.pathname === "/api/me") body = { logged_in: true, uuid: "test-admin", username: "admin" };
     else if (url.pathname === "/api/public") body = { data: { theme: "default", theme_settings: settings, sitename: "Komari" } };
     else if (url.pathname === "/api/admin/settings") body = { data: { theme: "default", eula_accepted: eulaAccepted } };
     else if (url.pathname === "/api/admin/client/list") body = clients;

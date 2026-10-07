@@ -2,7 +2,6 @@ package jsonrpc
 
 import (
 	"context"
-	"github.com/komari-monitor/komari/database/accounts"
 	"strings"
 	"time"
 
@@ -51,25 +50,6 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 		return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Permission denied", nil)
 	}
 
-	sensitive := strings.HasPrefix(req.Method, "admin:file") || req.Method == "admin:setOidcProvider"
-	if req.Method == "admin:editSettings" {
-		var settings map[string]any
-		req.BindParams(&settings)
-		for key := range settings {
-			if key == "api_key" || key == "api_key_scope" || strings.HasPrefix(key, "o_auth") || key == "disable_password_login" || key == "admin_path" || strings.Contains(key, "share_token") {
-				sensitive = true
-			}
-		}
-	}
-	if sensitive && meta.User != nil && !meta.APIKey {
-		var otp struct {
-			Code string `json:"2fa_code"`
-		}
-		req.BindParams(&otp)
-		if err := accounts.VerifySensitiveSession(meta.UserUUID, meta.SessionToken, otp.Code, true); err != nil {
-			return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, err.Error(), nil)
-		}
-	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	return rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)

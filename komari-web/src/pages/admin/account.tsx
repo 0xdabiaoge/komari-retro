@@ -8,7 +8,6 @@ import {
   Button,
   Dialog,
   Flex,
-  Skeleton,
   TextField,
 } from "@radix-ui/themes";
 import { Github, Globe, User } from "lucide-react";
@@ -27,7 +26,6 @@ const InnerLayout = () => {
   const { account, loading, error, refresh } = useAccount();
   const [usernameSaving, setUsernameSaving] = React.useState(false);
   const [passwordSaving, setPasswordSaving] = React.useState(false);
-  const [passwordTwoFa, setPasswordTwoFa] = React.useState("");
   if (loading) {
     return <Loading />;
   }
@@ -85,10 +83,6 @@ const InnerLayout = () => {
       toast.error(t("account.password_strength_error"));
       return;
     }
-    if (account?.["2fa_enabled"] && !passwordTwoFa) {
-      toast.error(t("account.otp_empty_error"));
-      return;
-    }
     setPasswordSaving(true);
     fetch("/api/admin/update/user", {
       method: "POST",
@@ -98,7 +92,6 @@ const InnerLayout = () => {
       body: JSON.stringify({
         uuid: account?.uuid,
         password: password,
-        "2fa_code": passwordTwoFa,
       }),
     })
       .then(async (response) => {
@@ -110,7 +103,6 @@ const InnerLayout = () => {
       })
       .then(() => {
         toast.success(t("common.updated_successfully"));
-        setPasswordTwoFa("");
         setTimeout(() => {
           window.location.href = "/";
         }, 2000);
@@ -236,24 +228,6 @@ const InnerLayout = () => {
               name="password_repeat"
               type="password"
             ></TextField.Root>
-            {account?.["2fa_enabled"] ? (
-              <>
-                <label htmlFor="password_2fa">
-                  {t("account.2fa_otp_input_prompt")}
-                </label>
-                <TextField.Root
-                  className="max-w-128"
-                  id="password_2fa"
-                  name="password_2fa"
-                  type="number"
-                  placeholder="000000"
-                  value={passwordTwoFa}
-                  onChange={(e) =>
-                    setPasswordTwoFa((e.target as HTMLInputElement).value)
-                  }
-                />
-              </>
-            ) : null}
             <div>
               <Button disabled={passwordSaving} type="submit">
                 {t("account.change_password_button")}
@@ -261,13 +235,7 @@ const InnerLayout = () => {
             </div>
           </form>
         </Flex>
-        <Flex direction="column" className="km-account-2fa gap-2">
-          <label className="font-bold text-2xl">2FA</label>
-          {account?.["2fa_enabled"] ? (
-            <TwoFactorEnabled />
-          ) : (
-            <TwoFactorDisabled></TwoFactorDisabled>
-          )}
+        <Flex direction="column" className="km-account-settings gap-2">
           <label className="font-bold text-2xl mt-2">
             {t("settings.sso.title")}
           </label>
@@ -351,177 +319,4 @@ const InnerLayout = () => {
     </Flex>
   );
 };
-const TwoFactorDisabled = () => {
-  const { t } = useTranslation();
-  const { refresh } = useAccount();
-  const [saving, setSaving] = React.useState(false);
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [qrcode, setQRCode] = React.useState<string | null>(null);
-  const [code, setCode] = React.useState<string>("");
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true);
-      fetch("/api/admin/2fa/generate")
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(t("account.qr_fetch_error"));
-          }
-          return response.blob();
-        })
-        .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          setQRCode(url);
-        })
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsLoading(false));
-    }
-  }, [isOpen]);
-
-  const handleEnable2fa = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!code) {
-      toast.error(t("account.otp_empty_error"));
-      return;
-    }
-    setSaving(true);
-    fetch(`/api/admin/2fa/enable?code=${encodeURIComponent(code)}`, {
-      method: "POST",
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(
-            data.message || `Failed to enable 2FA (${res.status})`
-          );
-        }
-        return res.json();
-      })
-      .then(() => {
-        toast.success(t("common.updated_successfully"));
-        setIsOpen(false);
-        refresh();
-      })
-      .catch((err) => toast.error(err.message))
-      .finally(() => setSaving(false));
-  };
-
-  return (
-    <Flex direction="column" gap="2" className="km-account-2fa-enable">
-      <label className="text-lg font-bold">{t("account.2fa_disabled")}</label>
-      <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-        <Dialog.Trigger>
-          <div>
-            <Button className="w-full">{t("account.enable_2fa")}</Button>
-          </div>
-        </Dialog.Trigger>
-        <Dialog.Content>
-          <Dialog.Title>{t("account.enable_2fa")}</Dialog.Title>
-          <Flex direction="column" gap="2">
-            <label>{t("account.2fa_qr_code_hint")}</label>
-            <div className="flex justify-center">
-              {isLoading ? (
-                <Skeleton width="200px" height="200px" />
-              ) : (
-                <img src={qrcode!} alt="2FA QR Code" width={200} height={200} />
-              )}
-            </div>
-            <label>{t("account.2fa_otp_input_prompt")}</label>
-            <form className="km-account-2fa-form flex flex-col gap-2" onSubmit={handleEnable2fa}>
-              <TextField.Root
-                type="number"
-                name="code"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode((e.target as HTMLInputElement).value)}
-              />
-              <Button disabled={saving} type="submit">
-                {t("account.enable_2fa")}
-              </Button>
-            </form>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
-    </Flex>
-  );
-};
-
-const TwoFactorEnabled = () => {
-  const { t } = useTranslation();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [code, setCode] = React.useState("");
-  const { refresh } = useAccount();
-  const disable2fa = () => {
-    if (!code) {
-      toast.error(t("account.otp_empty_error"));
-      return;
-    }
-    setSaving(true);
-    fetch(`/api/admin/2fa/disable?2fa_code=${encodeURIComponent(code)}`, {
-      method: "POST",
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.message || "Failed to disable 2FA");
-        }
-        return response.json();
-      })
-      .then(() => {
-        toast.success(t("common.updated_successfully"));
-        setIsOpen(false);
-        setCode("");
-        refresh();
-      })
-      .catch((error) => {
-        toast.error(error.message);
-      })
-      .finally(() => {
-        setSaving(false);
-      });
-  };
-  return (
-    <Flex direction="column" gap="2" className="km-account-2fa-disable">
-      <label>{t("account.2fa_enabled")}</label>
-      <div>
-        <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-          <Dialog.Trigger>
-            <Button className="ml-2" color="red">
-              {t("account.disable_2fa")}
-            </Button>
-          </Dialog.Trigger>
-          <Dialog.Content>
-            <Dialog.Title>{t("account.disable_2fa")}</Dialog.Title>
-            <Dialog.Description>
-              {t("account.disable_2fa_confirmation")}
-            </Dialog.Description>
-            <Flex direction="column" gap="2" className="mt-4">
-              <label htmlFor="disable_2fa_code">
-                {t("account.2fa_otp_input_prompt")}
-              </label>
-              <TextField.Root
-                id="disable_2fa_code"
-                type="number"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode((e.target as HTMLInputElement).value)}
-              />
-            </Flex>
-            <Flex gap="2" justify="end" className="mt-4">
-              <Button variant="soft" onClick={() => setIsOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button disabled={saving} color="red" onClick={disable2fa}>
-                {t("common.confirm")}
-              </Button>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
-      </div>
-    </Flex>
-  );
-};
-
 export default Account;

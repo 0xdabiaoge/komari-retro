@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -20,26 +19,12 @@ const EDITOR_TERMINAL_PADDING = 8;
 
 const EditorTerminalPanel = ({ uuid, onClose }: EditorTerminalPanelProps) => {
   const { t } = useTranslation();
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
   const [height, setHeight] = useState(180);
   const dragRef = useRef<{
     pointerId: number;
     startY: number;
     startHeight: number;
   } | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    void fetch("/api/me")
-      .then((response) => response.json())
-      .then((data: { "2fa_enabled"?: boolean }) => {
-        if (mounted) setTwoFaEnabled(Boolean(data?.["2fa_enabled"]));
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const handleResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -112,7 +97,6 @@ const EditorTerminalPanel = ({ uuid, onClose }: EditorTerminalPanelProps) => {
           active
           fontSize={EDITOR_TERMINAL_FONT_SIZE}
           padding={EDITOR_TERMINAL_PADDING}
-          twoFaEnabled={twoFaEnabled}
           disconnectMessage={t("terminal.disconnect", "Connection lost")}
           onApiChange={() => {}}
         />

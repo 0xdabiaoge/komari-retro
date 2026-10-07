@@ -7,7 +7,6 @@ type Account = {
   sso_type: string;
   username: string;
   uuid: string;
-  "2fa_enabled": boolean;
 };
 
 const anonymousAccount: Account = {
@@ -16,7 +15,6 @@ const anonymousAccount: Account = {
   sso_type: "",
   username: "",
   uuid: "",
-  "2fa_enabled": false,
 };
 
 // Context

@@ -16,6 +16,7 @@ export interface PublicInfo {
   record_preserve_time: number;
   sitename: string;
   private_site: boolean;
+  is_share_view?: boolean;
   theme: string;
   theme_settings: any;
   [property: string]: any;

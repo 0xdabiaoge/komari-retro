@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { authorizeFileAccess } from "../../lib/sensitive";
 import {
   cacheTransferChunkSize,
   getCachedTransferChunkSize,
@@ -305,7 +304,6 @@ export const useRemoteFileUpload = (
       };
 
       const send = async (operation: string, init?: RequestInit) => {
-        if (operation === "init") await authorizeFileAccess();
         const response = await fetch(uploadEndpoint(uuid!, operation), {
           ...init,
           signal: controller.signal,

@@ -26,7 +26,6 @@ const TerminalPage = () => {
     isSidebarOpen,
     leftWidth,
     httpsCalloutOpen,
-    twoFaEnabled,
     searchOpen,
     searchTerm,
     searchResultIndex,
@@ -130,7 +129,6 @@ const TerminalPage = () => {
             clientsLoading={clientsLoading}
             activeTabId={activeTabId}
             sessionsReady={sessionsReady}
-            twoFaEnabled={twoFaEnabled}
             disconnectMessage={t("terminal.disconnect")}
             searchOpen={searchOpen}
             searchTerm={searchTerm}

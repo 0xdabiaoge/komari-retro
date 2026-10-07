@@ -11,7 +11,6 @@ import Loading from "@/components/loading";
 import React from "react";
 import { renderProviderInputs } from "@/utils/renderProviders";
 import { toast } from "sonner";
-import { authorizeSensitiveAccess } from "@/lib/sensitive";
 
 export default function SignOnSettings() {
   const { t } = useTranslation();
@@ -78,7 +77,6 @@ export default function SignOnSettings() {
       addition: JSON.stringify(values),
     };
     try {
-      await authorizeSensitiveAccess();
       const res = await fetch("/api/admin/settings/oidc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
