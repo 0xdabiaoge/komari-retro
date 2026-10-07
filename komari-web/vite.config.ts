@@ -90,7 +90,8 @@ export default defineConfig(({ mode }) => {
           // HTML is rendered dynamically with theme, plugin, and site settings.
           // Cache only immutable assets so every navigation reaches the server.
           globPatterns: ["**/*.{js,css,ico,png,svg}"],
-          globIgnores: ["**/*monaco*", "**/*editor*", "**/*worker*"],
+          // Linux globs are case-sensitive (e.g. chunk-FileEditorDialog-*.js).
+          globIgnores: ["**/*[Mm]onaco*", "**/*[Ee]ditor*", "**/*[Ww]orker*"],
           maximumFileSizeToCacheInBytes: 1024 * 1024,
           navigateFallback: null,
           runtimeCaching: [],

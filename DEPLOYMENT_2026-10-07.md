@@ -46,3 +46,7 @@
 服务器 `docker-compose.override.yml` 固定本机镜像、生产 Compose 项目和专用网络，已加入服务器 Git 的本地排除文件。正常 `docker compose up -d` 会自动读取它，避免拉取旧的 `latest` 覆盖本次更新。此次没有发布新的 GitHub Release 或 GHCR 镜像；未来发布应走仓库质量门禁，再更新该版本固定配置。
 
 完整 GitHub CI/发布架构矩阵的结果须另行确认；不能用本机/服务器测试代替尚未结束的 GitHub 工作流。首次本地修复的详细限制见 `AUDIT_FIXES.md`。
+
+## Linux 前端构建规则修正
+
+首次 GitHub CI 中，探针检查通过，前端 PWA 构建因 Linux 大小写敏感而漏掉 `FileEditorDialog`，触发缓存体积限制。已将编辑器、Monaco 和 worker 的排除规则改为明确匹配大小写，并重新生成内嵌资源；没有提高缓存上限。Windows 重建后的预缓存仍为约 5.4 MiB。新构建须更新两套服务，并由后续 CI 确认 Linux 构建和浏览器回归结果。
