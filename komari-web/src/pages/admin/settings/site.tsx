@@ -3,6 +3,7 @@ import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import { authorizeSensitiveAccess } from "@/lib/sensitive";
 import {
+  SettingCard,
   SettingCardButton,
   SettingCardCollapse,
   SettingCardIconButton,
@@ -136,16 +137,9 @@ export default function SiteSettings() {
           await updateSettingsWithToast({ ws_allowed_origins: data }, t);
         }}
       />
-      <SettingCardSwitch
+      <SettingCard
         title={t("settings.site.ssrf_protection_enabled")}
         description={t("settings.site.ssrf_protection_enabled_description")}
-        defaultChecked={settings.ssrf_protection_enabled ?? false}
-        onChange={async (checked) => {
-          await updateSettingsWithToast(
-            { ssrf_protection_enabled: checked },
-            t,
-          );
-        }}
         className="km-setting-card"
       />
       <SettingCardSwitch
