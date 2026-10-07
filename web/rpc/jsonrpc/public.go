@@ -467,31 +467,30 @@ type MetricPointItem struct {
 }
 
 type MetricSeriesItem struct {
-	MetricKey string            `json:"metric_key"`
-	EntityID  string            `json:"entity_id"`
-	Count     int               `json:"count"`
-	Points    []MetricPointItem `json:"points"`
-}
-
-func publicListMetricDefinitions(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	return []any{}, nil
+	Tags                map[string]string `json:"tags,omitempty"`
+	Unit                string            `json:"unit,omitempty"`
+	IntervalSeconds     int64             `json:"interval_seconds"`
+	DownsampleAlgorithm string            `json:"downsample_algorithm"`
+	MetricKey           string            `json:"metric_key"`
+	EntityID            string            `json:"entity_id"`
+	Count               int               `json:"count"`
+	Points              []MetricPointItem `json:"points"`
 }
 
 func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
-		Hours int `json:"hours"`
+		Hours    *float64 `json:"hours"`
+		EntityID string   `json:"entity_id"`
+		Start    string   `json:"start"`
+		End      string   `json:"end"`
 	}
 	if err := req.BindParams(&params); err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid parameters", nil)
 	}
-	if params.Hours == 0 {
-		params.Hours = 24
+	startTime, endTime, err := metricQueryRange(params.Hours, params.Start, params.End)
+	if err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, err.Error(), nil)
 	}
-	if params.Hours < 1 || params.Hours > 744 {
-		return nil, rpc.MakeError(rpc.InvalidParams, "hours must be 1..744", nil)
-	}
-	endTime := time.Now()
-	startTime := endTime.Add(-time.Duration(params.Hours) * time.Hour)
 	type pingMetricStat struct {
 		EntityID string   `json:"entity_id"`
 		TaskID   string   `json:"task_id"`
@@ -508,7 +507,7 @@ func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any
 	query := `WITH filtered AS (
         SELECT p.*, ROW_NUMBER() OVER (PARTITION BY p.client,p.task_id ORDER BY p.time DESC,p.rowid DESC) AS recency
         FROM ping_records p JOIN clients c ON c.uuid=p.client
-        WHERE p.time>=? AND p.time<=? AND (? OR c.hidden=0)
+        WHERE p.time>=? AND p.time<? AND (? OR c.hidden=0) AND (?='' OR p.client=?)
     ) SELECT f.client AS entity_id, CAST(f.task_id AS TEXT) AS task_id, t.name,
         COUNT(*) AS total, SUM(CASE WHEN f.value>=0 THEN 1 ELSE 0 END) AS valid,
         100.0*SUM(CASE WHEN f.value<0 THEN 1 ELSE 0 END)/COUNT(*) AS loss,
@@ -518,143 +517,8 @@ func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any
         MAX(CASE WHEN f.recency=1 AND f.value>=0 THEN f.value END) AS latest
         FROM filtered f JOIN ping_tasks t ON t.id=f.task_id GROUP BY f.client,f.task_id,t.name
         ORDER BY f.client,f.task_id`
-	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(query, startTime, endTime, isLoginFromCtx(ctx)).Scan(&stats).Error; err != nil {
+	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(query, startTime, endTime, isLoginFromCtx(ctx), params.EntityID, params.EntityID).Scan(&stats).Error; err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to query ping statistics", nil)
 	}
 	return map[string]any{"start": startTime.Format(time.RFC3339), "end": endTime.Format(time.RFC3339), "stats": stats, "count": len(stats)}, nil
-}
-
-func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
-	var params struct {
-		MetricKeys []string `json:"metric_keys"`
-		Start      string   `json:"start"`
-		End        string   `json:"end"`
-	}
-	req.BindParams(&params)
-
-	var startTime, endTime time.Time
-	if params.End != "" {
-		if t, err := time.Parse(time.RFC3339, params.End); err == nil {
-			endTime = t
-		}
-	}
-	if endTime.IsZero() {
-		endTime = time.Now()
-	}
-
-	if params.Start != "" {
-		if t, err := time.Parse(time.RFC3339, params.Start); err == nil {
-			startTime = t
-		}
-	}
-	if startTime.IsZero() {
-		startTime = endTime.Add(-24 * time.Hour)
-	}
-
-	if !startTime.Before(endTime) || endTime.Sub(startTime) > 31*24*time.Hour {
-		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid history window (maximum 31 days)", nil)
-	}
-	recs, err := records.SampleLoad(ctx, "", startTime, endTime, 10000)
-	if err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, "Unable to query metrics", err.Error())
-	}
-
-	isLogin := isLoginFromCtx(ctx)
-	if !isLogin {
-		cinfo, _ := clients.GetAllClientBasicInfo()
-		hidden := map[string]bool{}
-		for _, c := range cinfo {
-			if c.Hidden {
-				hidden[c.UUID] = true
-			}
-		}
-		filtered := make([]models.Record, 0, len(recs))
-		for _, r := range recs {
-			if !hidden[r.Client] {
-				filtered = append(filtered, r)
-			}
-		}
-		recs = filtered
-	}
-
-	// Group records by client
-	clientRecords := make(map[string][]models.Record)
-	for _, r := range recs {
-		clientRecords[r.Client] = append(clientRecords[r.Client], r)
-	}
-
-	keys := params.MetricKeys
-	if len(keys) == 0 {
-		keys = []string{"net.in", "net.out", "cpu.usage", "memory.used"}
-	}
-
-	seriesList := make([]MetricSeriesItem, 0)
-	totalCount := 0
-
-	for clientUUID, recordsList := range clientRecords {
-		for _, key := range keys {
-			pts := make([]MetricPointItem, 0, len(recordsList))
-			for _, r := range recordsList {
-				var val float64
-				switch key {
-				case "cpu.usage":
-					val = float64(r.Cpu)
-				case "memory.used":
-					val = float64(r.Ram)
-				case "memory.total":
-					val = float64(r.RamTotal)
-				case "net.in":
-					val = float64(r.NetIn)
-				case "net.out":
-					val = float64(r.NetOut)
-				case "net.total.up":
-					val = float64(r.NetTotalUp)
-				case "net.total.down":
-					val = float64(r.NetTotalDown)
-				case "traffic.up":
-					val = float64(r.TrafficUp)
-				case "traffic.down":
-					val = float64(r.TrafficDown)
-				default:
-					continue
-				}
-				vCopy := val
-				pts = append(pts, MetricPointItem{
-					Time:  r.Time.ToTime().Format(time.RFC3339),
-					Value: &vCopy,
-				})
-			}
-
-			// Downsample if more than 120 points
-			if len(pts) > 120 {
-				step := len(pts) / 100
-				if step < 1 {
-					step = 1
-				}
-				downsampled := make([]MetricPointItem, 0, 105)
-				for i := 0; i < len(pts); i += step {
-					downsampled = append(downsampled, pts[i])
-				}
-				if len(downsampled) > 0 && downsampled[len(downsampled)-1].Time != pts[len(pts)-1].Time {
-					downsampled = append(downsampled, pts[len(pts)-1])
-				}
-				pts = downsampled
-			}
-
-			totalCount += len(pts)
-			seriesList = append(seriesList, MetricSeriesItem{
-				MetricKey: key,
-				EntityID:  clientUUID,
-				Count:     len(pts),
-				Points:    pts,
-			})
-		}
-	}
-
-	return map[string]any{
-		"start":  startTime.Format(time.RFC3339),
-		"end":    endTime.Format(time.RFC3339),
-		"series": seriesList,
-		"count":  totalCount,
-	}, nil
 }
