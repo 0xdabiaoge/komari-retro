@@ -2,6 +2,8 @@ FROM alpine:3.21
 
 WORKDIR /app
 
+RUN apk add --no-cache ca-certificates tzdata
+
 # Docker buildx 会在构建时自动填充这些变量
 ARG TARGETOS
 ARG TARGETARCH

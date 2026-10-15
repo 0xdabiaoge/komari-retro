@@ -87,11 +87,11 @@ $nssmCmd = Get-Command nssm -ErrorAction SilentlyContinue
 if ($nssmCmd) {
     Log-Info "nssm found in PATH at $($nssmCmd.Source)."
     try {
-        $nssmVersionOutput = nssm version 2>&1
+        $nssmVersionOutput = (Get-Item -LiteralPath $nssmCmd.Source -ErrorAction Stop).VersionInfo.ProductVersion
         Log-Info "Detected nssm version: $nssmVersionOutput"
     }
     catch {
-        Log-Warning "nssm found in PATH failed to execute 'nssm version'. Will attempt to use/download local copy. Error: $_"
+        Log-Warning "Cannot read nssm executable metadata. Will attempt to use/download local copy. Error: $_"
         $nssmCmd = $null # Force re-evaluation for local copy or download
     }
 }
@@ -104,10 +104,10 @@ if (-not $nssmCmd) {
         $nssmCmd = Get-Command nssm -ErrorAction SilentlyContinue
         if ($nssmCmd) {
             try {
-                $nssmVersionOutput = nssm version 2>&1
+                $nssmVersionOutput = (Get-Item -LiteralPath $nssmCmd.Source -ErrorAction Stop).VersionInfo.ProductVersion
             }
             catch {
-                Log-Warning "nssm from $InstallDir failed to execute 'nssm version'. Error: $_"
+                Log-Warning "Cannot read nssm executable metadata from $InstallDir. Error: $_"
                 $nssmCmd = $null # Mark as unusable
             }
         }
@@ -120,23 +120,24 @@ if (-not $nssmCmd) {
 # If still no usable nssm command, proceed to download
 if (-not $nssmCmd) {
     Log-Info "nssm not found or not usable. Attempting to download to $InstallDir..."
-    $NssmVersion = "2.24"
-    $NssmZipUrl = "https://nssm.cc/release/nssm-$NssmVersion.zip"
-    $TempNssmZipPath = Join-Path $env:TEMP "nssm-$NssmVersion.zip"
-    $TempExtractDir = Join-Path $env:TEMP "nssm_extract_temp"
+    # The official download page recommends this build for modern Windows.
+    $NssmVersion = "2.24-101-g897c7ad"
+    $NssmZipUrl = "https://nssm.cc/ci/nssm-$NssmVersion.zip"
+    $TempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd([IO.Path]::DirectorySeparatorChar)
+    $TempExtractDir = Join-Path $TempRoot ('komari-nssm-' + [guid]::NewGuid().ToString('N'))
+    $TempNssmZipPath = "$TempExtractDir.zip"
 
     try {
         Log-Info "Downloading nssm from $NssmZipUrl..."
         Invoke-WebRequest -Uri $NssmZipUrl -OutFile $TempNssmZipPath -UseBasicParsing
 
-        if (Test-Path $TempExtractDir) { Remove-Item -Recurse -Force $TempExtractDir }
-        New-Item -ItemType Directory -Path $TempExtractDir -Force | Out-Null
+        New-Item -ItemType Directory -Path $TempExtractDir -ErrorAction Stop | Out-Null
         Expand-Archive -Path $TempNssmZipPath -DestinationPath $TempExtractDir -Force
         
         $NssmSourceDirInsideZip = "nssm-$NssmVersion" # Used for Get-ChildItem search path
         # The path part within the extracted nssm folder, e.g., "nssm-2.24\win32"
-        # 'win32' nssm is used for both 'amd64' and 'arm64' PowerShell architectures.
-        $NssmArchSubDir = Join-Path "nssm-$NssmVersion" "win32"
+        $NssmArch = if ($arch -eq 'amd64') { 'win64' } else { 'win32' }
+        $NssmArchSubDir = Join-Path "nssm-$NssmVersion" $NssmArch
         $NssmSourceExePath = Join-Path (Join-Path $TempExtractDir $NssmArchSubDir) "nssm.exe"
 
         if (-not (Test-Path $NssmSourceExePath)) {
@@ -174,13 +175,18 @@ if (-not $nssmCmd) {
     }
     finally {
         if (Test-Path $TempNssmZipPath) { Remove-Item $TempNssmZipPath -Force -ErrorAction SilentlyContinue }
-        if (Test-Path $TempExtractDir) { Remove-Item $TempExtractDir -Recurse -Force -ErrorAction SilentlyContinue }
+        if ((Test-Path -LiteralPath $TempExtractDir) -and
+            [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($TempExtractDir)).TrimEnd([IO.Path]::DirectorySeparatorChar) -eq $TempRoot) {
+            Remove-Item -LiteralPath $TempExtractDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
 # Final check that nssm is operational
 try {
-    $nssmVersionOutput = nssm version 2>&1
+    # NSSM 2.24 has no `version` command; it can show a blocking GUI usage
+    # dialog without a console. Read executable metadata instead.
+    $nssmVersionOutput = (Get-Item -LiteralPath $nssmCmd.Source -ErrorAction Stop).VersionInfo.ProductVersion
 }
 catch {
     Log-Error "nssm command failed to execute even after setup attempts. Please check the nssm installation and PATH. Error: $_"
@@ -192,7 +198,7 @@ Log-Config "Service name: $ServiceName"
 Log-Config "Install directory: $InstallDir"
 Log-Config "GitHub proxy: $ProxyDisplay"
 Log-Config "Agent arguments: $($KomariArgs -join ' ')"
-if ($InstallVersion -ne "") {
+if ($InstallVersion -ne "" -and $InstallVersion -ine "latest") {
     Log-Config "Specified agent version: $InstallVersion"
 } else {
     Log-Config "Agent version: Latest"
@@ -235,12 +241,12 @@ function Uninstall-Previous {
         Remove-Item $AgentPath -Force
     }
 }
-Uninstall-Previous
+# Keep the current installation running until the candidate passes verification.
 
 function Get-LatestSnapshotVersion {
     param([Parameter(Mandatory = $true)][string]$AssetName)
 
-    $ApiUrl = "https://api.github.com/repos/komari-monitor/komari-agent/releases?per_page=100"
+    $ApiUrl = "https://api.github.com/repos/0xdabiaoge/komari-retro/releases?per_page=100"
     $ApiUrls = @($ApiUrl)
     if ($GitHubProxy -ne "") {
         $ApiUrls = @("$GitHubProxy/$ApiUrl", $ApiUrl)
@@ -280,7 +286,7 @@ function Get-LatestSnapshotVersion {
 }
 
 $versionToInstall = ""
-if ($InstallVersion -ne "") {
+if ($InstallVersion -ne "" -and $InstallVersion -ine "latest") {
     Log-Info "Attempting to install specified version: $InstallVersion"
     if ($InstallVersion -ieq "snapshot") {
         Log-Info "Resolving the latest snapshot version..."
@@ -298,7 +304,7 @@ if ($InstallVersion -ne "") {
     }
 }
 else {
-    $ApiUrl = "https://api.github.com/repos/komari-monitor/komari-agent/releases/latest"
+    $ApiUrl = "https://api.github.com/repos/0xdabiaoge/komari-retro/releases/latest"
     try {
         Log-Step "Fetching latest release version from GitHub API..."
         $release = Invoke-RestMethod -Uri $ApiUrl -UseBasicParsing
@@ -320,28 +326,67 @@ $DownloadUrl = if ($GitHubProxy) { "$GitHubProxy/https://github.com/0xdabiaoge/k
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 Log-Info "URL: $DownloadUrl"
 try {
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $AgentPath -UseBasicParsing
+    $CandidatePath = Join-Path $InstallDir ('.agent-download-' + [guid]::NewGuid().ToString('N'))
+    Invoke-WebRequest -Uri $DownloadUrl -OutFile $CandidatePath -UseBasicParsing -ErrorAction Stop
+    $Checksum = Invoke-WebRequest -Uri "$DownloadUrl.sha256" -UseBasicParsing -ErrorAction Stop
+    $ChecksumText = if ($Checksum.Content -is [byte[]]) {
+        [Text.Encoding]::UTF8.GetString($Checksum.Content)
+    } else { [string]$Checksum.Content }
+    $ExpectedHash = $ChecksumText.Trim().Split()[0]
+    $ActualHash = (Get-FileHash -LiteralPath $CandidatePath -Algorithm SHA256).Hash
+    if ($ExpectedHash -notmatch '^[a-fA-F0-9]{64}$' -or $ActualHash -ine $ExpectedHash) {
+        throw 'Downloaded agent failed SHA256 verification'
+    }
+    if (Test-Path -LiteralPath $AgentPath) {
+        Copy-Item -LiteralPath $AgentPath -Destination (Join-Path $InstallDir '.agent.previous.exe') -Force -ErrorAction Stop
+    }
+    Uninstall-Previous
+    Move-Item -LiteralPath $CandidatePath -Destination $AgentPath -Force -ErrorAction Stop
 }
 catch {
     Log-Error "Download failed: $_"
     exit 1
 }
+finally {
+    if ($CandidatePath -and (Test-Path -LiteralPath $CandidatePath)) {
+        Remove-Item -LiteralPath $CandidatePath -Force
+    }
+}
 Log-Success "Downloaded and saved to $AgentPath"
 
 # Register and start service
 Log-Step "Configuring Windows service with nssm..."
-$argString = $KomariArgs -join ' '
-# The application path is passed WITHOUT literal quotes: PowerShell already
-# quotes native arguments containing spaces on the command line, while
-# embedded quotes made nssm store a broken Application path (komari-agent#118).
-nssm install $ServiceName $AgentPath $argString
-# Set display name and startup type using nssm
-nssm set $ServiceName DisplayName "Komari Agent Service"
-nssm set $ServiceName Start SERVICE_AUTO_START
-nssm set $ServiceName AppExit Default Restart
-nssm set $ServiceName AppRestartDelay 5000
-# Start the service using nssm
-nssm start $ServiceName
+$argString = ($KomariArgs | ForEach-Object { ConvertTo-CommandLineArg ([string]$_) }) -join ' '
+# Encode both command-line boundaries explicitly. Windows PowerShell's native
+# invocation strips the quotes inside AppParameters, splitting --config paths.
+function Invoke-NssmChecked {
+    param([string[]]$Arguments)
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $nssmCmd.Source
+    $startInfo.Arguments = ($Arguments | ForEach-Object { ConvertTo-CommandLineArg ([string]$_) }) -join ' '
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    try {
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) { throw "nssm $($Arguments[0]) failed (exit $($process.ExitCode))" }
+    }
+    finally { $process.Dispose() }
+}
+try {
+    Invoke-NssmChecked @('install', $ServiceName, $AgentPath, $argString)
+    Invoke-NssmChecked @('set', $ServiceName, 'DisplayName', 'Komari Agent Service')
+    Invoke-NssmChecked @('set', $ServiceName, 'Start', 'SERVICE_AUTO_START')
+    Invoke-NssmChecked @('set', $ServiceName, 'AppExit', 'Default', 'Restart')
+    Invoke-NssmChecked @('set', $ServiceName, 'AppRestartDelay', '5000')
+    # Official workaround for NSSM 2.24 on Windows 10 / Server 2016 and newer.
+    Invoke-NssmChecked @('set', $ServiceName, 'AppNoConsole', '1')
+    Invoke-NssmChecked @('start', $ServiceName)
+}
+catch {
+    Log-Error "Unable to configure or start the Agent service: $_"
+    exit 1
+}
 Log-Success "Service $ServiceName installed and started using nssm."
 
 Log-Success "Komari Agent installation completed!"

@@ -18,6 +18,7 @@ import (
 
 // Next.js stores its exported theme assets under `_next`, which `go:embed`
 // skips when recursively embedding a directory unless the subtree uses `all:`.
+//
 //go:embed defaultTheme retroTheme all:retroTheme/dist/_next
 var PublicFS embed.FS
 
@@ -360,6 +361,12 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		}
 
 		reqPath := c.Request.URL.Path
+		// API misses must never fall through to the frontend document. Otherwise
+		// removed endpoints appear successful and JSON clients receive HTML.
+		if reqPath == "/api" || strings.HasPrefix(reqPath, "/api/") {
+			c.Status(http.StatusNotFound)
+			return
+		}
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)
 

@@ -2,11 +2,35 @@ package public
 
 import (
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"path"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
+
+func TestMissingAPIRoutesDoNotServeFrontend(t *testing.T) {
+	r := gin.New()
+	r.GET("/api/known", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
+	Static(r.Group("/"), r.NoRoute)
+	for _, endpoint := range []string{"/api", "/api/missing", "/api/admin/2fa/generate", "/api/admin/2fa/enable"} {
+		for _, method := range []string{http.MethodGet, http.MethodPost} {
+			recorder := httptest.NewRecorder()
+			r.ServeHTTP(recorder, httptest.NewRequest(method, endpoint, nil))
+			if recorder.Code != http.StatusNotFound || strings.Contains(recorder.Body.String(), "<html") {
+				t.Fatalf("%s %s returned %d with frontend content", method, endpoint, recorder.Code)
+			}
+		}
+	}
+	recorder := httptest.NewRecorder()
+	r.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/known", nil))
+	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"ok":true`) {
+		t.Fatalf("registered API stopped working: %d %s", recorder.Code, recorder.Body.String())
+	}
+}
 
 func TestBuiltinThemesAreEmbedded(t *testing.T) {
 	entries, err := fs.ReadDir(PublicFS, ".")

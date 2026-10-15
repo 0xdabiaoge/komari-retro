@@ -214,8 +214,7 @@ uninstall_previous() {
     fi
 }
 
-# Uninstall previous installation
-uninstall_previous
+# Preserve the running installation until its replacement is downloaded and verified.
 
 install_dependencies() {
     log_step "Checking and installing dependencies..."
@@ -322,7 +321,7 @@ log_info "Detected OS: ${GREEN}$os_name${NC}, Architecture: ${GREEN}$arch${NC}"
 file_name="komari-agent-${os_name}-${arch}"
 
 resolve_snapshot_version() {
-    snapshot_api_url="https://api.github.com/repos/komari-monitor/komari-agent/releases?per_page=100"
+    snapshot_api_url="https://api.github.com/repos/0xdabiaoge/komari-retro/releases?per_page=100"
     if [ -n "$github_proxy" ]; then
         snapshot_api_urls="${github_proxy}/${snapshot_api_url} ${snapshot_api_url}"
     else
@@ -409,14 +408,28 @@ https://ghproxy.net/${download_url}
 fi
 
 dl_ok=""
+download_candidate=$(mktemp "${target_dir}/.agent-download.XXXXXX") || exit 1
+trap 'rm -f "$download_candidate"' EXIT HUP INT TERM
 for u in $download_urls; do
     log_step "Downloading $file_name ..."
     log_info "URL: ${CYAN}$u${NC}"
-    if curl -fL --connect-timeout 15 -o "$komari_agent_path" "$u" && [ -s "$komari_agent_path" ]; then
-        dl_ok=1
-        break
+    if curl -fL --connect-timeout 15 --max-time 120 -o "$download_candidate" "$u" && [ -s "$download_candidate" ]; then
+        expected_hash=$(curl -fsSL --connect-timeout 15 --max-time 30 "$u.sha256" | awk '{print $1}')
+        if command -v sha256sum >/dev/null 2>&1; then
+            actual_hash=$(sha256sum "$download_candidate" | awk '{print $1}')
+        elif command -v shasum >/dev/null 2>&1; then
+            actual_hash=$(shasum -a 256 "$download_candidate" | awk '{print $1}')
+        else
+            log_error "A SHA256 utility (sha256sum or shasum) is required"
+            exit 1
+        fi
+        if [ "${#expected_hash}" -eq 64 ] && [ "$expected_hash" = "$actual_hash" ]; then
+            dl_ok=1
+            break
+        fi
+        log_warning "Downloaded agent failed SHA256 verification"
     fi
-    rm -f "$komari_agent_path"
+    : > "$download_candidate"
 done
 
 if [ -z "$dl_ok" ]; then
@@ -424,6 +437,13 @@ if [ -z "$dl_ok" ]; then
     log_error "Retry later, or specify --install-ghproxy <mirror-prefix> manually"
     exit 1
 fi
+
+if [ -f "$komari_agent_path" ]; then
+    cp -p "$komari_agent_path" "${target_dir}/.agent.previous" || exit 1
+fi
+uninstall_previous
+mv -f "$download_candidate" "$komari_agent_path" || exit 1
+trap - EXIT HUP INT TERM
 
 # Set executable permissions
 chmod +x "$komari_agent_path"
@@ -590,7 +610,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=${komari_agent_path} ${komari_args}
+ExecStart="${komari_agent_path}" ${komari_args}
 WorkingDirectory=${target_dir}
 Restart=always
 
@@ -611,7 +631,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=${komari_agent_path} ${komari_args}
+ExecStart="${komari_agent_path}" ${komari_args}
 WorkingDirectory=${target_dir}
 Restart=always
 User=${service_user}

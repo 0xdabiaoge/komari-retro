@@ -1,0 +1,2242 @@
+{
+  "date": "2026-10-15",
+  "base_commit": "61fa87aacc9959c73862829690d71fbd8633a26b",
+  "production_version": "v1.2.13",
+  "candidate_version": "v1.2.13+acceptance",
+  "delivery": "push main and run CI; manual release and production upgrade deferred to user",
+  "counting": "checks count deployment/scenario combinations, not distinct features; earlier failures and their final replacements are described in the report",
+  "check_counts": {
+    "PASS": 251,
+    "BLOCKED": 1
+  },
+  "checks": [
+    {
+      "group": "core-initial",
+      "case": "fresh-install-login",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.019
+    },
+    {
+      "group": "core-initial",
+      "case": "wrong-password-refusal",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.115
+    },
+    {
+      "group": "core-initial",
+      "case": "settings-save-and-read",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.045
+    },
+    {
+      "group": "core-initial",
+      "case": "terminal-settings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.025
+    },
+    {
+      "group": "core-initial",
+      "case": "api-key-scopes",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.023
+    },
+    {
+      "group": "core-initial",
+      "case": "private-site-secure-view",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.017
+    },
+    {
+      "group": "core-initial",
+      "case": "notification-delivery-sink",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.023
+    },
+    {
+      "group": "core-initial",
+      "case": "offline-and-traffic-notification-config",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.03
+    },
+    {
+      "group": "core-initial",
+      "case": "generic-oauth-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.056
+    },
+    {
+      "group": "core-initial",
+      "case": "theme-lifecycle-and-malformed-archive",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.042
+    },
+    {
+      "group": "core-initial",
+      "case": "favicon-lifecycle",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.007
+    },
+    {
+      "group": "core-initial",
+      "case": "account-update",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.291
+    },
+    {
+      "group": "core-initial",
+      "case": "session-revocation",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.162
+    },
+    {
+      "group": "core-initial",
+      "case": "removed-2fa-regression",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.034
+    },
+    {
+      "group": "core-initial",
+      "case": "logout",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-initial",
+      "case": "isolated-destructive-maintenance",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.022
+    },
+    {
+      "group": "core-initial",
+      "case": "fresh-install-login",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-initial",
+      "case": "wrong-password-refusal",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.153
+    },
+    {
+      "group": "core-initial",
+      "case": "settings-save-and-read",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.039
+    },
+    {
+      "group": "core-initial",
+      "case": "terminal-settings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.024
+    },
+    {
+      "group": "core-initial",
+      "case": "api-key-scopes",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.028
+    },
+    {
+      "group": "core-initial",
+      "case": "private-site-secure-view",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.017
+    },
+    {
+      "group": "core-initial",
+      "case": "notification-delivery-sink",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.026
+    },
+    {
+      "group": "core-initial",
+      "case": "offline-and-traffic-notification-config",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.034
+    },
+    {
+      "group": "core-initial",
+      "case": "generic-oauth-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.046
+    },
+    {
+      "group": "core-initial",
+      "case": "theme-lifecycle-and-malformed-archive",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.051
+    },
+    {
+      "group": "core-initial",
+      "case": "favicon-lifecycle",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.009
+    },
+    {
+      "group": "core-initial",
+      "case": "account-update",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.238
+    },
+    {
+      "group": "core-initial",
+      "case": "session-revocation",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.13
+    },
+    {
+      "group": "core-initial",
+      "case": "removed-2fa-regression",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.035
+    },
+    {
+      "group": "core-initial",
+      "case": "logout",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-initial",
+      "case": "isolated-destructive-maintenance",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.021
+    },
+    {
+      "group": "core-extended",
+      "case": "health-version",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getMe",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getNodesInformation",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getPublicSettings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.009
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getPublicPingTasks",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getPingMetricStats",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "public:queryMetrics",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.014
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getNodes",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getNodesLatestStatus",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getPublicInfo",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.007
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getVersion",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listClients",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getSettings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getSessions",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getLogs",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getAllPingTasks",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getTasks",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listOfflineNotifications",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listTrafficReportNotifications",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getAllLoadNotifications",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listClipboard",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getDatabaseSize",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getXtermjsSettings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getMessageSenderProvider",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listNotificationChannels",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getOidcProvider",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getCloudflaredStatus",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listPlugins",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getMetricMigrationStatus",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/me",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.002
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/nodes",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/public",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/task/ping",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.002
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/install/status",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.002
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/client/list",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/settings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/settings/xtermjs",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.002
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/theme/list",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/logs?limit=2&page=1",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "anonymous-permissions",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "rpc-batch-notification",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "rpc-websocket",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "consistent-backup-download",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.057
+    },
+    {
+      "group": "core-extended",
+      "case": "client-crud-before-delete",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.013
+    },
+    {
+      "group": "core-extended",
+      "case": "rpc-void-success-wire-contract",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "clipboard-full-crud",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.031
+    },
+    {
+      "group": "core-extended",
+      "case": "probe-hardware-telemetry",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 2.028
+    },
+    {
+      "group": "core-extended",
+      "case": "node-history",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.03
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-ram",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-swap",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-load",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-temp",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-disk",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-network",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-process",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-connections",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-all",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-gpu",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "remote-exec-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 1.047
+    },
+    {
+      "group": "core-extended",
+      "case": "file-upload-download-range-empty",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.108
+    },
+    {
+      "group": "core-extended",
+      "case": "file-management-operations",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.081
+    },
+    {
+      "group": "core-extended",
+      "case": "file-preview-token",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.013
+    },
+    {
+      "group": "core-extended",
+      "case": "terminal-real-pty",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.036
+    },
+    {
+      "group": "core-extended",
+      "case": "ping-icmp-tcp-http-crud-and-report",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 2.08
+    },
+    {
+      "group": "core-extended",
+      "case": "load-notification-rule-crud",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.014
+    },
+    {
+      "group": "core-extended",
+      "case": "disabled-geoip-refusal",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "disabled-feature admin:deletePlugin",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "disabled-feature admin:startMetricMigration",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.013
+    },
+    {
+      "group": "core-extended",
+      "case": "large-file-30MiB-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 2.322
+    },
+    {
+      "group": "core-extended",
+      "case": "upload-cancel-and-incomplete-commit",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.015
+    },
+    {
+      "group": "core-extended",
+      "case": "text-utf8-gbk-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.053
+    },
+    {
+      "group": "core-extended",
+      "case": "chart-node-time-range-and-point-limit",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 52.276
+    },
+    {
+      "group": "core-extended",
+      "case": "chart-nine-aggregations-and-invalid-input",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.104
+    },
+    {
+      "group": "core-extended",
+      "case": "auto-discovery-registration",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.019
+    },
+    {
+      "group": "core-extended",
+      "case": "read-only-sharing-expiry",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.044
+    },
+    {
+      "group": "core-extended",
+      "case": "compressed-http-report-auth-binding",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.01
+    },
+    {
+      "group": "core-extended",
+      "case": "offline-online-trigger-delivery",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 36.15
+    },
+    {
+      "group": "core-extended",
+      "case": "cloudflared-no-token-controls",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.198
+    },
+    {
+      "group": "core-extended",
+      "case": "theme-import-ssrf-enforcement",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "scheduled-load-alert-delivery",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 60.148
+    },
+    {
+      "group": "core-extended",
+      "case": "scheduled-traffic-limit-alert-delivery",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 24.086
+    },
+    {
+      "group": "core-extended",
+      "case": "mjpeg-real-multipart-two-frames",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 2.048
+    },
+    {
+      "group": "core-extended",
+      "case": "maxmind-real-database-download-update-lookup",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 7.716
+    },
+    {
+      "group": "core-extended",
+      "case": "backup-upload-restart-restore",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "script",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "health-version",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getMe",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.009
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getNodesInformation",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getPublicSettings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getPublicPingTasks",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "public:getPingMetricStats",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.01
+    },
+    {
+      "group": "core-extended",
+      "case": "public:queryMetrics",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.014
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getNodes",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getNodesLatestStatus",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getPublicInfo",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "common:getVersion",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listClients",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getSettings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getSessions",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getLogs",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getAllPingTasks",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getTasks",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listOfflineNotifications",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listTrafficReportNotifications",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getAllLoadNotifications",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listClipboard",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getDatabaseSize",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getXtermjsSettings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.007
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getMessageSenderProvider",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listNotificationChannels",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getOidcProvider",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getCloudflaredStatus",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:listPlugins",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "admin:getMetricMigrationStatus",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/me",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/nodes",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/public",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/task/ping",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/install/status",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/client/list",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/settings",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/settings/xtermjs",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/theme/list",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.007
+    },
+    {
+      "group": "core-extended",
+      "case": "REST /api/admin/logs?limit=2&page=1",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "anonymous-permissions",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "rpc-batch-notification",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "rpc-websocket",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "consistent-backup-download",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.064
+    },
+    {
+      "group": "core-extended",
+      "case": "client-crud-before-delete",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.017
+    },
+    {
+      "group": "core-extended",
+      "case": "rpc-void-success-wire-contract",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "clipboard-full-crud",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.042
+    },
+    {
+      "group": "core-extended",
+      "case": "probe-hardware-telemetry",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 2.025
+    },
+    {
+      "group": "core-extended",
+      "case": "node-history",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.029
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-ram",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-swap",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-load",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.005
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-temp",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-disk",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-network",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-process",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-connections",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.003
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-all",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.008
+    },
+    {
+      "group": "core-extended",
+      "case": "history-filter-gpu",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "remote-exec-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.039
+    },
+    {
+      "group": "core-extended",
+      "case": "file-upload-download-range-empty",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.113
+    },
+    {
+      "group": "core-extended",
+      "case": "file-management-operations",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.111
+    },
+    {
+      "group": "core-extended",
+      "case": "file-preview-token",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.013
+    },
+    {
+      "group": "core-extended",
+      "case": "terminal-real-pty",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.033
+    },
+    {
+      "group": "core-extended",
+      "case": "ping-icmp-tcp-http-crud-and-report",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 2.073
+    },
+    {
+      "group": "core-extended",
+      "case": "load-notification-rule-crud",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.017
+    },
+    {
+      "group": "core-extended",
+      "case": "disabled-geoip-refusal",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "disabled-feature admin:deletePlugin",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "disabled-feature admin:startMetricMigration",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.004
+    },
+    {
+      "group": "core-extended",
+      "case": "large-file-30MiB-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 1.433
+    },
+    {
+      "group": "core-extended",
+      "case": "upload-cancel-and-incomplete-commit",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.023
+    },
+    {
+      "group": "core-extended",
+      "case": "text-utf8-gbk-roundtrip",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.067
+    },
+    {
+      "group": "core-extended",
+      "case": "chart-node-time-range-and-point-limit",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 54.306
+    },
+    {
+      "group": "core-extended",
+      "case": "chart-nine-aggregations-and-invalid-input",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.102
+    },
+    {
+      "group": "core-extended",
+      "case": "auto-discovery-registration",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.018
+    },
+    {
+      "group": "core-extended",
+      "case": "read-only-sharing-expiry",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.035
+    },
+    {
+      "group": "core-extended",
+      "case": "compressed-http-report-auth-binding",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.011
+    },
+    {
+      "group": "core-extended",
+      "case": "offline-online-trigger-delivery",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 37.146
+    },
+    {
+      "group": "core-extended",
+      "case": "cloudflared-no-token-controls",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.165
+    },
+    {
+      "group": "core-extended",
+      "case": "theme-import-ssrf-enforcement",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.006
+    },
+    {
+      "group": "core-extended",
+      "case": "scheduled-load-alert-delivery",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 60.188
+    },
+    {
+      "group": "core-extended",
+      "case": "scheduled-traffic-limit-alert-delivery",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 22.111
+    },
+    {
+      "group": "core-extended",
+      "case": "mjpeg-real-multipart-two-frames",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 2.084
+    },
+    {
+      "group": "core-extended",
+      "case": "maxmind-real-database-download-update-lookup",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 8.796
+    },
+    {
+      "group": "core-extended",
+      "case": "backup-upload-restart-restore",
+      "status": "PASS",
+      "scope": "isolated fresh database, fixed backend",
+      "deployment": "docker",
+      "seconds": 0.024
+    },
+    {
+      "group": "unified-theme",
+      "case": "unified-both-built-in-theme-assets",
+      "status": "PASS",
+      "scope": "candidate binary with newly built embedded frontends",
+      "deployment": "script",
+      "seconds": 0.07
+    },
+    {
+      "group": "unified-theme",
+      "case": "unified-retro-managed-settings",
+      "status": "PASS",
+      "scope": "candidate binary with newly built embedded frontends",
+      "deployment": "script",
+      "seconds": 0.014
+    },
+    {
+      "group": "unified-theme",
+      "case": "unified-both-built-in-theme-assets",
+      "status": "PASS",
+      "scope": "candidate binary with newly built embedded frontends",
+      "deployment": "docker",
+      "seconds": 0.068
+    },
+    {
+      "group": "unified-theme",
+      "case": "unified-retro-managed-settings",
+      "status": "PASS",
+      "scope": "candidate binary with newly built embedded frontends",
+      "deployment": "docker",
+      "seconds": 0.01
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-server-login-and-health",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.0
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-node-add-edit",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.0
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-real-agent-online-and-telemetry",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 1.563
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-real-powershell-task",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.219
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-real-file-operations",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.015
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-native-conpty-terminal",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.453
+    },
+    {
+      "group": "windows-native",
+      "case": "unknown-api-and-removed-2fa-404",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.0
+    },
+    {
+      "group": "windows-native",
+      "case": "windows-node-delete",
+      "status": "PASS",
+      "scope": "native Windows server and Agent; real file, task and ConPTY operations",
+      "seconds": 0.0
+    },
+    {
+      "group": "windows-service",
+      "case": "windows-real-service-install-and-quoted-config",
+      "status": "PASS",
+      "scope": "native Windows NSSM installation and generated uninstall; isolated receiver",
+      "seconds": 13.891
+    },
+    {
+      "group": "windows-service",
+      "case": "windows-real-generated-service-uninstall",
+      "status": "PASS",
+      "scope": "native Windows NSSM installation and generated uninstall; isolated receiver",
+      "seconds": 1.391
+    },
+    {
+      "group": "linux-userspace",
+      "case": "system-debian:12-slim",
+      "status": "PASS",
+      "scope": "real containers; shared Debian host kernel; not native init/reboot testing",
+      "seconds": 8.223
+    },
+    {
+      "group": "linux-userspace",
+      "case": "system-ubuntu:24.04",
+      "status": "PASS",
+      "scope": "real containers; shared Debian host kernel; not native init/reboot testing",
+      "seconds": 47.221
+    },
+    {
+      "group": "linux-userspace",
+      "case": "system-alpine:3.21",
+      "status": "PASS",
+      "scope": "real containers; shared Debian host kernel; not native init/reboot testing",
+      "seconds": 6.858
+    },
+    {
+      "group": "linux-userspace",
+      "case": "system-rockylinux:9-minimal",
+      "status": "PASS",
+      "scope": "real containers; shared Debian host kernel; not native init/reboot testing",
+      "seconds": 55.313
+    },
+    {
+      "group": "linux-userspace",
+      "case": "agent-dockerfile-build-and-runtime",
+      "status": "PASS",
+      "scope": "real containers; shared Debian host kernel; not native init/reboot testing",
+      "seconds": 7.081
+    },
+    {
+      "group": "release-followup",
+      "case": "published-agent-image-inspection",
+      "status": "BLOCKED",
+      "scope": "anonymous GHCR pull denied; release workflow now publishes Agent image; next manual release and package visibility check required"
+    },
+    {
+      "group": "linux-installer-failure",
+      "case": "linux-installer-download-failure",
+      "status": "PASS",
+      "scope": "real installer flow with isolated network and service-control mocks; root and unprivileged fixture regression passed",
+      "seconds": 0.001
+    },
+    {
+      "group": "linux-installer-failure",
+      "case": "linux-installer-checksum-failure",
+      "status": "PASS",
+      "scope": "real installer flow with isolated network and service-control mocks; root and unprivileged fixture regression passed",
+      "seconds": 0.0
+    },
+    {
+      "group": "linux-installer-failure",
+      "case": "linux-installer-success",
+      "status": "PASS",
+      "scope": "real installer flow with isolated network and service-control mocks; root and unprivileged fixture regression passed",
+      "seconds": 0.001
+    },
+    {
+      "group": "windows-installer-failure",
+      "case": "download-failure",
+      "status": "PASS",
+      "scope": "native Windows PowerShell; download/checksum mocks and real native-process argument boundary"
+    },
+    {
+      "group": "windows-installer-failure",
+      "case": "checksum-failure",
+      "status": "PASS",
+      "scope": "native Windows PowerShell; download/checksum mocks and real native-process argument boundary"
+    },
+    {
+      "group": "windows-installer-failure",
+      "case": "success",
+      "status": "PASS",
+      "scope": "native Windows PowerShell; download/checksum mocks and real native-process argument boundary"
+    },
+    {
+      "group": "windows-installer-failure",
+      "case": "native-service-argument-quoting-and-exit-status",
+      "status": "PASS",
+      "scope": "native Windows PowerShell; download/checksum mocks and real native-process argument boundary"
+    },
+    {
+      "group": "linux-service",
+      "case": "real-systemd-install-from-github-release",
+      "status": "PASS",
+      "scope": "real Debian systemd service; actual GitHub release download, self update and generated uninstall",
+      "seconds": 12.716
+    },
+    {
+      "group": "linux-service",
+      "case": "real-systemd-reinstall-identity-preserved",
+      "status": "PASS",
+      "scope": "real Debian systemd service; actual GitHub release download, self update and generated uninstall",
+      "seconds": 11.862
+    },
+    {
+      "group": "linux-service",
+      "case": "real-download-failure-preserves-running-agent",
+      "status": "PASS",
+      "scope": "real Debian systemd service; actual GitHub release download, self update and generated uninstall",
+      "seconds": 0.7
+    },
+    {
+      "group": "linux-service",
+      "case": "real-agent-automatic-upgrade-from-previous-release",
+      "status": "PASS",
+      "scope": "real Debian systemd service; actual GitHub release download, self update and generated uninstall",
+      "seconds": 23.534
+    },
+    {
+      "group": "linux-service",
+      "case": "real-generated-uninstall-and-unrelated-file-preservation",
+      "status": "PASS",
+      "scope": "real Debian systemd service; actual GitHub release download, self update and generated uninstall",
+      "seconds": 1.295
+    },
+    {
+      "group": "agent-docker",
+      "case": "real-agent-docker-discovery-recreation",
+      "status": "PASS",
+      "scope": "actual Agent Docker image, private persistent discovery file and recreation; clean fixture supersedes stale-identity run",
+      "seconds": 5.635
+    },
+    {
+      "group": "production",
+      "case": "production-integrity-and-state-preservation",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.142
+    },
+    {
+      "group": "production",
+      "case": "production-version-and-service-health",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.04
+    },
+    {
+      "group": "production",
+      "case": "production-private-anonymous-boundary",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.016
+    },
+    {
+      "group": "production",
+      "case": "production-permanent-readonly-share",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.011
+    },
+    {
+      "group": "production",
+      "case": "production-retro-embedded-assets",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.046
+    },
+    {
+      "group": "production",
+      "case": "production-admin-and-built-in-themes",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.015
+    },
+    {
+      "group": "production",
+      "case": "production-origin-https",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.059
+    },
+    {
+      "group": "production",
+      "case": "production-agent-fleet",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "script-production",
+      "seconds": 0.009
+    },
+    {
+      "group": "production",
+      "case": "production-integrity-and-state-preservation",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.028
+    },
+    {
+      "group": "production",
+      "case": "production-version-and-service-health",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.119
+    },
+    {
+      "group": "production",
+      "case": "production-private-anonymous-boundary",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.02
+    },
+    {
+      "group": "production",
+      "case": "production-permanent-readonly-share",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.015
+    },
+    {
+      "group": "production",
+      "case": "production-retro-embedded-assets",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.065
+    },
+    {
+      "group": "production",
+      "case": "production-admin-and-built-in-themes",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.016
+    },
+    {
+      "group": "production",
+      "case": "production-origin-https",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "deployment": "docker-production",
+      "seconds": 0.038
+    },
+    {
+      "group": "production",
+      "case": "acceptance-runtime-cleanup",
+      "status": "PASS",
+      "scope": "read-only production health, database integrity and private sharing; no production candidate deployment",
+      "seconds": 0.049
+    },
+    {
+      "group": "external-https",
+      "case": "external-https-version",
+      "status": "PASS",
+      "scope": "external HTTPS requests to script and Docker instances",
+      "deployment": "script"
+    },
+    {
+      "group": "external-https",
+      "case": "external-https-version",
+      "status": "PASS",
+      "scope": "external HTTPS requests to script and Docker instances",
+      "deployment": "docker"
+    },
+    {
+      "group": "alpine-native",
+      "case": "native-alpine-openrc-agent-health",
+      "status": "PASS",
+      "scope": "read-only native Alpine 3.21.8; OpenRC active; official v1.2.13 executable SHA256 matched; existing remote-control policy preserved"
+    }
+  ],
+  "browser_route_smoke": [
+    {
+      "deployment": "script",
+      "path": "/admin/dashboard",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/servers",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/terminal",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/ping",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/exec",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/sessions",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/notification/channels",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/notification/general",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/notification/offline",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/themes",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/theme_managed",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/settings/site",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/settings/general",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/settings/sign-on",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/logs",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/account",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "script",
+      "path": "/admin/about",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/dashboard",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/servers",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/terminal",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/ping",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/exec",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/sessions",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/notification/channels",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/notification/general",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/notification/offline",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/themes",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/theme_managed",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/settings/site",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/settings/general",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/settings/sign-on",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/logs",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/account",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    },
+    {
+      "deployment": "docker",
+      "path": "/admin/about",
+      "status": "PASS",
+      "scope": "authenticated browser route render smoke; mutations tested separately in isolated API suites"
+    }
+  ],
+  "browser_route_count": 34,
+  "additional_browser_observations": [
+    "add-node dialog rendered",
+    "guest share has no visible login/admin entry in either deployment",
+    "Retro desktop and 390px mobile preview checked after layout fixes"
+  ],
+  "blocked": [
+    "real Telegram Bot/chat receipt",
+    "real external OAuth account consent",
+    "Cloudflared real tunnel without credentials",
+    "GPU physical hardware",
+    "native macOS/FreeBSD and ARM64/386/RISC-V hardware",
+    "native full lifecycle for every Linux distribution",
+    "Windows older-version self-update and host reboot",
+    "external Office preview; PWA offline install; Firefox/Safari exhaustive checks",
+    "long-duration load, power loss and full penetration testing",
+    "Agent GHCR publication/public anonymous pull until next manual release"
+  ],
+  "historical_failures": [
+    {
+      "case": "unknown API and removed 2FA GET",
+      "cause": "SPA fallback returned HTML with HTTP 200",
+      "resolution": "backend returns HTTP 404 before SPA; both isolated deployments passed"
+    },
+    {
+      "case": "chart and GeoIP first harness run",
+      "cause": "missing datetime import and wrong expectation while GeoIP disabled",
+      "resolution": "harness corrected; real MMDB download/update and chart tests passed"
+    },
+    {
+      "case": "theme settings first smoke run",
+      "cause": "harness used nonexistent GET settings endpoint",
+      "resolution": "correct admin write plus public projection read passed"
+    },
+    {
+      "case": "Docker discovery recreation rerun",
+      "cause": "fixture retained identity token for deliberately deleted isolated node",
+      "resolution": "fresh fixture state and same-identity container recreation passed"
+    },
+    {
+      "case": "native Windows service startup",
+      "cause": "NSSM unsupported version probe and PowerShell nested argument quoting loss",
+      "resolution": "metadata probe, official recommended NSSM build, explicit CRT argument encoding and checked exit status; actual install/uninstall passed"
+    }
+  ]
+}

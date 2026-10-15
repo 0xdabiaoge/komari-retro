@@ -1,3 +1,4 @@
+import { createDockerAgentCommand } from "@/utils/dockerAgentCommand.mjs";
 import * as React from "react";
 import { z } from "zod";
 import { schema } from "@/components/admin/NodeTable/schema/node";
@@ -108,24 +109,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
           quoteShellArgs(args);
         break;
       case "docker": {
-        const installOnlyFlags = [
-          "--install-ghproxy",
-          "--install-dir",
-          "--install-service-name",
-          "--install-version",
-        ];
-        const dockerArgs: string[] = [];
-        for (let i = 0; i < args.length; i++) {
-          if (installOnlyFlags.includes(args[i])) {
-            i++;
-            continue;
-          }
-          dockerArgs.push(args[i]);
-        }
-        finalCommand =
-          `docker run -d --name komari-agent --restart=always ` +
-          `ghcr.io/0xdabiaoge/komari-retro-agent:latest ` +
-          quoteShellArgs(dockerArgs);
+        finalCommand = createDockerAgentCommand(args, quoteShellArgs);
         break;
       }
     }
@@ -208,7 +192,6 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
               <SegmentedControl.Item value="windows">
                 Windows
               </SegmentedControl.Item>
-              <SegmentedControl.Item value="macos">macOS</SegmentedControl.Item>
               <SegmentedControl.Item value="docker">Docker</SegmentedControl.Item>
             </SegmentedControl.Root>
 

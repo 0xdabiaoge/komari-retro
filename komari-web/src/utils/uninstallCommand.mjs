@@ -123,7 +123,10 @@ if (Test-Path -LiteralPath $NssmExe) {
   Remove-Item -LiteralPath (Join-Path $InstallDir $_) -Force -ErrorAction SilentlyContinue
 }
 # This removes the install directory only when no unrelated files remain.
-Remove-Item -LiteralPath $InstallDir -Force -ErrorAction SilentlyContinue`;
+if ((Test-Path -LiteralPath $InstallDir -PathType Container) -and
+    -not (Get-ChildItem -LiteralPath $InstallDir -Force | Select-Object -First 1)) {
+  Remove-Item -LiteralPath $InstallDir -Force -ErrorAction SilentlyContinue
+}`;
 }
 
 function dockerCommand(containerName) {

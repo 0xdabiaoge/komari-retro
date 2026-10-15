@@ -33,10 +33,30 @@ jobs:
         working-directory: '${{ matrix.module }}'
       - run: bash -n install-komari.sh && bash script/install-regression.sh
         if: matrix.module == '.'
+      - run: python3 script/agent-install-linux.test.py
+        if: matrix.module == '.'
       - run: go test -race ./...
         working-directory: '${{ matrix.module }}'
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
         working-directory: '${{ matrix.module }}'
+  agent-windows:
+    name: Windows Agent 原生测试
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: komari-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.2'
+          cache-dependency-path: komari-agent/go.sum
+      - run: go test ./...
+      - run: go vet ./...
+
+      - name: 验证 Agent 安装失败保留旧服务
+        run: python ../script/agent-install-windows.test.py
+
   frontend:
     runs-on: ubuntu-latest
     steps:

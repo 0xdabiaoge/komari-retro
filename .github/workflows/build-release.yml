@@ -238,6 +238,8 @@ jobs:
         run: |
           cp release-assets/komari-linux-amd64 ./komari-linux-amd64
           cp release-assets/komari-linux-arm64 ./komari-linux-arm64
+          cp release-assets/komari-agent-linux-amd64 ./komari-agent-linux-amd64
+          cp release-assets/komari-agent-linux-arm64 ./komari-agent-linux-arm64
 
       - name: 配置 QEMU
         uses: docker/setup-qemu-action@v3
@@ -264,6 +266,9 @@ jobs:
           TAGS="$IMAGE:$RELEASE_TAG"
           if [ "$PUSH_LATEST" = true ]; then TAGS="$TAGS,$IMAGE:latest"; fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          AGENT_TAGS="$IMAGE-agent:$RELEASE_TAG"
+          if [ "$PUSH_LATEST" = true ]; then AGENT_TAGS="$AGENT_TAGS,$IMAGE-agent:latest"; fi
+          echo "agent_tags=$AGENT_TAGS" >> "$GITHUB_OUTPUT"
 
       - name: 构建并发布多架构 Docker 镜像
         uses: docker/build-push-action@v6
@@ -274,6 +279,20 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           labels: |
             org.opencontainers.image.title=Komari Retro
+            org.opencontainers.image.version=${{ needs.validate-release.outputs.tag_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: 构建并发布多架构 Agent Docker 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: komari-agent/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.agent_tags }}
+          labels: |
+            org.opencontainers.image.title=Komari Retro Agent
             org.opencontainers.image.version=${{ needs.validate-release.outputs.tag_name }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
