@@ -54,8 +54,8 @@ func UploadTheme(c *gin.Context) {
 	}
 
 	// 临时文件名
-	tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("uploaded_theme_%d.zip", time.Now().UnixNano()))
-	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+	tempFile, err := writeThemeArchive(data)
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
@@ -630,8 +630,8 @@ func UpdateTheme(c *gin.Context) {
 	// 4. 用户提供的GitHub仓库信息，获取最新release下载
 
 	// 临时文件名
-	tempFile := filepath.Join(os.TempDir(), "downloaded_theme.zip")
-	if err := os.WriteFile(tempFile, themeData, 0644); err != nil {
+	tempFile, err := writeThemeArchive(themeData)
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}
@@ -755,8 +755,8 @@ func ImportTheme(c *gin.Context) {
 	}
 
 	// 保存到临时文件
-	tempFile := filepath.Join(os.TempDir(), "import_theme.zip")
-	if err := os.WriteFile(tempFile, themeData, 0644); err != nil {
+	tempFile, err := writeThemeArchive(themeData)
+	if err != nil {
 		api.RespondError(c, http.StatusInternalServerError, "保存文件失败: "+err.Error())
 		return
 	}

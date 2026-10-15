@@ -8,6 +8,7 @@ import (
 	"github.com/komari-monitor/komari/database/records"
 	"github.com/komari-monitor/komari/pkg/rpc"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
+	report_cache "github.com/komari-monitor/komari/web/report"
 )
 
 // admin.client.go
@@ -126,13 +127,16 @@ func adminRemoveClient(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.
 	if params.UUID == "" {
 		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid or missing UUID", nil)
 	}
-	if err := clients.DeleteClient(params.UUID); err != nil {
+	unlock := agent_runtime.LockClientLifecycle(params.UUID)
+	defer unlock()
+	if err := report_cache.DeleteClient(params.UUID, func() error { return clients.DeleteClient(params.UUID) }); err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to delete client"+err.Error(), nil)
 	}
 	actor, ip := auditActor(ctx)
 	auditlog.Log(ip, actor, "delete client:"+params.UUID, "warn")
 	agent_runtime.DeleteConnectedClients(params.UUID)
 	agent_runtime.DeleteLatestReport(params.UUID)
+	agent_runtime.DeleteV2Events(params.UUID)
 	return nil, nil
 }
 

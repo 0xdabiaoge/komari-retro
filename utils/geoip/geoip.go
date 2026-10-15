@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -13,6 +14,8 @@ import (
 
 var CurrentProvider GeoIPService
 var geoCache *cache.Cache
+var providerMu sync.RWMutex
+var initMu sync.Mutex
 
 type GeoInfo struct {
 	ISOCode string
@@ -52,6 +55,8 @@ func GetRegionUnicodeEmoji(isoCode string) string {
 }
 
 func InitGeoIp() {
+	initMu.Lock()
+	defer initMu.Unlock()
 	conf, err := config.GetMany(map[string]any{
 		config.GeoIpEnabledKey:  true,
 		config.GeoIpProviderKey: "ipinfo",
@@ -60,6 +65,7 @@ func InitGeoIp() {
 		panic("Failed to get configuration for GeoIP: " + err.Error())
 	}
 	if !conf[config.GeoIpEnabledKey].(bool) {
+		replaceProvider(&EmptyProvider{})
 		return
 	}
 	switch conf[config.GeoIpProviderKey].(string) {
@@ -69,9 +75,9 @@ func InitGeoIp() {
 			slog.Error("Failed to initialize MaxMind GeoIP service: " + err.Error())
 		}
 		if NewCurrentProvider != nil {
-			CurrentProvider = NewCurrentProvider
+			replaceProvider(NewCurrentProvider)
 		} else {
-			CurrentProvider = &EmptyProvider{}
+			replaceProvider(&EmptyProvider{})
 			slog.Error("Failed to initialize MaxMind GeoIP service, using EmptyProvider instead.")
 		}
 	case "ip-api":
@@ -80,10 +86,10 @@ func InitGeoIp() {
 			slog.Error("Failed to initialize ip-api service: " + err.Error())
 		}
 		if NewCurrentProvider != nil {
-			CurrentProvider = NewCurrentProvider
+			replaceProvider(NewCurrentProvider)
 			slog.Info("Using ip-api.com as GeoIP provider.")
 		} else {
-			CurrentProvider = &EmptyProvider{}
+			replaceProvider(&EmptyProvider{})
 			slog.Info("Failed to initialize ip-api service, using EmptyProvider instead.")
 		}
 	case "geojs":
@@ -92,10 +98,10 @@ func InitGeoIp() {
 			slog.Error("Failed to initialize GeoJS service: " + err.Error())
 		}
 		if NewCurrentProvider != nil {
-			CurrentProvider = NewCurrentProvider
+			replaceProvider(NewCurrentProvider)
 			slog.Info("Using geojs.io as GeoIP provider.")
 		} else {
-			CurrentProvider = &EmptyProvider{}
+			replaceProvider(&EmptyProvider{})
 			slog.Info("Failed to initialize GeoJS service, using EmptyProvider instead.")
 		}
 	case "ipinfo":
@@ -104,18 +110,20 @@ func InitGeoIp() {
 			slog.Error("Failed to initialize IPInfo service: " + err.Error())
 		}
 		if NewCurrentProvider != nil {
-			CurrentProvider = NewCurrentProvider
+			replaceProvider(NewCurrentProvider)
 			slog.Info("Using ipinfo.io as GeoIP provider.")
 		} else {
-			CurrentProvider = &EmptyProvider{}
+			replaceProvider(&EmptyProvider{})
 			slog.Info("Failed to initialize IPInfo service, using EmptyProvider instead.")
 		}
 	default:
-		CurrentProvider = &EmptyProvider{}
+		replaceProvider(&EmptyProvider{})
 	}
 }
 
 func GetGeoInfo(ip net.IP) (*GeoInfo, error) {
+	providerMu.RLock()
+	defer providerMu.RUnlock()
 	providerName := CurrentProvider.Name()
 	cacheKey := providerName + ":" + ip.String()
 
@@ -133,10 +141,29 @@ func GetGeoInfo(ip net.IP) (*GeoInfo, error) {
 }
 
 func UpdateDatabase() error {
+	providerMu.RLock()
+	defer providerMu.RUnlock()
 	err := CurrentProvider.UpdateDatabase()
 	if err == nil {
 		geoCache.Flush()
 		slog.Info("GeoIP cache cleared due to database update.")
 	}
 	return err
+}
+
+// ProviderName is safe to inspect while runtime settings are changing.
+func ProviderName() string {
+	providerMu.RLock()
+	defer providerMu.RUnlock()
+	return CurrentProvider.Name()
+}
+
+func replaceProvider(next GeoIPService) {
+	providerMu.Lock()
+	defer providerMu.Unlock()
+	previous := CurrentProvider
+	CurrentProvider = next
+	if previous != nil && previous != next {
+		_ = previous.Close()
+	}
 }

@@ -27,6 +27,15 @@ var (
 	v2EventQueues = make(map[string]*v2EventQueue)
 )
 
+func DeleteV2Events(uuid string) {
+	v2EventMu.Lock()
+	defer v2EventMu.Unlock()
+	if q := v2EventQueues[uuid]; q != nil {
+		close(q.signal)
+		delete(v2EventQueues, uuid)
+	}
+}
+
 func getV2EventQueueLocked(uuid string) *v2EventQueue {
 	q := v2EventQueues[uuid]
 	if q == nil {

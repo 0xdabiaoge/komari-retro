@@ -1,6 +1,7 @@
 package report
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -12,6 +13,22 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestDeleteClientPurgesPendingCacheOnlyAfterSuccessfulDeletion(t *testing.T) {
+	resetReportCache(t)
+	_, err := AppendClientReport("removed", v1.Report{})
+	require.NoError(t, err)
+	_, err = AppendClientReport("retained", v1.Report{})
+	require.NoError(t, err)
+	require.Error(t, DeleteClient("removed", func() error { return errors.New("rollback") }))
+	_, present := Records.Get("removed")
+	require.True(t, present)
+	require.NoError(t, DeleteClient("removed", func() error { return nil }))
+	_, present = Records.Get("removed")
+	require.False(t, present)
+	_, present = Records.Get("retained")
+	require.True(t, present)
+}
 
 func openReportCacheTestDB(t *testing.T) *gorm.DB {
 	t.Helper()

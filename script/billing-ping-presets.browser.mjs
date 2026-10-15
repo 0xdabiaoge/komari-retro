@@ -18,6 +18,16 @@ export async function testBillingAndPingPresets({owner,ownerContext,rpc,fixture,
   await bill.getByRole('button',{name:'保存',exact:true}).click();await bill.waitFor({state:'hidden'});
   assert.equal((await readNode()).price,1000);assert.equal((await readNode()).currency,'JPY');
   await owner.reload();bill=await openBilling();assert.ok((await bill.getByRole('combobox',{name:'货币',exact:true}).innerText()).includes('JPY'));
+  await bill.getByRole('combobox',{name:'货币',exact:true}).click();const currencies=await owner.getByRole('option').allTextContents();assert.equal(currencies.length,17);await owner.keyboard.press('Escape');
+  for(const label of currencies){await select(bill,'货币',label);await bill.getByRole('button',{name:'保存',exact:true}).click();await bill.waitFor({state:'hidden'});assert.equal((await readNode()).currency,label.match(/\b[A-Z]{3}\b/)[0]);bill=await openBilling();}
+  await bill.getByRole('combobox',{name:'货币',exact:true}).click();await owner.getByRole('option',{name:/日元 · JPY/}).click();
+  await bill.locator('input[name="billingCycle"]').fill('365');await bill.locator('#billing-expiry').fill('2030-12-31');await bill.getByRole('switch',{name:'自动续期',exact:true}).check();
+  await bill.getByRole('button',{name:'保存',exact:true}).click();await bill.waitFor({state:'hidden'});let savedBill=await readNode();assert.equal(savedBill.billing_cycle,365);assert.equal(savedBill.auto_renewal,true);assert.ok(savedBill.expired_at.startsWith('2030-12-31'));
+  await owner.reload();bill=await openBilling();assert.equal(await bill.locator('input[name="billingCycle"]').inputValue(),'365');assert.equal(await bill.locator('#billing-expiry').inputValue(),'2030-12-31');
+  await bill.getByRole('button',{name:'设置为长期',exact:true}).click();assert.ok(Number((await bill.locator('#billing-expiry').inputValue()).slice(0,4))>=2200);
+  await bill.locator('input[name="billingCycle"]').fill('0');await bill.getByRole('button',{name:'保存',exact:true}).click();await owner.getByText('请选择有效计费周期',{exact:true}).waitFor();assert.equal(await bill.isVisible(),true);assert.equal((await readNode()).billing_cycle,365);
+  await bill.locator('input[name="billingCycle"]').fill('30');
+
   await select(bill,'价格模式','免费');await bill.getByRole('button',{name:'保存',exact:true}).click();await bill.waitFor({state:'hidden'});assert.equal((await readNode()).price,-1);
   await owner.reload();bill=await openBilling();await select(bill,'价格模式','隐藏价格');
   await bill.getByRole('button',{name:'保存',exact:true}).click();await bill.waitFor({state:'hidden'});assert.equal((await readNode()).price,0);
@@ -29,7 +39,7 @@ export async function testBillingAndPingPresets({owner,ownerContext,rpc,fixture,
   await bill.getByRole('button',{name:'保存',exact:true}).click();await owner.getByText('隔离保存失败测试',{exact:true}).waitFor();assert.equal(await bill.isVisible(),true);assert.equal((await readNode()).price,0);await owner.unroute(route);
   await owner.setViewportSize({width:390,height:844});assert.ok(await owner.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await owner.screenshot({path:join(output,'billing-mobile.png'),fullPage:true});
-  await bill.getByRole('button',{name:'取消',exact:true}).click();await rpc('admin:editClient',{uuid:fixture.node,price:0,currency:'USD'});
+  await bill.getByRole('button',{name:'取消',exact:true}).click();await rpc('admin:editClient',{uuid:fixture.node,price:0,currency:'USD',billing_cycle:30,expired_at:null,auto_renewal:false});
   await owner.setViewportSize({width:1440,height:1100});await owner.goto(fixture.base+'/admin/ping');
   async function openPresets(){await owner.getByRole('button',{name:'批量添加预设',exact:true}).click();const d=owner.getByTestId('ping-preset-dialog');await d.waitFor();await d.getByRole('checkbox',{name:'全选当前筛选结果',exact:true}).waitFor();return d;}
   let dialog=await openPresets();await dialog.getByRole('checkbox',{name:'北京电信 · V4',exact:true}).waitFor({timeout:30000});
@@ -74,7 +84,7 @@ export async function testBillingAndPingPresets({owner,ownerContext,rpc,fixture,
     assert.equal(await guest.getByText('Free',{exact:true}).count(),0);assert.equal(await guest.getByText(/JP¥1000/).count(),0);
   } finally {await guestContext.close();}
   assert.ok((await ownerContext.request.post(settingsURL,{data:{}})).ok());
-  await rpc('admin:editClient',{uuid:fixture.node,price:0,currency:'USD'});
+  await rpc('admin:editClient',{uuid:fixture.node,price:0,currency:'USD',billing_cycle:30,expired_at:null,auto_renewal:false});
   await owner.setViewportSize({width:1440,height:1000});
-  return [{case:'billing-price-modes-currency-legacy-failure-mobile',status:'PASS'},{case:'ping-presets-multiselect-families-atomic-save-dedup-mobile',status:'PASS',catalog_entries:210,mainland:186,external_probes_sent:0},{case:'retro-compact-guest-price-hidden-free-paid',status:'PASS'}];
+  return [{case:'billing-all-currencies-cycle-expiry-auto-renewal',status:'PASS',currencies:17},{case:'billing-price-modes-currency-legacy-failure-mobile',status:'PASS'},{case:'ping-presets-multiselect-families-atomic-save-dedup-mobile',status:'PASS',catalog_entries:210,mainland:186,external_probes_sent:0},{case:'retro-compact-guest-price-hidden-free-paid',status:'PASS'}];
 }

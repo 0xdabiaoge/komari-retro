@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
+import { testProfileAndTheme, testNodeManagement } from './admin-functional.browser.mjs';
 import { testBillingAndPingPresets } from './billing-ping-presets.browser.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('../komari-web/node_modules/playwright');
@@ -93,6 +94,8 @@ try {
   await owner.setViewportSize({width:1440,height:1000});
   rows.push({case:'notification-editor-chinese-presets-save-escaping-mobile',status:'PASS',external_messages_sent:0});
   rows.push(...await testBillingAndPingPresets({owner,ownerContext,rpc,fixture,output}));
+  rows.push(...await testProfileAndTheme({owner,ownerContext,rpc,fixture}));
+  rows.push(...await testNodeManagement({owner,ownerContext,rpc,fixture}));
   for (const theme of ['default', 'retro']) {
     await rpc('admin:editSettings', { theme });
     const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 1000 } });
@@ -205,7 +208,7 @@ try {
   const crossSite = await ownerContext.request.post(fixture.base + '/api/rpc2', { headers:{ Origin:'https://foreign.invalid' }, data:{ jsonrpc:'2.0',id:1,method:'admin:getSettings',params:{} } });
   assert.equal(crossSite.status(),403);
   rows.push({ case:'cookie-authority-origin-check-independent-of-cors-toggle',status:'PASS' });
-  await rpc('admin:editSettings', { tempory_share_token_expire_at: Math.floor(Date.now() / 1000) - 1 });
+  await rpc('admin:editSettings', { tempory_share_token_expire_at: 1 });
   assert.equal((await browser.newContext().then(context => context.request.get(fixture.base + '/s/' + fixture.temporary))).status(), 404);
   rows.push({ case: 'expired-share-real-server-rejected', status: 'PASS' });
   await writeFile(join(output, 'results.json'), JSON.stringify(rows, null, 2));

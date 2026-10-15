@@ -89,16 +89,7 @@ func RunServer() {
 	r.Use(logutil.GinRecovery())
 	r.Use(security.ResponseHeaders())
 
-	config.Subscribe(func(event config.ConfigEvent) {
-		if event.IsChanged(config.GeoIpProviderKey) {
-			go geoip.InitGeoIp()
-		}
-
-		if event.IsChanged(config.NotificationMethodKey) {
-			go messageSender.Initialize()
-		}
-
-	})
+	config.Subscribe(refreshRuntimeSettings)
 	r.Use(security.CorsMiddleware(conf.CorsOriginCheckEnabled, conf.CorsAllowedOrigins))
 
 	r.Use(api.RequestLimits())

@@ -192,14 +192,9 @@ func WebSocketReport(c *gin.Context) {
 		return
 	}
 
-	// 接受新连接，并处理旧连接
-	if oldConn, exists := agent_runtime.GetConnectedClients()[uuid]; exists {
-		log.Printf("Client %s is reconnecting. Closing the old connection.", uuid)
-
-		// 强制关闭旧连接。这将导致旧连接的 ReadMessage() 循环出错退出。
-		go oldConn.Close()
+	if err := registerAgentConnection(uuid, conn); err != nil {
+		return
 	}
-	agent_runtime.SetConnectedClients(uuid, conn)
 	log.Printf("Client %s is reconnect success, connID: %d", uuid, conn.ID)
 	go notifier.OnlineNotification(uuid, conn.ID)
 	defer func() {

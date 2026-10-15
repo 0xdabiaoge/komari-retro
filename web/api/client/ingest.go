@@ -3,11 +3,26 @@ package client
 import (
 	"time"
 
+	"github.com/komari-monitor/komari/database/clients"
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/database/tasks"
 	v1 "github.com/komari-monitor/komari/protocol/v1"
 	agent_runtime "github.com/komari-monitor/komari/web/agent"
+	"github.com/komari-monitor/komari/web/connection"
 )
+
+func registerAgentConnection(uuid string, conn *connection.SafeConn) error {
+	unlock := agent_runtime.LockClientLifecycle(uuid)
+	defer unlock()
+	if _, err := clients.GetClientByUUID(uuid); err != nil {
+		return err
+	}
+	if oldConn := agent_runtime.GetConnectedClients()[uuid]; oldConn != nil {
+		go oldConn.Close()
+	}
+	agent_runtime.SetConnectedClients(uuid, conn)
+	return nil
+}
 
 // ingest.go
 // agent 上报数据的传输无关处理逻辑。v1 (REST/WS) 与 v2 (JSON-RPC) 两套上报入口
@@ -17,6 +32,11 @@ import (
 // protocolVersion 标记上报所用协议（1 或 2），用于运行时区分客户端能力。
 // markPresence 为 true 时按 POST 上报会话刷新在线状态（WS 连接自行管理在线状态，应传 false）。
 func ingestReport(uuid string, report v1.Report, protocolVersion int, markPresence bool) error {
+	unlock := agent_runtime.LockClientLifecycle(uuid)
+	defer unlock()
+	if _, err := clients.GetClientByUUID(uuid); err != nil {
+		return err
+	}
 	report.UUID = uuid
 	savedReport, err := SaveClientReport(uuid, report)
 	if err != nil {
@@ -32,6 +52,11 @@ func ingestReport(uuid string, report v1.Report, protocolVersion int, markPresen
 
 // ingestBasicInfo 保存客户端基础信息。fallbackIP 在上报未携带 IP 时用作兜底。
 func ingestBasicInfo(uuid string, info map[string]interface{}, fallbackIP string) error {
+	unlock := agent_runtime.LockClientLifecycle(uuid)
+	defer unlock()
+	if _, err := clients.GetClientByUUID(uuid); err != nil {
+		return err
+	}
 	if info == nil {
 		info = map[string]interface{}{}
 	}
@@ -40,6 +65,11 @@ func ingestBasicInfo(uuid string, info map[string]interface{}, fallbackIP string
 
 // ingestPingResult 保存一条 ping 探测结果。
 func ingestPingResult(uuid string, taskID uint, value int, finishedAt time.Time) {
+	unlock := agent_runtime.LockClientLifecycle(uuid)
+	defer unlock()
+	if _, err := clients.GetClientByUUID(uuid); err != nil {
+		return
+	}
 	tasks.SavePingRecord(models.PingRecord{
 		Client: uuid,
 		TaskId: taskID,

@@ -7,6 +7,7 @@ import ConfigFormTabs from "@/components/admin/ConfigFormTabs";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
 import { saveThemeSettings } from "@/utils/saveThemeSettings";
+import { readThemeSetting } from "@/utils/themeSettingValues";
 import { useTranslation } from "react-i18next";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 import {
@@ -91,7 +92,7 @@ const ThemeManaged: React.FC = () => {
         ds.forEach((f) => {
           if (f.type !== "title" && f.type !== "textbox" && f.key) {
             const selection = f.type === "nodes" || f.type === "pingtasks";
-            const saved = themeSettings?.[f.key];
+            const saved = readThemeSetting(themeSettings, f.key, theme);
             init[f.key] =
               saved !== undefined
                 ? selection
@@ -137,8 +138,6 @@ const ThemeManaged: React.FC = () => {
 
   const saveAll = async () => {
     if (!theme) return;
-    console.log("保存前的 values:", values);
-    console.log("保存前的 payload:", payload);
     setSaving(true);
     try {
       await saveThemeSettings(theme, payload);

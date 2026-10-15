@@ -21,6 +21,20 @@ var Records = cache.New(1*time.Minute, 1*time.Minute)
 var reportCacheMu sync.Mutex
 var saveClientReportMu sync.Mutex
 
+// DeleteClient serializes the database deletion with cache flushes. A pending
+// flush must never recreate history for a node that has just been removed.
+func DeleteClient(uuid string, remove func() error) error {
+	saveClientReportMu.Lock()
+	defer saveClientReportMu.Unlock()
+	reportCacheMu.Lock()
+	defer reportCacheMu.Unlock()
+	if err := remove(); err != nil {
+		return err
+	}
+	Records.Delete(uuid)
+	return nil
+}
+
 func AppendClientReport(uuid string, report v1.Report) (v1.Report, error) {
 	reportCacheMu.Lock()
 	defer reportCacheMu.Unlock()

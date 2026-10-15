@@ -93,6 +93,11 @@ func handleV2RPC(uuid string, req v2.Request, allowWait bool) v2.Response {
 		ingestPingResult(uuid, params.TaskID, params.Value, finishedAt)
 		return v2.Success(req.ID, gin.H{"status": "success"})
 	case v2.MethodAgentTaskResult:
+		unlock := agent_runtime.LockClientLifecycle(uuid)
+		defer unlock()
+		if _, err := clients.GetClientByUUID(uuid); err != nil {
+			return v2.Error(req.ID, -32001, "client no longer exists", nil)
+		}
 		var params struct {
 			TaskID     string `json:"task_id"`
 			Result     string `json:"result"`
@@ -187,10 +192,9 @@ func WebSocketV2RPC(c *gin.Context) {
 		conn.WriteJSON(v2.Error(nil, -32001, "invalid token", nil))
 		return
 	}
-	if oldConn, exists := agent_runtime.GetConnectedClients()[uuid]; exists {
-		go oldConn.Close()
+	if err := registerAgentConnection(uuid, conn); err != nil {
+		return
 	}
-	agent_runtime.SetConnectedClients(uuid, conn)
 	agent_runtime.SetClientProtocolVersion(uuid, 2)
 	go notifierOnline(uuid, conn.ID)
 	defer func() {

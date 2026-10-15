@@ -17,12 +17,10 @@ import (
 )
 
 func DeleteClient(clientUuid string) error {
-	db := dbcore.GetDBInstance()
-	err := db.Delete(&models.Client{}, "uuid = ?", clientUuid).Error
-	if err != nil {
-		return err
-	}
-	return nil
+	lock := getReportSaveLock(clientUuid)
+	lock.Lock()
+	defer lock.Unlock()
+	return deleteClient(dbcore.GetDBInstance(), clientUuid)
 }
 
 func SaveClientInfo(update map[string]interface{}) error {

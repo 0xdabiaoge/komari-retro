@@ -31,12 +31,8 @@ func UpdateUser(c *gin.Context) {
 		api.RespondError(c, 400, "At least one field (username or password) must be provided")
 		return
 	}
-	if req.Name != nil && len(*req.Name) < 3 {
-		api.RespondError(c, 400, "Username must be at least 3 characters long")
-		return
-	}
-	if req.Password != nil && len(*req.Password) < 6 {
-		api.RespondError(c, 400, "Password must be at least 6 characters long")
+	if err := accounts.ValidateUserUpdate(req.Name, req.Password); err != nil {
+		api.RespondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := accounts.UpdateUser(req.Uuid, req.Name, req.Password); err != nil {

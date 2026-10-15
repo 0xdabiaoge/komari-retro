@@ -147,6 +147,9 @@ func GetUserByUUID(uuid string) (user models.User, err error) {
 }
 
 func UpdateUser(uuid string, name, password *string) error {
+	if err := ValidateUserUpdate(name, password); err != nil {
+		return err
+	}
 	db := dbcore.GetDBInstance()
 	// Check if user exists
 	var existingUser models.User

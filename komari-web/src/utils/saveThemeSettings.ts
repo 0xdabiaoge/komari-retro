@@ -1,3 +1,5 @@
+import { mergeThemeSettings } from "./themeSettingValues";
+
 type ThemeSettings = Record<string, unknown>;
 
 let pending: Promise<unknown> = Promise.resolve();
@@ -27,7 +29,7 @@ export function saveThemeSettings(
     const response = await fetch(`/api/admin/theme/settings?theme=${encodeURIComponent(theme)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...current.settings, ...values }),
+      body: JSON.stringify(mergeThemeSettings(current.settings, values, theme)),
       keepalive: true,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

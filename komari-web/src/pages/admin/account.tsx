@@ -20,7 +20,7 @@ const Account = () => {
 
 const InnerLayout = () => {
   const { t } = useTranslation();
-  const { account, loading, error } = useAccount();
+  const { account, loading, error, refresh } = useAccount();
   const [usernameSaving, setUsernameSaving] = React.useState(false);
   const [passwordSaving, setPasswordSaving] = React.useState(false);
   if (loading) {
@@ -50,6 +50,7 @@ const InnerLayout = () => {
         return response.json();
       })
       .then(() => {
+        refresh();
         toast.success(t("common.updated_successfully"));
       })
       .catch((error) => {

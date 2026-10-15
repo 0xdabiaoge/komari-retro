@@ -1050,12 +1050,14 @@ const Header = ({
     setDialogOpen(true);
     setLoading(true);
     try {
-      await fetch("/api/admin/client/add", {
+      const response = await fetch("/api/admin/client/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name || "" }),
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       refresh();
+      setDialogOpen(false);
     } catch (error) {
       toast.error(
         `${t("common.error", "Error")}: ${
@@ -1064,7 +1066,6 @@ const Header = ({
       );
     } finally {
       setLoading(false);
-      setDialogOpen(false);
     }
   };
   return (
@@ -1324,13 +1325,15 @@ const NodeTable = ({
         return acc;
       }, {} as Record<string, number>);
 
-      await fetch("/api/admin/client/order", {
+      const response = await fetch("/api/admin/client/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       // 不再调用 refresh，以免覆盖本地排序
     } catch {
+      setLocalNodes(nodes);
       toast.error(t("admin.nodeTable.errorRefreshNodeList"));
     }
   };
@@ -1489,9 +1492,10 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   const handleDelete = async () => {
     try {
       setDeleting(true);
-      await fetch(`/api/admin/client/${node.uuid}/remove`, {
+      const response = await fetch(`/api/admin/client/${node.uuid}/remove`, {
         method: "POST",
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       toast.success(`Delete ${node.name}`);
       setOpen(false);
       refresh();
