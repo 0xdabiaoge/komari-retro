@@ -6,7 +6,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/0xdabiaoge/komari-retro?color=blue&style=flat-square)](https://github.com/0xdabiaoge/komari-retro/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](./LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.27.1-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.27.2-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
 [![React Version](https://img.shields.io/badge/React-19.x-61DAFB.svg?style=flat-square&logo=react)](https://react.dev)
 
 [简体中文](./README.md) | [Documentation](./komari-document) | [GitHub 仓库](https://github.com/0xdabiaoge/komari-retro)
@@ -148,7 +148,7 @@ Invoke-Expression (Invoke-RestMethod "https://raw.githubusercontent.com/0xdabiao
 ## 🛠️ 本地从源码构建 (Build from Source)
 
 环境要求：
-- **Go**: 模块最低 1.25，发布与安全验证固定使用 1.27.1
+- **Go**: 模块最低 1.26，发布与安全验证固定使用 1.27.2
 - **Node.js**: 22 LTS (仅前端需要重新打包时)
 - **npm**: 使用提交的 `package-lock.json` 与 `npm ci`
 
