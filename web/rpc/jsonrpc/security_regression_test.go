@@ -49,11 +49,81 @@ func TestSecurityRegressions(t *testing.T) {
 	srv := httptest.NewServer(engine)
 	defer srv.Close()
 
+	t.Run("PingPresetCatalogAndImportRequireAdministrator", func(t *testing.T) {
+		for _, method := range []string{"admin:getPingPresets", "admin:importPingPresets"} {
+			for _, meta := range []*rpc.ContextMeta{{Permission: rpc.RoleGuest, TempShareValid: true}, {Permission: rpc.RoleClient}, {Permission: rpc.RoleAdmin, APIKey: true, APIKeyScope: "read-only"}} {
+				response := jsonrpc.Dispatch(context.Background(), meta, &rpc.JsonRpcRequest{Version: "2.0", ID: 1, Method: method, Params: map[string]any{}})
+				if response.Error == nil || response.Result != nil {
+					t.Fatalf("non-admin acquired ping presets via %s", method)
+				}
+			}
+		}
+		response := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Version: "2.0", ID: 2, Method: "admin:getPingPresets", Params: map[string]any{}})
+		if response.Error != nil {
+			t.Fatal("administrator cannot read preset catalog")
+		}
+	})
+
 	t.Run("RemovedExternalLoginSettingsCannotReturn", func(t *testing.T) {
 		for _, key := range []string{"o_auth_enabled", "o_auth_provider", "o_auth_client_id", "o_auth_client_secret", "disable_password_login", "oauth_enabled", "oauth_enable", "oauth_provider"} {
 			response := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Version: "2.0", ID: 1, Method: "admin:editSettings", Params: map[string]any{key: "synthetic"}})
 			if response.Error == nil || response.Error.Code != rpc.InvalidParams {
 				t.Fatalf("removed setting %s was accepted", key)
+			}
+		}
+	})
+	t.Run("PublicPingTaskMembershipAndSummariesHidePrivateNodes", func(t *testing.T) {
+		db := dbcore.GetDBInstance()
+		for _, node := range []models.Client{
+			{UUID: "preset-visible", Token: "preset-visible", Name: "visible"},
+			{UUID: "preset-hidden", Token: "preset-hidden", Name: "hidden", Hidden: true},
+		} {
+			if err := db.Create(&node).Error; err != nil {
+				t.Fatal(err)
+			}
+		}
+		defer db.Where("uuid IN ?", []string{"preset-visible", "preset-hidden"}).Delete(&models.Client{})
+		for _, task := range []models.PingTask{
+			{Id: 201, Name: "mixed-task", Clients: models.StringArray{"preset-visible", "preset-hidden", "preset-deleted"}, Target: "secret-target", Type: "icmp"},
+			{Id: 202, Name: "private-only-task", Clients: models.StringArray{"preset-hidden"}, Target: "secret-target", Type: "icmp"},
+			{Id: 203, Name: "future-only-task", Clients: models.StringArray{}, DefaultOn: true, Target: "secret-target", Type: "icmp"},
+		} {
+			if err := db.Create(&task).Error; err != nil {
+				t.Fatal(err)
+			}
+		}
+		defer db.Where("id IN ?", []uint{201, 202, 203}).Delete(&models.PingTask{})
+		for _, call := range []struct {
+			method string
+			params map[string]any
+		}{
+			{"public:getPublicPingTasks", map[string]any{}},
+			{"public:getPingRecords", map[string]any{"task_id": "201", "hours": "1"}},
+			{"common:getRecords", map[string]any{"type": "ping", "task_id": 201, "hours": 1}},
+			{"common:getRecords", map[string]any{"type": "ping", "hours": 1}},
+		} {
+			for _, permission := range []string{rpc.RoleGuest, rpc.RoleAdmin} {
+				response := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: permission}, &rpc.JsonRpcRequest{Version: "2.0", ID: 1, Method: call.method, Params: call.params})
+				if response.Error != nil {
+					t.Fatalf("%s: %v", call.method, response.Error)
+				}
+				encoded, _ := json.Marshal(response.Result)
+				body := string(encoded)
+				if !strings.Contains(body, "mixed-task") {
+					t.Fatalf("visible task lost: %s", body)
+				}
+				if strings.Contains(body, "secret-target") {
+					t.Fatalf("target exposed: %s", body)
+				}
+				if permission == rpc.RoleGuest {
+					for _, secret := range []string{"preset-hidden", "preset-deleted", "private-only-task", "future-only-task"} {
+						if strings.Contains(body, secret) {
+							t.Fatalf("%s leaked %s", call.method, secret)
+						}
+					}
+				} else if call.method == "public:getPublicPingTasks" && !strings.Contains(body, "preset-hidden") {
+					t.Fatal("administrator lost complete membership")
+				}
 			}
 		}
 	})

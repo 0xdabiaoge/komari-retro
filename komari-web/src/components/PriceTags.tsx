@@ -1,3 +1,4 @@
+import { formatBillingAmount } from "../../../shared/billing";
 import { Badge, Flex } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 
@@ -51,7 +52,7 @@ const PriceTags = ({
 
       <Badge color="iris" size="1" variant="soft" className="text-sm">
         <label className="text-xs">
-          {price == -1 ? t("common.free") : `${currency}${price}`}/
+          {price == -1 ? t("common.free") : formatBillingAmount(currency, price)}/
           {(() => {
             if (billing_cycle >= 27 && billing_cycle <= 32) {
               return t("common.monthly");

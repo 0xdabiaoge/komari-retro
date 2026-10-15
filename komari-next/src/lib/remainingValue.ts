@@ -1,3 +1,4 @@
+import { normalizeBillingCurrency } from "../../../shared/billing";
 import type { NodeBasicInfo } from "@/contexts/NodeListContext";
 
 export type SkipReason =
@@ -37,18 +38,6 @@ export type RemainingValueSnapshot = {
   active: RemainingValueNode[];
   expired: RemainingValueNode[];
   skipped: SkippedRemainingValueNode[];
-};
-
-const SYMBOL_TO_ISO: Record<string, string> = {
-  "\u00a5": "CNY",
-  "$": "USD",
-  "\u20ac": "EUR",
-  "\u00a3": "GBP",
-  "\u20bd": "RUB",
-  "\u20a3": "CHF",
-  "\u20b9": "INR",
-  "\u20ab": "VND",
-  "\u0e3f": "THB",
 };
 
 const LONG_TERM_THRESHOLD_MS = 36500 * 24 * 60 * 60 * 1000;
@@ -103,7 +92,8 @@ export function normalizeCurrencyCode(currency: string): string | null {
     return upper;
   }
 
-  return SYMBOL_TO_ISO[trimmed] ?? null;
+  const normalized = normalizeBillingCurrency(trimmed);
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
 function toRemainingValueNode(

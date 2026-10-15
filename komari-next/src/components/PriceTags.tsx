@@ -1,3 +1,4 @@
+import { formatBillingAmount } from "../../../shared/billing";
 import { Badge, type BadgeColor } from "@/components/ui/badge";
 import { Flex } from "@/components/ui/flex";
 import { cn } from "@/lib/utils";
@@ -153,7 +154,7 @@ const PriceTags = ({
       {shouldShowPrice && (
         <Badge color="iris" variant="outline" className={badgeClassName}>
           <label className={labelClassName}>
-            {price == -1 ? t("common.free") : `${currency}${price}`}/
+            {price == -1 ? t("common.free") : formatBillingAmount(currency, price)}/
             {(() => {
               if (billing_cycle >= 27 && billing_cycle <= 32) {
                 return t("common.monthly");

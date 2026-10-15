@@ -1,3 +1,4 @@
+import { formatBillingAmount } from "../../../shared/billing";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { TrendingUp, ArrowUp, ArrowDown, Activity, Upload, Download } from "lucide-react";
@@ -393,8 +394,10 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
               : `${formatBytes(liveData.network.totalUp + liveData.network.totalDown)} / ∞`;
 
             // 价格行文字（上行）：免费直接显示【免费】，付费显示价格/周期
+            const showCompactPrice = showPrice && Number.isFinite(basic.price) && (basic.price === -1 || basic.price > 0);
             const compactPriceLine = (() => {
-              if (!basic.price || basic.price <= 0) return t("common.free", { defaultValue: "免费" });
+              if (basic.price === -1) return t("common.free", { defaultValue: "免费" });
+              if (!showCompactPrice) return "";
               const cycleLabel = (() => {
                 if (basic.billing_cycle >= 27 && basic.billing_cycle <= 32) return t("common.monthly");
                 if (basic.billing_cycle >= 87 && basic.billing_cycle <= 95) return t("common.quarterly");
@@ -404,7 +407,7 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
                 if (basic.billing_cycle == -1) return t("common.once");
                 return `${basic.billing_cycle}${t("nodeCard.time_day")}`;
               })();
-              return `${basic.currency}${basic.price}/${cycleLabel}`;
+              return `${formatBillingAmount(basic.currency, basic.price)}/${cycleLabel}`;
             })();
 
             // 剩余天数行文字（下行）
@@ -422,7 +425,7 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
             })();
 
             const hasCompactBillingInfo =
-              (showPrice && basic.price !== undefined) ||
+              showCompactPrice ||
               (showExpiredAt && !!basic.expired_at);
 
             // CPU 负载小字：1min / 5min / 15min 平均负载
@@ -536,7 +539,7 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
                   <div className="min-w-0 rounded-md bg-muted/40 px-2 py-1.5 flex flex-col justify-center gap-0.5 items-end">
                     {hasCompactBillingInfo ? (
                       <>
-                        {showPrice && (
+                        {showCompactPrice && (
                           <span className="font-mono text-[11px] text-muted-foreground truncate w-full text-right">{compactPriceLine}</span>
                         )}
                         {showExpiredAt && (

@@ -1,0 +1,19 @@
+[
+  {"code":"USD","name":"美元","symbol":"$","aliases":["$","US$"]},
+  {"code":"CNY","name":"人民币","symbol":"¥","aliases":["¥","￥","RMB","CN¥"]},
+  {"code":"EUR","name":"欧元","symbol":"€","aliases":["€"]},
+  {"code":"GBP","name":"英镑","symbol":"£","aliases":["£"]},
+  {"code":"JPY","name":"日元","symbol":"JP¥","aliases":["JP¥","JP￥"]},
+  {"code":"HKD","name":"港币","symbol":"HK$","aliases":["HK$"]},
+  {"code":"SGD","name":"新加坡元","symbol":"S$","aliases":["S$","SG$"]},
+  {"code":"CAD","name":"加拿大元","symbol":"C$","aliases":["C$","CA$"]},
+  {"code":"AUD","name":"澳大利亚元","symbol":"A$","aliases":["A$","AU$"]},
+  {"code":"CHF","name":"瑞士法郎","symbol":"CHF ","aliases":["₣"]},
+  {"code":"KRW","name":"韩元","symbol":"₩","aliases":["₩"]},
+  {"code":"INR","name":"印度卢比","symbol":"₹","aliases":["₹"]},
+  {"code":"RUB","name":"俄罗斯卢布","symbol":"₽","aliases":["₽"]},
+  {"code":"TWD","name":"新台币","symbol":"NT$","aliases":["NT$"]},
+  {"code":"NZD","name":"新西兰元","symbol":"NZ$","aliases":["NZ$"]},
+  {"code":"THB","name":"泰铢","symbol":"฿","aliases":["฿"]},
+  {"code":"VND","name":"越南盾","symbol":"₫","aliases":["₫"]}
+]

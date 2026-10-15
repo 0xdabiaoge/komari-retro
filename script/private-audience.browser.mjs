@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
+import { testBillingAndPingPresets } from './billing-ping-presets.browser.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('../komari-web/node_modules/playwright');
 const fixture = JSON.parse(await readFile(process.env.PRIVATE_AUDIENCE_FIXTURE, 'utf8'));
@@ -91,6 +92,7 @@ try {
   await rpc('admin:editSettings',{notification_enabled:false,notification_method:'none'});
   await owner.setViewportSize({width:1440,height:1000});
   rows.push({case:'notification-editor-chinese-presets-save-escaping-mobile',status:'PASS',external_messages_sent:0});
+  rows.push(...await testBillingAndPingPresets({owner,ownerContext,rpc,fixture,output}));
   for (const theme of ['default', 'retro']) {
     await rpc('admin:editSettings', { theme });
     const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 1000 } });

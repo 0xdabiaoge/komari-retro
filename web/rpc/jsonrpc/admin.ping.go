@@ -5,6 +5,7 @@ import (
 
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/database/tasks"
+	"github.com/komari-monitor/komari/pkg/pingpresets"
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
 
@@ -12,6 +13,10 @@ import (
 // 延迟监测任务（ping task）的 RPC2 方法（admin 命名空间）。
 
 func init() {
+	RegisterWithGroupAndMeta("getPingPresets", rpc.RoleAdmin, func(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+		return pingpresets.Catalog, nil
+	}, &rpc.MethodMeta{Name: "admin:getPingPresets", Summary: "List built-in ping target presets"})
+	RegisterWithGroupAndMeta("importPingPresets", rpc.RoleAdmin, adminImportPingPresets, &rpc.MethodMeta{Name: "admin:importPingPresets", Summary: "Import selected ping presets atomically"})
 	RegisterWithGroupAndMeta("addPingTask", rpc.RoleAdmin, adminAddPingTask, &rpc.MethodMeta{
 		Name:    "admin:addPingTask",
 		Summary: "Create a ping task",
@@ -37,6 +42,23 @@ func init() {
 		Summary: "Reorder ping tasks (map of id->weight)",
 		Returns: "null",
 	})
+}
+
+func adminImportPingPresets(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+	var params struct {
+		PresetIDs []string `json:"preset_ids"`
+		Clients   []string `json:"clients"`
+		DefaultOn bool     `json:"default_on"`
+		Interval  int      `json:"interval"`
+	}
+	if err := req.BindParams(&params); err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, "无效的预设参数", nil)
+	}
+	result, err := tasks.ImportPingPresets(params.PresetIDs, params.Clients, params.DefaultOn, params.Interval)
+	if err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, err.Error(), nil)
+	}
+	return result, nil
 }
 
 func adminAddPingTask(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {

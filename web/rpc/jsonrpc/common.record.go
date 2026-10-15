@@ -297,6 +297,10 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		if err != nil {
 			return nil, rpc.MakeError(rpc.InternalError, "Failed to fetch ping tasks", err.Error())
 		}
+		pingTasks, err = visiblePingTasks(ctx, pingTasks)
+		if err != nil {
+			return nil, rpc.MakeError(rpc.InternalError, "Failed to filter public ping tasks", nil)
+		}
 		toList := make([]map[string]any, 0, len(pingTasks))
 		for _, t := range pingTasks {
 			if taskId != -1 && t.Id != uint(taskId) {

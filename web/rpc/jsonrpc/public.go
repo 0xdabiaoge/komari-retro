@@ -215,10 +215,14 @@ func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, 
 	return response, nil
 }
 
-func publicGetPublicPingTasks(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+func publicGetPublicPingTasks(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	pingTasks, err := tasks.GetAllPingTasks()
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, err.Error(), nil)
+	}
+	pingTasks, err = visiblePingTasks(ctx, pingTasks)
+	if err != nil {
+		return nil, rpc.MakeError(rpc.InternalError, "Failed to filter public ping tasks", nil)
 	}
 	type publicPingTask struct {
 		Id        uint     `json:"id"`
@@ -408,6 +412,10 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		pingTasks, err := tasks.GetAllPingTasks()
 		if err != nil {
 			return nil, rpc.MakeError(rpc.InternalError, "Failed to fetch ping tasks: "+err.Error(), nil)
+		}
+		pingTasks, err = visiblePingTasks(ctx, pingTasks)
+		if err != nil {
+			return nil, rpc.MakeError(rpc.InternalError, "Failed to filter public ping tasks", nil)
 		}
 		tasksList := make([]map[string]any, 0, len(pingTasks))
 		for _, t := range pingTasks {
