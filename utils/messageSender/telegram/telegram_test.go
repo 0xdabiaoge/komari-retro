@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -23,9 +24,9 @@ func TestTelegramDeliveryAndFailures(t *testing.T) {
 		{"malformed response", 200, `not json`, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			called := false
+			var called atomic.Bool
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				called = true
+				called.Store(true)
 				if r.Method != http.MethodPost || r.URL.Path != "/bot/test-token/sendMessage" {
 					t.Errorf("unexpected Telegram request: %s %s", r.Method, r.URL.Path)
 				}
@@ -41,8 +42,8 @@ func TestTelegramDeliveryAndFailures(t *testing.T) {
 			defer server.Close()
 			sender := &TelegramSender{Addition: Addition{Endpoint: server.URL + "/bot", BotToken: " test-token ", ChatID: " test-chat ", MessageThreadID: " 42 "}}
 			err := sender.SendTextMessage("节点已离线", "测试标题")
-			if !called || (err != nil) != tt.wantError {
-				t.Fatalf("called=%v error=%v, expected error=%v", called, err, tt.wantError)
+			if !called.Load() || (err != nil) != tt.wantError {
+				t.Fatalf("called=%v error=%v, expected error=%v", called.Load(), err, tt.wantError)
 			}
 		})
 	}
