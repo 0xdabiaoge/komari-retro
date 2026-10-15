@@ -25,6 +25,10 @@ func ForwardTerminal(id string) {
 			if err != nil {
 				return
 			}
+			if session.Authorized != nil && !session.Authorized() {
+				revokeTerminal(id, session)
+				return
+			}
 			if err = dst.WriteMessage(kind, data); err != nil {
 				return
 			}

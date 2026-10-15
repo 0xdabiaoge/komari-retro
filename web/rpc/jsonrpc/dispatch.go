@@ -2,12 +2,17 @@ package jsonrpc
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
 	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/pkg/rpc"
 )
+
+const maxResultBytes = 4 << 20
+
+var metricSlots = make(chan struct{}, 4)
 
 // Dispatch 是所有传输入口的统一分发点：私有站点检查 → 权限校验 → 执行方法。
 // ctx 携带可选的取消/超时；meta 为调用者身份元数据（其中 Permission 为权限分组）。
@@ -52,7 +57,20 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	return rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)
+	switch req.Method {
+	case "public:queryMetrics", "common:getRecords", "public:getRecordsByUUID", "public:getClientRecentRecords", "public:getPingRecords":
+		select {
+		case metricSlots <- struct{}{}:
+			defer func() { <-metricSlots }()
+		default:
+			return rpc.ErrorResponse(req.ID, rpc.Unavailable, "Metric query capacity exceeded", nil)
+		}
+	}
+	response := rpc.CallWithContext(rpc.NewContextWithMeta(ctx, meta), req.ID, req.Method, req.Params)
+	if encoded, err := json.Marshal(response); err != nil || len(encoded) > maxResultBytes {
+		return rpc.ErrorResponse(req.ID, rpc.OutOfRange, "Response exceeds 4 MiB; narrow the query", nil)
+	}
+	return response
 }
 
 // OnInternalRequest 内部调用 RPC 方法（如服务端代码代发请求），仅携带权限分组。

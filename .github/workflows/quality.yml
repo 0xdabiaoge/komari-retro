@@ -35,6 +35,11 @@ jobs:
         if: matrix.module == '.'
       - run: python3 script/agent-install-linux.test.py
         if: matrix.module == '.'
+      - name: 检查安全验收脚本并模糊测试 RPC 解析器
+        if: matrix.module == '.'
+        run: |
+          python3 -m py_compile script/security-acceptance.py
+          go test ./pkg/rpc -run='^$' -fuzz=FuzzParseRequests -fuzztime=10s -parallel=2
       - run: go test -race ./...
         working-directory: '${{ matrix.module }}'
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

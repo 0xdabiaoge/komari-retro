@@ -170,8 +170,8 @@ func (m *manager) start(token string) error {
 	m.message = "cloudflared is running"
 	m.appendLogLocked(fmt.Sprintf("started cloudflared (pid=%d)", cmd.Process.Pid))
 
-	go m.scanPipe(stdout, false)
-	go m.scanPipe(stderr, true)
+	go m.scanPipe(stdout, false, token)
+	go m.scanPipe(stderr, true, token)
 	go m.waitProcess(cmd, m.done)
 
 	return nil
@@ -248,10 +248,18 @@ func (m *manager) waitProcess(cmd *exec.Cmd, done chan struct{}) {
 	close(done)
 }
 
-func (m *manager) scanPipe(reader io.ReadCloser, isErr bool) {
+func (m *manager) scanPipe(reader io.ReadCloser, isErr bool, token string) {
+	defer reader.Close()
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
+		if token != "" {
+			line = strings.ReplaceAll(line, token, "[redacted]")
+		}
+		if len(line) > 4096 {
+			const marker = " [truncated]"
+			line = line[:4096-len(marker)] + marker
+		}
 		if strings.TrimSpace(line) == "" {
 			continue
 		}

@@ -48,6 +48,49 @@ func TestSecurityRegressions(t *testing.T) {
 	engine.GET("/api/admin/test", api.RequireRole(api.RoleAdmin), func(c *gin.Context) { c.Status(200) })
 	srv := httptest.NewServer(engine)
 	defer srv.Close()
+
+	t.Run("RemovedExternalLoginSettingsCannotReturn", func(t *testing.T) {
+		for _, key := range []string{"o_auth_enabled", "o_auth_provider", "o_auth_client_id", "o_auth_client_secret", "disable_password_login", "oauth_enabled", "oauth_enable", "oauth_provider"} {
+			response := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Version: "2.0", ID: 1, Method: "admin:editSettings", Params: map[string]any{key: "synthetic"}})
+			if response.Error == nil || response.Error.Code != rpc.InvalidParams {
+				t.Fatalf("removed setting %s was accepted", key)
+			}
+		}
+	})
+
+	t.Run("ResultAndBatchMemoryBudgets", func(t *testing.T) {
+		calls := 0
+		_ = jsonrpc.Register("securityBudgetFixture", func(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+			calls++
+			var params struct {
+				Size int `json:"size"`
+			}
+			_ = req.BindParams(&params)
+			return strings.Repeat("x", params.Size), nil
+		})
+		single := jsonrpc.Dispatch(context.Background(), &rpc.ContextMeta{Permission: rpc.RoleAdmin}, &rpc.JsonRpcRequest{Version: "2.0", ID: 1, Method: "common:securityBudgetFixture", Params: map[string]any{"size": 5 << 20}})
+		if single.Error == nil || single.Error.Code != rpc.OutOfRange {
+			t.Fatal("oversized result accepted")
+		}
+		calls = 0
+		batch := []map[string]any{}
+		for i := 0; i < 3; i++ {
+			batch = append(batch, map[string]any{"jsonrpc": "2.0", "id": i, "method": "common:securityBudgetFixture", "params": map[string]any{"size": 3 << 20}})
+		}
+		payload, _ := json.Marshal(batch)
+		request := httptest.NewRequest("POST", "/api/rpc2", bytes.NewReader(payload))
+		request.AddCookie(&http.Cookie{Name: "session_token", Value: token})
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, request)
+		var responses []rpc.JsonRpcResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &responses); err != nil {
+			t.Fatal(err)
+		}
+		if len(responses) != 3 || responses[0].Error != nil || responses[1].Error == nil || responses[2].Error == nil || calls != 2 || w.Body.Len() > 4<<20 {
+			t.Fatalf("batch budget violated: results=%d calls=%d bytes=%d", len(responses), calls, w.Body.Len())
+		}
+	})
+
 	t.Run("ForwardedIPCannotBeForged", func(t *testing.T) {
 		r := httptest.NewRequest("GET", "/ip", nil)
 		r.RemoteAddr = "198.51.100.9:1234"

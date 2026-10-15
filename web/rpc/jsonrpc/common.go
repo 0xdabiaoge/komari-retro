@@ -417,8 +417,6 @@ func getNodesLatestStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var resp struct {
 		LoggedIn bool   `json:"logged_in"`
-		SSOId    string `json:"sso_id"`
-		SSOType  string `json:"sso_type"`
 		Username string `json:"username"`
 		UUID     string `json:"uuid"`
 	}
@@ -434,8 +432,6 @@ func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) 
 			return resp, nil
 		}
 		resp.LoggedIn = true
-		resp.SSOId = meta.User.SSOID
-		resp.SSOType = meta.User.SSOType
 		resp.Username = meta.User.Username
 		resp.UUID = meta.User.UUID
 		return resp, nil
@@ -444,8 +440,6 @@ func getMe(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) 
 		return resp, nil
 	case "client":
 		resp.LoggedIn = true
-		resp.SSOId = "client"
-		resp.SSOType = "client"
 		resp.Username = "client"
 		resp.UUID = meta.ClientToken
 		client, err := clients.GetClientUUIDByToken(meta.ClientToken)

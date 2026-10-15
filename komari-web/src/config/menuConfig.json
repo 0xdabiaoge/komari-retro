@@ -88,7 +88,7 @@
           "icon": "Ellipsis"
         },
         {
-          "labelKey": "settings.sign_on.title",
+          "labelKey": "settings.api.title",
           "path": "/admin/settings/sign-on",
           "icon": "CircleArrowRight"
         },
@@ -115,13 +115,6 @@
           "icon": "AtSign"
         }
       ]
-    },
-    {
-      "labelKey": "common.documentation",
-      "path": "https://komari-document.pages.dev/",
-      "icon": "Book",
-      "newTab": true,
-      "bottom": true
     },
     {
       "labelKey": "common.home",

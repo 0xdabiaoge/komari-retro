@@ -24,12 +24,8 @@ type Settings struct {
 	EulaAccepted           bool   `json:"eula_accepted" default:"false"`
 	BaseScriptsURLKey      string `json:"base_scripts_url" default:""`
 	// GeoIP 配置
-	GeoIpEnabled  bool   `json:"geo_ip_enabled" default:"true"`
-	GeoIpProvider string `json:"geo_ip_provider" default:"ipinfo"` // empty, mmdb, ip-api, geojs
-	// OAuth 配置
-	OAuthEnabled          bool   `json:"o_auth_enabled" default:"false"`
-	OAuthProvider         string `json:"o_auth_provider" default:"github"`
-	DisablePasswordLogin  bool   `json:"disable_password_login" default:"false"`
+	GeoIpEnabled          bool   `json:"geo_ip_enabled" default:"true"`
+	GeoIpProvider         string `json:"geo_ip_provider" default:"ipinfo"` // empty, mmdb, ip-api, geojs
 	CloudflareTunnelToken string `json:"cloudflare_tunnel_token" default:""`
 	// 自定义美化
 	CustomHead string `json:"custom_head" default:""`
@@ -77,9 +73,6 @@ const (
 	BaseScriptsURLKey             = "base_scripts_url"
 	GeoIpEnabledKey               = "geo_ip_enabled"
 	GeoIpProviderKey              = "geo_ip_provider"
-	OAuthEnabledKey               = "o_auth_enabled"
-	OAuthProviderKey              = "o_auth_provider"
-	DisablePasswordLoginKey       = "disable_password_login"
 	CloudflareTunnelTokenKey      = "cloudflare_tunnel_token"
 	CustomHeadKey                 = "custom_head"
 	CustomBodyKey                 = "custom_body"

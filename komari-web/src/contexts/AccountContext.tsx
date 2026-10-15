@@ -3,8 +3,6 @@ import React from "react";
 // 账户数据类型
 type Account = {
   logged_in: boolean;
-  sso_id: string;
-  sso_type: string;
   username: string;
   uuid: string;
 };
@@ -26,7 +24,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [account, setAccount] = React.useState<Account | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<Error | null>(null);
-    
+
     const refresh = async () => {
         setLoading(true);
         setError(null);
@@ -43,11 +41,11 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setLoading(false);
         }
     };
-    
+
     React.useEffect(() => {
         refresh();
     }, []);
-    
+
     return (
         <AccountContext.Provider value={{ account, loading, error, refresh }}>
         {children}

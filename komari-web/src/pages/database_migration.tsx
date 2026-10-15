@@ -86,7 +86,7 @@ type MigrationStatus = {
 
 type LoginMethods = Pick<
   RestrictedAuthStatus,
-  "oauth_enabled" | "oauth_provider" | "password_login_enabled"
+  "password_login_enabled"
 > & { mode: Mode };
 type Me = Pick<RestrictedAuthStatus, "logged_in" | "username">;
 type AuthStatus = LoginMethods & Me;

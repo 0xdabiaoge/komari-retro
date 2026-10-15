@@ -16,7 +16,7 @@ const (
 	warningTitle        = "[Komari] Remote control is enabled on this device"
 	warningAdvice       = "If you did not set this up, your device may have been accessed without authorization."
 	warningCompromise   = "Stop Komari Agent immediately and check your device for signs of compromise."
-	warningUninstallURL = "https://komari-document.pages.dev/en/faq/uninstall"
+	warningUninstallURL = "https://github.com/0xdabiaoge/komari-retro#agent-uninstall"
 )
 
 type securityWarning struct {

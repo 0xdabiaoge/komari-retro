@@ -82,7 +82,7 @@ func TestRunSkipsLegacyConfigMigrationForCurrentConfigItemTable(t *testing.T) {
 	if err := db.AutoMigrate(&appconfig.ConfigItem{}); err != nil {
 		t.Fatalf("migrate config item table: %v", err)
 	}
-	if err := db.Create(&appconfig.ConfigItem{Key: "o_auth_provider", Value: `"github"`}).Error; err != nil {
+	if err := db.Create(&appconfig.ConfigItem{Key: "sitename", Value: `"github"`}).Error; err != nil {
 		t.Fatalf("seed config item: %v", err)
 	}
 
@@ -93,12 +93,12 @@ func TestRunSkipsLegacyConfigMigrationForCurrentConfigItemTable(t *testing.T) {
 	if db.Migrator().HasColumn(&legacyModelConfig{}, "id") {
 		t.Fatal("config item table was changed into the legacy config shape")
 	}
-	if db.Migrator().HasTable(&models.OidcProvider{}) {
+	if db.Migrator().HasTable(&legacyProviderFixture{}) {
 		t.Fatal("legacy OIDC migration ran against the config item table")
 	}
 
 	var item appconfig.ConfigItem
-	if err := db.First(&item, "key = ?", "o_auth_provider").Error; err != nil {
+	if err := db.First(&item, "key = ?", "sitename").Error; err != nil {
 		t.Fatalf("config item was not preserved: %v", err)
 	}
 	if item.Value != `"github"` {
@@ -110,7 +110,7 @@ func TestRunPreservesVersion120RuntimeShape(t *testing.T) {
 	db := openTestDB(t, "migrations_v120_runtime_shape")
 	if err := db.AutoMigrate(
 		&appconfig.ConfigItem{},
-		&models.OidcProvider{},
+		&legacyProviderFixture{},
 		&models.MessageSenderProvider{},
 		&models.Client{},
 		&models.PingTask{},
@@ -131,10 +131,10 @@ func TestRunPreservesVersion120RuntimeShape(t *testing.T) {
 	}).Error; err != nil {
 		t.Fatalf("seed ping task: %v", err)
 	}
-	if err := db.Create(&appconfig.ConfigItem{Key: appconfig.OAuthProviderKey, Value: `"github"`}).Error; err != nil {
+	if err := db.Create(&appconfig.ConfigItem{Key: appconfig.SitenameKey, Value: `"github"`}).Error; err != nil {
 		t.Fatalf("seed config item: %v", err)
 	}
-	if err := db.Create(&models.OidcProvider{Name: "github", Addition: `{"client_id":"old","client_secret":"secret"}`}).Error; err != nil {
+	if err := db.Create(&legacyProviderFixture{Name: "github", Addition: `{"client_id":"old","client_secret":"secret"}`}).Error; err != nil {
 		t.Fatalf("seed oidc provider: %v", err)
 	}
 	if err := db.Create(&models.MessageSenderProvider{Name: "telegram", Addition: `{"bot_token":"old-token"}`}).Error; err != nil {
@@ -150,19 +150,15 @@ func TestRunPreservesVersion120RuntimeShape(t *testing.T) {
 	}
 
 	var configItem appconfig.ConfigItem
-	if err := db.First(&configItem, "key = ?", appconfig.OAuthProviderKey).Error; err != nil {
+	if err := db.First(&configItem, "key = ?", appconfig.SitenameKey).Error; err != nil {
 		t.Fatalf("find config item: %v", err)
 	}
 	if configItem.Value != `"github"` {
 		t.Fatalf("unexpected config item value: %s", configItem.Value)
 	}
 
-	var oidc models.OidcProvider
-	if err := db.First(&oidc, "name = ?", "github").Error; err != nil {
-		t.Fatalf("find oidc provider: %v", err)
-	}
-	if oidc.Addition != `{"client_id":"old","client_secret":"secret"}` {
-		t.Fatalf("oidc provider was unexpectedly changed: %s", oidc.Addition)
+	if db.Migrator().HasTable("oidc_providers") {
+		t.Fatal("removed provider table remains")
 	}
 
 	var sender models.MessageSenderProvider
@@ -284,3 +280,10 @@ func TestRunExpandsLegacyPingAllClientsTasks(t *testing.T) {
 		t.Fatalf("unexpected clients json: %s", raw)
 	}
 }
+
+type legacyProviderFixture struct {
+	Name     string `gorm:"primaryKey"`
+	Addition string
+}
+
+func (legacyProviderFixture) TableName() string { return "oidc_providers" }

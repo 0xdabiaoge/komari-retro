@@ -22,18 +22,8 @@
     "title": "Akun"
   },
   "account_settings": {
-    "bind_sso": "Hubungkan Akun Eksternal",
     "confirm_unbind": "Konfirmasi Pemutusan Tautan",
     "looking_for_backup": "Mencari cadangan? Sekarang telah dipindahkan ke menu Pengaturan - Situs - Cadangan.",
-    "sso_account": "Akun Eksternal",
-    "sso_account_bound": "Akun {{name}}",
-    "sso_auth_failed": "Gagal memproses otentikasi SSO",
-    "sso_bound": "Akun Eksternal Terhubung",
-    "sso_not_bound": "Belum Terhubung",
-    "unbind_sso": "Putuskan Tautan Akun Eksternal",
-    "unbind_sso_failed": "Gagal membatalkan ikatan",
-    "unbind_sso_success": "Berhasil membatalkan ikatan",
-    "unbind_sso_warning": "Apakah Anda yakin ingin memutuskan tautan akun {{provider}}?",
     "upload_success": "Unggah berhasil"
   },
   "admin": {
@@ -677,8 +667,6 @@
   },
   "login": {
     "desc": "Masuk ke panel kontrol Komari.",
-    "login_with": "Masuk dengan {{provider}}",
-    "login_with_github": "Masuk dengan GitHub",
     "password": "Kata Sandi",
     "password_placeholder": "Masukkan kata sandi",
     "request_failed": "Login gagal. Silakan coba lagi.",
@@ -1355,7 +1343,7 @@
       "enable_description": "Aktifkan untuk mendapatkan pembaruan melalui metode pilihan Anda.",
       "Javascript": {
         "script": "Kode JavaScript",
-        "script_help": "Kode JavaScript yang mengimplementasikan fungsi sendMessage(message, title) dan sendEvent(event) yang bersifat opsional (dukungan sebagian untuk ES6). Keduanya harus mengembalikan Promise atau nilai boolean. API yang tersedia: fetch(), xhr(), console.log(). Panduan: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "Kode JavaScript yang mengimplementasikan fungsi sendMessage(message, title) dan sendEvent(event) yang bersifat opsional (dukungan sebagian untuk ES6). Keduanya harus mengembalikan Promise atau nilai boolean. API yang tersedia: fetch(), xhr(), console.log()."
       },
       "method": "Metode Pengiriman",
       "method_description": "Pilih platform favorit Anda untuk peringatan.",
@@ -1380,7 +1368,6 @@
     "settings_save_failed": "Gagal menyimpan pengaturan",
     "settings_saved": "Pengaturan berhasil disimpan",
     "sign_on": {
-      "disable_password": "Nonaktifkan login dengan kata sandi",
       "title": "Masuk"
     },
     "site": {
@@ -1416,35 +1403,6 @@
       "ws_allowed_origins": "Daftar izin Origin WebSocket",
       "ws_origin_check_enabled": "Pemeriksaan Origin WebSocket",
       "ws_origin_check_enabled_description": "Jika diaktifkan, permintaan WebSocket hanya diizinkan dari Origin yang sama atau dalam daftar izin"
-    },
-    "sso": {
-      "callback_url_tips": "Konfigurasikan penyedia SSO Anda dengan URL callback berikut: {{url}}",
-      "client_id_description": "ID klien aplikasi OAuth",
-      "client_secret_description": "Rahasia klien aplikasi OAuth",
-      "enable": "Aktifkan Single Sign-On",
-      "enable_description": "Izinkan pengguna login dengan akun pihak ketiga (seperti GitHub)",
-      "generic": {
-        "auth_url": "URL Otorisasi",
-        "client_id": "Client ID",
-        "client_secret": "Client Secret",
-        "scope": "Lingkup",
-        "token_url": "URL Token",
-        "user_id_field": "Field ID Pengguna",
-        "user_info_url": "URL Info Pengguna"
-      },
-      "github": {
-        "client_id": "GitHub Client ID",
-        "client_secret": "GitHub Client Secret"
-      },
-      "not_implemented_suffix": " [Belum diimplementasikan]",
-      "provider": "Penyedia Single Sign-On",
-      "provider_description": "Pilih penyedia autentikasi untuk single sign-on",
-      "provider_fetch_failed": "Gagal memuat informasi penyedia masuk",
-      "provider_fields": "Parameter OAuth",
-      "provider_fields_description": "Detail metode login yang Anda pilih",
-      "provider_save_failed": "Gagal menyimpan pengaturan penyedia masuk",
-      "provider_settings_fetch_failed": "Gagal memuat pengaturan penyedia masuk",
-      "title": "Single Sign-On"
     },
     "title": "Pengaturan",
     "update_1_2_7": {

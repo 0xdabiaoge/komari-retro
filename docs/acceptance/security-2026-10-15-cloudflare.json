@@ -1,0 +1,15 @@
+[
+  {
+    "case": "accountless-quick-tunnel-real-https",
+    "status": "PASS",
+    "scope": "synthetic private instance only; no production data exposed"
+  },
+  {
+    "case": "private-site-anonymous-through-real-tunnel",
+    "status": "PASS"
+  },
+  {
+    "case": "real-cloudflare-websocket-roundtrip",
+    "status": "PASS"
+  }
+]

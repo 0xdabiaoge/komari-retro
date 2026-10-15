@@ -1,0 +1,166 @@
+{
+  "production_before": {
+    "script": {
+      "version": {
+        "hash": "5f3dd9d233d865045f5386fd658b4b6769c3f02a",
+        "version": "v1.2.14"
+      },
+      "clients": 2
+    },
+    "docker": {
+      "version": {
+        "hash": "5f3dd9d233d865045f5386fd658b4b6769c3f02a",
+        "version": "v1.2.14"
+      },
+      "clients": 4
+    }
+  },
+  "phases": {
+    "baseline": {
+      "checks": 398,
+      "passed": 382,
+      "failed": [
+        {
+          "case": "removed/api/oauth",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.002
+        },
+        {
+          "case": "removed/api/oauth_callback",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.003
+        },
+        {
+          "case": "removed/api/admin/settings/oidc",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.003
+        },
+        {
+          "case": "removed/api/admin/oauth2/bind",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.006
+        },
+        {
+          "case": "removed/oidc-rpc",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.004
+        },
+        {
+          "case": "removed/password-disable-setting-rejected",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.011
+        },
+        {
+          "case": "csrf/theme-get-no-mutation",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.003
+        },
+        {
+          "case": "csrf/logout-cross-site-denied",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.226
+        },
+        {
+          "case": "csrf/same-origin-theme-post",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.003
+        },
+        {
+          "case": "headers/no-referrer",
+          "status": "FAIL",
+          "error": "unexpected authorization or response",
+          "seconds": 0.002
+        },
+        {
+          "case": "resource/anonymous-upload-early-reject/api/admin/upload/backup",
+          "status": "FAIL",
+          "error": "timed out",
+          "seconds": 3.004
+        },
+        {
+          "case": "resource/anonymous-upload-early-reject/api/admin/theme/upload",
+          "status": "FAIL",
+          "error": "timed out",
+          "seconds": 3.004
+        },
+        {
+          "case": "resource/anonymous-upload-early-reject/api/clients/transfer/forged",
+          "status": "FAIL",
+          "error": "timed out",
+          "seconds": 3.004
+        },
+        {
+          "case": "resource/290-slow-header-connections-and-recovery",
+          "status": "FAIL",
+          "error": "socket/FD quota was exceeded",
+          "seconds": 0.169
+        },
+        {
+          "case": "resource/slow-json-read-deadline",
+          "status": "FAIL",
+          "error": "timed out",
+          "seconds": 19.022
+        },
+        {
+          "case": "terminal/real-pty-revocation-and-session-quota",
+          "status": "FAIL",
+          "error": "real PTY did not execute fixture command",
+          "seconds": 3.037
+        }
+      ],
+      "exit_code": 1,
+      "oom_killed": false,
+      "resources": {
+        "VmHWM": "83856 kB",
+        "VmRSS": "22440 kB",
+        "Threads": "10"
+      }
+    },
+    "candidate": {
+      "checks": 398,
+      "passed": 398,
+      "failed": [],
+      "exit_code": 0,
+      "oom_killed": false,
+      "resources": {
+        "VmHWM": "37928 kB",
+        "VmRSS": "23016 kB",
+        "Threads": "9"
+      }
+    }
+  },
+  "upgrade_smoke": {
+    "script": {
+      "status": "PASS",
+      "users_preserved": 1,
+      "nodes_preserved": 2,
+      "private_settings_preserved": true,
+      "password_hashes_preserved": true,
+      "password_session_valid": true,
+      "provider_configs_preserved": true,
+      "sqlite_integrity": "ok"
+    },
+    "docker": {
+      "status": "PASS",
+      "users_preserved": 1,
+      "nodes_preserved": 4,
+      "private_settings_preserved": true,
+      "password_hashes_preserved": true,
+      "password_session_valid": true,
+      "provider_configs_preserved": true,
+      "sqlite_integrity": "ok"
+    }
+  },
+  "managed_process_unit": "PASS",
+  "production_preserved": true,
+  "scope": "Disposable loopback fixtures; production v1.2.14 observed read-only."
+}

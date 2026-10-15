@@ -1,24 +1,49 @@
 {
   "dashboardLayout": {
-    "workspace": "我的儀表板", "editing": "編輯佈局", "customize": "自訂",
-    "cards": "選擇卡片", "selection": "已選擇 {{count}} 張卡片",
-    "reset": "恢復預設佈局", "width": "卡片寬度", "height": "卡片高度",
-    "visibleNodes": "顯示節點數", "visibleNodesCount": "顯示 {{count}} 台節點",
-    "compact": "標準", "wide": "加寬", "full": "整行",
-    "short": "精簡", "normal": "標準", "tall": "加高",
-    "move": "移動{{name}}", "hide": "隱藏{{name}}",
-    "saved": "儀表板佈局已儲存", "saveFailed": "儲存失敗，佈局尚未儲存，請重試。",
-    "loadFailed": "佈局載入失敗，重試", "empty": "暫無卡片",
-    "cores": "CPU 核心", "ram": "總記憶體", "storage": "總磁碟",
+    "workspace": "我的儀表板",
+    "editing": "編輯佈局",
+    "customize": "自訂",
+    "cards": "選擇卡片",
+    "selection": "已選擇 {{count}} 張卡片",
+    "reset": "恢復預設佈局",
+    "width": "卡片寬度",
+    "height": "卡片高度",
+    "visibleNodes": "顯示節點數",
+    "visibleNodesCount": "顯示 {{count}} 台節點",
+    "compact": "標準",
+    "wide": "加寬",
+    "full": "整行",
+    "short": "精簡",
+    "normal": "標準",
+    "tall": "加高",
+    "move": "移動{{name}}",
+    "hide": "隱藏{{name}}",
+    "saved": "儀表板佈局已儲存",
+    "saveFailed": "儲存失敗，佈局尚未儲存，請重試。",
+    "loadFailed": "佈局載入失敗，重試",
+    "empty": "暫無卡片",
+    "cores": "CPU 核心",
+    "ram": "總記憶體",
+    "storage": "總磁碟",
     "capacityCount": "{{count}} 台節點的配置容量",
-    "servers": "伺服器管理", "terminal": "遠端工作台", "notifications": "通知設定",
+    "servers": "伺服器管理",
+    "terminal": "遠端工作台",
+    "notifications": "通知設定",
     "keyboard": "按空白鍵提起卡片，方向鍵移動，再按空白鍵放下，Escape 取消。",
-    "picked": "已提起{{name}}", "moved": "{{name}}移至第 {{position}} 位",
-    "dropped": "卡片已放下", "cancelled": "已取消移動",
+    "picked": "已提起{{name}}",
+    "moved": "{{name}}移至第 {{position}} 位",
+    "dropped": "卡片已放下",
+    "cancelled": "已取消移動",
     "widgets": {
-      "overview": "上線概覽", "database": "資料庫用量", "expiry": "到期提醒",
-      "traffic": "24 小時流量", "cpu": "CPU 使用排行", "memory": "記憶體使用排行",
-      "ping": "網路品質", "resources": "資源容量", "disk": "磁碟壓力",
+      "overview": "上線概覽",
+      "database": "資料庫用量",
+      "expiry": "到期提醒",
+      "traffic": "24 小時流量",
+      "cpu": "CPU 使用排行",
+      "memory": "記憶體使用排行",
+      "ping": "網路品質",
+      "resources": "資源容量",
+      "disk": "磁碟壓力",
       "shortcuts": "快捷操作"
     }
   },
@@ -89,18 +114,8 @@
     "title": "帳戶"
   },
   "account_settings": {
-    "bind_sso": "繫結外部帳戶",
     "confirm_unbind": "確認解除繫結",
     "looking_for_backup": "正在尋找備份？現已經遷移到設定-站點-備份。",
-    "sso_account": "外部帳戶",
-    "sso_account_bound": "{{name}}帳戶",
-    "sso_auth_failed": "處理SSO認證失敗",
-    "sso_bound": "已繫結外部帳戶",
-    "sso_not_bound": "未繫結",
-    "unbind_sso": "解除繫結外部帳戶",
-    "unbind_sso_failed": "解除繫結失敗",
-    "unbind_sso_success": "成功解除繫結",
-    "unbind_sso_warning": "確定要解除繫結 {{provider}} 帳號嗎？",
     "upload_success": "上傳成功"
   },
   "admin": {
@@ -696,8 +711,6 @@
   },
   "login": {
     "desc": "登入到 Komari 控制面板。",
-    "login_with": "使用 {{provider}} 登入",
-    "login_with_github": "使用 GitHub 登入",
     "password": "密碼",
     "password_placeholder": "請輸入您的密碼",
     "request_failed": "登入失敗，請重試。",
@@ -1329,7 +1342,7 @@
       "enable_description": "透過首選方式獲取及時通知。",
       "Javascript": {
         "script": "JavaScript 程式碼",
-        "script_help": "實現 sendMessage(message, title) 及可選的 sendEvent(event) 函式的 JavaScript 程式碼（部分支援 ES6）。兩者均應返回 Promise 或布林值。可用 API：fetch()、xhr()、console.log()。指南: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "實現 sendMessage(message, title) 及可選的 sendEvent(event) 函式的 JavaScript 程式碼（部分支援 ES6）。兩者均應返回 Promise 或布林值。可用 API：fetch()、xhr()、console.log()。"
       },
       "method": "通知渠道",
       "method_description": "選擇您偏好的通知平臺",
@@ -1355,7 +1368,6 @@
     "settings_save_failed": "儲存設定失敗",
     "settings_saved": "設定已儲存",
     "sign_on": {
-      "disable_password": "禁止密碼登入",
       "title": "登入"
     },
     "site": {
@@ -1417,35 +1429,6 @@
       "ws_allowed_origins": "WebSocket Origin 允許列表",
       "ws_origin_check_enabled": "WebSocket Origin 校驗",
       "ws_origin_check_enabled_description": "開啟後 WebSocket 請求只允許同源或允許列表中的 Origin"
-    },
-    "sso": {
-      "callback_url_tips": "回調地址：{{url}}",
-      "client_id_description": "OAuth 應用的客戶端 ID",
-      "client_secret_description": "OAuth 應用的客戶端金鑰",
-      "enable": "啟用單點登入",
-      "enable_description": "允許使用者透過第三方賬戶（如 GitHub）登入",
-      "generic": {
-        "auth_url": "授權 URL",
-        "client_id": "客戶端 ID",
-        "client_secret": "客戶端金鑰",
-        "scope": "作用域",
-        "token_url": "令牌 URL",
-        "user_id_field": "使用者 ID 欄位",
-        "user_info_url": "使用者資訊 URL"
-      },
-      "github": {
-        "client_id": "GitHub 客戶端 ID",
-        "client_secret": "GitHub 客戶端金鑰"
-      },
-      "not_implemented_suffix": " [暫未實作]",
-      "provider": "單點登入提供商",
-      "provider_description": "選擇用於單點登入的身份驗證提供商",
-      "provider_fetch_failed": "載入登入提供商資訊失敗",
-      "provider_fields": "登入參數",
-      "provider_fields_description": "設定您選擇登入方式的詳細資訊",
-      "provider_save_failed": "儲存登入提供商設定失敗",
-      "provider_settings_fetch_failed": "載入登入提供商設定失敗",
-      "title": "單點登入"
     },
     "title": "設定",
     "update_1_2_7": {

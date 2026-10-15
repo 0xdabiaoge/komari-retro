@@ -38,3 +38,5 @@ komari
 .codex
 edge_*_profile/
 screen*.png
+__pycache__/
+*.py[cod]

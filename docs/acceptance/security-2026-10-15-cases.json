@@ -1,0 +1,1992 @@
+[
+  {
+    "case": "acl/anonymous/admin:addClient",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/anonymous/admin:addLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:addPingTask",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:batchDeleteClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:cancelMetricMigration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:clearAllRecords",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:clearRecords",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:createClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:deleteAllSessions",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:deleteClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:deleteLoadNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:deletePingTask",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:deletePlugin",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:deleteSession",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:disableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:disableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:editClient",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:editLoadNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:editOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.044
+  },
+  {
+    "case": "acl/anonymous/admin:editPingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:editSettings",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:editTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:enableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:enableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:exec",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:fileChmod",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:fileChown",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:fileCopy",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:fileDelete",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:fileList",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:fileListRoots",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:fileMkdir",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:fileMove",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:fileSearch",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:fileStat",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getAllLoadNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:getAllPingTasks",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:getClientToken",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:getClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getCloudflaredStatus",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getDatabaseSize",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getLogs",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getMetricMigrationStatus",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.013
+  },
+  {
+    "case": "acl/anonymous/admin:getPluginLogs",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getSessions",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getSettings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getSpecificTaskResult",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:getTaskById",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:getTaskResultsByTaskId",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/anonymous/admin:getTasks",
+    "status": "PASS",
+    "seconds": 0.008
+  },
+  {
+    "case": "acl/anonymous/admin:getTasksByClientId",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/anonymous/admin:getXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/anonymous/admin:listClients",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:listClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:listMetricDefinitions",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/anonymous/admin:listNotificationChannels",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:listOfflineNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:listPlugins",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:listTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:orderClients",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:orderPingTask",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:removeClient",
+    "status": "PASS",
+    "seconds": 0.018
+  },
+  {
+    "case": "acl/anonymous/admin:removeCloudflaredToken",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:setMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:setNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:setPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:setPluginEnabled",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:setXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:startCloudflared",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:startMetricMigration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:stopCloudflared",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:testGeoip",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:testSendMessage",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/anonymous/admin:updateClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/anonymous/admin:updateMetricDefinition",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:addClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:addLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:addPingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:batchDeleteClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:cancelMetricMigration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:clearAllRecords",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:clearRecords",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:createClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:deleteAllSessions",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:deleteClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:deleteLoadNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:deletePingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:deletePlugin",
+    "status": "PASS",
+    "seconds": 0.001
+  },
+  {
+    "case": "acl/share/admin:deleteSession",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:disableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:disableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:editClient",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:editLoadNotification",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/share/admin:editOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/share/admin:editPingTask",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:editSettings",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/share/admin:editTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.007
+  },
+  {
+    "case": "acl/share/admin:enableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/share/admin:enableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:exec",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:fileChmod",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:fileChown",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/share/admin:fileCopy",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:fileDelete",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:fileList",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:fileListRoots",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:fileMkdir",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:fileMove",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:fileSearch",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:fileStat",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getAllLoadNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getAllPingTasks",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getClient",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getClientToken",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getCloudflaredStatus",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getDatabaseSize",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getLogs",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getMetricMigrationStatus",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:getNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getPluginLogs",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getSessions",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getSettings",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getSpecificTaskResult",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getTaskById",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getTaskResultsByTaskId",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getTasks",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:getTasksByClientId",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:getXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:listClients",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/share/admin:listClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:listMetricDefinitions",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:listNotificationChannels",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:listOfflineNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:listPlugins",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:listTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:orderClients",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:orderPingTask",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:removeClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:removeCloudflaredToken",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:setMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/share/admin:setNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:setPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:setPluginEnabled",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:setXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:startCloudflared",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:startMetricMigration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:stopCloudflared",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:testGeoip",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:testSendMessage",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:updateClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/share/admin:updateMetricDefinition",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:addClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:addLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:addPingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:batchDeleteClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:cancelMetricMigration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:clearAllRecords",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:clearRecords",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:createClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:deleteAllSessions",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:deleteClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:deleteLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:deletePingTask",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:deletePlugin",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:deleteSession",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:disableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:disableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:editClient",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:editLoadNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:editOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:editPingTask",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:editSettings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:editTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:enableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:enableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:exec",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileChmod",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileChown",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileCopy",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileDelete",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileList",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileListRoots",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileMkdir",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileMove",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileSearch",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:fileStat",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getAllLoadNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getAllPingTasks",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getClient",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getClientToken",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getClipboard",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getCloudflaredStatus",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getDatabaseSize",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getLogs",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getMetricMigrationStatus",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getPluginLogs",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getSessions",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getSettings",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/read-only-key/admin:getSpecificTaskResult",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:getTaskById",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:getTaskResultsByTaskId",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getTasks",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getTasksByClientId",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:getXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:listClients",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:listClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:listMetricDefinitions",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:listNotificationChannels",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:listOfflineNotifications",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:listPlugins",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:listTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:orderClients",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:orderPingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:removeClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:removeCloudflaredToken",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:setMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/read-only-key/admin:setNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:setPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/read-only-key/admin:setPluginEnabled",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:setXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:startCloudflared",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:startMetricMigration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:stopCloudflared",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:testGeoip",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:testSendMessage",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:updateClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/read-only-key/admin:updateMetricDefinition",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/agent-token/admin:addClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:addLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:addPingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:batchDeleteClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:cancelMetricMigration",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:clearAllRecords",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:clearRecords",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:createClipboard",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:deleteAllSessions",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:deleteClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:deleteLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:deletePingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:deletePlugin",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/agent-token/admin:deleteSession",
+    "status": "PASS",
+    "seconds": 0.006
+  },
+  {
+    "case": "acl/agent-token/admin:disableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:disableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:editClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:editLoadNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:editOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:editPingTask",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:editSettings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/agent-token/admin:editTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:enableOfflineNotification",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/agent-token/admin:enableTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:exec",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:fileChmod",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:fileChown",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:fileCopy",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:fileDelete",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/agent-token/admin:fileList",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:fileListRoots",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:fileMkdir",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:fileMove",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:fileSearch",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:fileStat",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getAllLoadNotifications",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getAllPingTasks",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getClient",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getClientToken",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "acl/agent-token/admin:getClipboard",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getCloudflaredStatus",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getDatabaseSize",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getLogs",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getMetricMigrationStatus",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getPluginLogs",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getSessions",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getSettings",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getSpecificTaskResult",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/agent-token/admin:getTaskById",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:getTaskResultsByTaskId",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getTasks",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getTasksByClientId",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:getXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:listClients",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:listClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:listMetricDefinitions",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:listNotificationChannels",
+    "status": "PASS",
+    "seconds": 0.006
+  },
+  {
+    "case": "acl/agent-token/admin:listOfflineNotifications",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:listPlugins",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:listTrafficReportNotifications",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/agent-token/admin:orderClients",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "acl/agent-token/admin:orderPingTask",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:removeClient",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:removeCloudflaredToken",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:setMessageSenderProvider",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:setNotificationChannelConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:setPluginConfiguration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:setPluginEnabled",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:setXtermjsSettings",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:startCloudflared",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:startMetricMigration",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:stopCloudflared",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:testGeoip",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "acl/agent-token/admin:testSendMessage",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:updateClipboard",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "acl/agent-token/admin:updateMetricDefinition",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "private/anonymous/",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/admin",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/admin/login",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/terminal",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/api/public",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/api/nodes",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/api/admin/settings",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/api/admin/download/backup",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/.git/config",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/data/komari.db",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/data/initial-admin.txt",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/api/oauth",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "private/anonymous/api/oauth_callback",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "removed/api/oauth",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "removed/api/oauth_callback",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "removed/api/admin/settings/oidc",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "removed/api/admin/oauth2/bind",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "removed/api/admin/2fa/generate",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "removed/oidc-rpc",
+    "status": "PASS",
+    "seconds": 0.006
+  },
+  {
+    "case": "removed/password-disable-setting-rejected",
+    "status": "PASS",
+    "seconds": 0.006
+  },
+  {
+    "case": "auth-forgery/336",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "auth-forgery/337",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "auth-forgery/338",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "auth-forgery/339",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "auth-forgery/340",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "cors/https://evil.invalid",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "cors/null",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "cors/https://127.0.0.1.evil.invalid",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "cors/https://user@evil.invalid",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "csrf/theme-get-no-mutation",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "csrf/logout-cross-site-denied",
+    "status": "PASS",
+    "seconds": 0.335
+  },
+  {
+    "case": "csrf/same-origin-theme-post",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "share/redaction-348",
+    "status": "PASS",
+    "seconds": 0.005
+  },
+  {
+    "case": "share/redaction-349",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "share/permanent-page-and-cookie",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "share/temporary-valid",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "share/temporary-expired",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "share/forged",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "websocket/origin-malformed-recovery-frame-limit",
+    "status": "PASS",
+    "seconds": 0.285
+  },
+  {
+    "case": "websocket/revoked-admin-session",
+    "status": "PASS",
+    "seconds": 0.349
+  },
+  {
+    "case": "headers/no-referrer",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "files/guest-denied/file/download?path=/etc/shadow",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "files/guest-denied/file/preview-token?path=/etc/shadow",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "files/guest-denied/terminal",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "files/forged-preview-denied",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "files/unknown-transfer-denied",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "ssrf/http://127.0.0.1:1/theme.zip",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "ssrf/http://169.254.169.254/latest/meta-data",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "ssrf/file:///etc/passwd",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "ssrf/http://[::1]/theme.zip",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "archive/traversal",
+    "status": "PASS",
+    "seconds": 0.007
+  },
+  {
+    "case": "input/query-367",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "input/query-368",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "input/query-369",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "input/query-370",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "input/metric-371",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "input/metric-372",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "input/metric-373",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-374",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "json/malformed-375",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-376",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-377",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-378",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-379",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-380",
+    "status": "PASS",
+    "seconds": 0.015
+  },
+  {
+    "case": "json/malformed-381",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-382",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "json/malformed-383",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "rpc/batch-cap",
+    "status": "PASS",
+    "seconds": 0.003
+  },
+  {
+    "case": "http/body-size-cap",
+    "status": "PASS",
+    "seconds": 0.001
+  },
+  {
+    "case": "resource/anonymous-upload-early-reject/api/admin/upload/backup",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "resource/anonymous-upload-early-reject/api/admin/theme/upload",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "resource/anonymous-upload-early-reject/api/clients/transfer/forged",
+    "status": "PASS",
+    "seconds": 0.001
+  },
+  {
+    "case": "resource/32-concurrent-160-metric-queries",
+    "status": "PASS",
+    "seconds": 0.543
+  },
+  {
+    "case": "resource/290-slow-header-connections-and-recovery",
+    "status": "PASS",
+    "seconds": 0.197
+  },
+  {
+    "case": "resource/slow-json-read-deadline",
+    "status": "PASS",
+    "seconds": 15.007
+  },
+  {
+    "case": "resource/24-concurrent-64-oversized-json-bodies",
+    "status": "PASS",
+    "seconds": 0.856
+  },
+  {
+    "case": "health/after-adversarial-requests",
+    "status": "PASS",
+    "seconds": 0.002
+  },
+  {
+    "case": "data/node-inventory-preserved",
+    "status": "PASS",
+    "seconds": 0.009
+  },
+  {
+    "case": "data/sqlite-integrity",
+    "status": "PASS",
+    "seconds": 0.004
+  },
+  {
+    "case": "terminal/real-pty-revocation-and-session-quota",
+    "status": "PASS",
+    "seconds": 5.51
+  },
+  {
+    "case": "resource/parallel-login-and-forged-ip-limits",
+    "status": "PASS",
+    "seconds": 1.355
+  }
+]

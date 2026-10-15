@@ -189,6 +189,11 @@ func HandleFilePreviewToken(c *gin.Context) {
 
 	token := randomHex(24)
 	previewTokensMu.Lock()
+	if len(previewTokens) >= 1024 {
+		previewTokensMu.Unlock()
+		c.JSON(http.StatusTooManyRequests, gin.H{"message": "Preview token capacity exceeded"})
+		return
+	}
 	previewTokens[token] = previewTokenEntry{
 		UUID:      uuid,
 		Path:      path,

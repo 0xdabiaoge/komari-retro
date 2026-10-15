@@ -23,7 +23,6 @@
   },
   "account_settings": {
     "bind_github": "绑定GitHub账户",
-    "bind_sso": "绑定外部账户",
     "cancel": "取消",
     "confirm_unbind": "确认解绑",
     "download_backup": "下载服务器数据备份",
@@ -33,19 +32,10 @@
     "github_not_bound": "未绑定GitHub账户",
     "github_unbound": "未绑定",
     "looking_for_backup": "正在寻找备份？现已经迁移到设置-站点-备份。",
-    "sso_account": "外部账户",
-    "sso_auth_failed": "处理SSO认证失败",
-    "sso_bound": "已绑定外部账户",
-    "sso_not_bound": "未绑定",
-    "sso_unbound": "未绑定",
     "unbind_github": "解绑GitHub账户",
     "unbind_github_failed": "解绑GitHub账户失败",
     "unbind_github_success": "已成功解绑GitHub账户",
     "unbind_github_warning": "解绑后，您将无法使用GitHub账户登录。确定要解绑吗？",
-    "unbind_sso": "解绑外部账户",
-    "unbind_sso_failed": "解绑失败",
-    "unbind_sso_success": "成功解绑",
-    "unbind_sso_warning": "确定要解绑 {{provider}} 账号吗？",
     "unknown_error": "未知错误",
     "upload_backup": "上传服务器数据备份",
     "upload_failed": "上传失败，仅支持`.zip`格式",
@@ -332,8 +322,6 @@
     "desc": "登录到 Komari 控制面板。",
     "failed": "Login failed.",
     "logging_in": "Logging in...",
-    "login_with": "使用 {{provider}} 登录",
-    "login_with_github": "使用 GitHub 登录",
     "network_error": "Network error.",
     "password": "密码",
     "password_placeholder": "请输入您的密码",
@@ -603,7 +591,7 @@
       "enable_description": "通过首选方式获取及时通知。",
       "Javascript": {
         "script": "JavaScript 代码",
-        "script_help": "实现 sendMessage(message, title) 及可选的 sendEvent(event) 函数的 JavaScript 代码（部分支持 ES6）。两者均应返回 Promise 或布尔值。可用 API：fetch()、xhr()、console.log()。指南: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "实现 sendMessage(message, title) 及可选的 sendEvent(event) 函数的 JavaScript 代码（部分支持 ES6）。两者均应返回 Promise 或布尔值。可用 API：fetch()、xhr()、console.log()。"
       },
       "method": "通知渠道",
       "method_description": "选择您偏好的通知平台",
@@ -651,7 +639,6 @@
     "settings_save_failed": "保存设置失败",
     "settings_saved": "设置已保存",
     "sign_on": {
-      "disable_password": "禁止密码登录",
       "title": "登录"
     },
     "site": {
@@ -675,33 +662,6 @@
       "send_ip_addr_to_guest": "向访客显示部分IP地址",
       "send_ip_addr_to_guest_description": "未登录的情况下可以通过 common:getNodes 查看部分IP地址信息，形如 9.*.*.* / fe80:*:*:*:*:*:*:*。用于部分主题展示IP。",
       "title": "站点"
-    },
-    "sso": {
-      "callback_url_tips": "回调地址：{{url}}",
-      "client_id": "客户端 ID",
-      "client_id_description": "OAuth 应用的客户端 ID",
-      "client_secret": "客户端密钥",
-      "client_secret_description": "OAuth 应用的客户端密钥",
-      "enable": "启用单点登录",
-      "enable_description": "允许用户通过第三方账户（如 GitHub）登录",
-      "generic": {
-        "auth_url": "授权 URL",
-        "client_id": "客户端 ID",
-        "client_secret": "客户端密钥",
-        "scope": "作用域",
-        "token_url": "令牌 URL",
-        "user_id_field": "用户 ID 字段",
-        "user_info_url": "用户信息 URL"
-      },
-      "github": {
-        "client_id": "GitHub 客户端 ID",
-        "client_secret": "GitHub 客户端密钥"
-      },
-      "provider": "单点登录提供商",
-      "provider_description": "选择用于单点登录的身份验证提供商",
-      "provider_fields": "登录参数",
-      "provider_fields_description": "设置您选择登录方式的详细信息",
-      "title": "单点登录"
     },
     "title": "设置"
   },

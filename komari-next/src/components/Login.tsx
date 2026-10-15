@@ -25,10 +25,6 @@ type LoginDialogProps = {
   onLoginSuccess?: () => void;
 };
 
-const startOAuthLogin = () => {
-  window.location.assign("/api/oauth");
-};
-
 const LoginDialogContent = ({
   trigger,
   autoOpen = false,
@@ -49,42 +45,18 @@ const LoginDialogContent = ({
   const [errorMsg, setErrorMsg] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [open, setOpen] = React.useState(autoOpen);
-  const oauthRedirectStarted = React.useRef(false);
 
   const publicInfoReady = publicInfo !== null;
-  const passwordLoginEnabled = publicInfoReady
-    ? !publicInfo.disable_password_login
-    : false;
-  const oauthEnabled = publicInfoReady && publicInfo.oauth_enable;
-  const onlyOAuthLogin = oauthEnabled && !passwordLoginEnabled;
+  const passwordLoginEnabled = publicInfoReady;
+
   const isFormValid =
     passwordLoginEnabled &&
     username.trim() !== "" &&
     password.trim() !== "";
-  const shouldAutoRedirectToOAuth = Boolean(
-    autoOpen &&
-    !loading &&
-    !error &&
-    !publicInfoLoading &&
-    !publicInfoError &&
-    onlyOAuthLogin &&
-    account?.logged_in === false
-  );
 
   React.useEffect(() => {
-    if (autoOpen && !onlyOAuthLogin) {
-      setOpen(true);
-    }
-  }, [autoOpen, onlyOAuthLogin]);
-
-  React.useEffect(() => {
-    if (!shouldAutoRedirectToOAuth || oauthRedirectStarted.current) {
-      return;
-    }
-
-    oauthRedirectStarted.current = true;
-    startOAuthLogin();
-  }, [shouldAutoRedirectToOAuth]);
+    if (autoOpen) setOpen(true);
+  }, [autoOpen]);
 
   const handleLogin = async () => {
     if (!isFormValid) {
@@ -136,7 +108,7 @@ const LoginDialogContent = ({
     publicInfoLoading ||
     (!publicInfoReady && !publicInfoError);
 
-  if (authStateLoading || shouldAutoRedirectToOAuth) {
+  if (authStateLoading) {
     return <Button disabled>{mounted ? t("loading") : "Loading..."}</Button>;
   }
   if (error || publicInfoError || !account || !publicInfoReady) {
@@ -157,23 +129,6 @@ const LoginDialogContent = ({
         </Button>
       </a>
     );
-  }
-
-  if (onlyOAuthLogin && !autoOpen) {
-    if (trigger) {
-      if (typeof trigger === "string") {
-        return <Button onClick={startOAuthLogin}>{trigger}</Button>;
-      }
-      return (
-        <span
-          onClick={startOAuthLogin}
-          style={{ cursor: "pointer", display: "inline-flex" }}
-        >
-          {trigger}
-        </span>
-      );
-    }
-    return <Button onClick={startOAuthLogin}>{t("login.title")}</Button>;
   }
 
   return (
@@ -198,8 +153,7 @@ const LoginDialogContent = ({
           }}
         >
           <Flex direction="column" gap="3">
-            {passwordLoginEnabled && (
-              <>
+            <>
                 <label>
                   <Text as="div" size="2" weight="bold">
                     {t("login.username")}
@@ -240,25 +194,7 @@ const LoginDialogContent = ({
                   {isLoading ? "Logging in..." : t("login.title")}
                 </Button>
               </>
-            )}
-            {oauthEnabled && (
-              <Button
-                onClick={startOAuthLogin}
-                variant={passwordLoginEnabled ? "outline" : "default"}
-                disabled={isLoading}
-                type="button"
-              >
-                {t("login.login_with", {
-                  provider:
-                    publicInfo.oauth_provider === "generic"
-                      ? "OAuth"
-                      : publicInfo.oauth_provider
-                      ? publicInfo.oauth_provider.charAt(0).toUpperCase() +
-                        publicInfo.oauth_provider.slice(1)
-                      : "",
-                })}
-              </Button>
-            )}
+
           </Flex>
         </Box>
       </DialogContent>

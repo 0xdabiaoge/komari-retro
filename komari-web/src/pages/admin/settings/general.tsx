@@ -170,18 +170,6 @@ const ApiCard = ({ settings }: { settings: SettingsResponse }) => {
         <Button variant="soft" color="green" onClick={handleGenerateApiKey}>
           {t("common.generate")}
         </Button>
-        <Button
-          variant="soft"
-          color="mint"
-          onClick={() => {
-            window.open(
-              "https://komari-document.pages.dev/install/agent-ad.html",
-              "_blank"
-            );
-          }}
-        >
-          {t("common.help")}
-        </Button>
       </div>
     </SettingCardShortTextInput>
   );

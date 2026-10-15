@@ -23,7 +23,6 @@
   },
   "account_settings": {
     "bind_github": "Bind GitHub Account",
-    "bind_sso": "Bind External Account",
     "cancel": "Cancel",
     "confirm_unbind": "Confirm Unbind",
     "download_backup": "Download backup",
@@ -33,19 +32,10 @@
     "github_not_bound": "GitHub account not bound",
     "github_unbound": "Unbound",
     "looking_for_backup": "Looking for backup? It has now been moved to Settings - Site - Backup.",
-    "sso_account": "External Account",
-    "sso_auth_failed": "SSO authentication failed",
-    "sso_bound": "Bound External Account",
-    "sso_not_bound": "Unbound",
-    "sso_unbound": "Unbound",
     "unbind_github": "Unbind GitHub Account",
     "unbind_github_failed": "Failed to unbind GitHub account",
     "unbind_github_success": "Successfully unbound GitHub account",
     "unbind_github_warning": "After unbinding, you will not be able to log in with your GitHub account. Are you sure you want to unbind?",
-    "unbind_sso": "Unbind External Account",
-    "unbind_sso_failed": "Unbinding failed",
-    "unbind_sso_success": "Successfully unbound",
-    "unbind_sso_warning": "Are you sure you want to unbind the {{provider}} account?",
     "unknown_error": "Unknown error",
     "upload_backup": "Upload backup",
     "upload_failed": "Failed to upload, only `.zip` are allowed",
@@ -330,8 +320,6 @@
   },
   "login": {
     "desc": "Log in to the Komari control panel.",
-    "login_with": "Login with {{provider}}",
-    "login_with_github": "Login with GitHub",
     "password": "Password",
     "password_placeholder": "Enter your password",
     "title": "Login",
@@ -539,7 +527,7 @@
       "enable_description": "Enable to get updates via your preferred method.",
       "Javascript": {
         "script": "JavaScript code",
-        "script_help": "JavaScript code that implements the sendMessage(message, title) and optional sendEvent(event) functions (partially supports ES6). Both should return a Promise or a boolean value. Available APIs: fetch(), xhr(), console.log(). Guide: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "JavaScript code that implements the sendMessage(message, title) and optional sendEvent(event) functions (partially supports ES6). Both should return a Promise or a boolean value. Available APIs: fetch(), xhr(), console.log()."
       },
       "method": "Delivery Method",
       "method_description": "Pick your preferred platform for alerts.",
@@ -587,7 +575,6 @@
     "settings_save_failed": "Failed to Save Settings",
     "settings_saved": "Settings Saved",
     "sign_on": {
-      "disable_password": "Disable password login",
       "title": "Sign-On"
     },
     "site": {
@@ -611,33 +598,6 @@
       "send_ip_addr_to_guest": "Show partial IP address to guests",
       "send_ip_addr_to_guest_description": "Under non-logged-in conditions, partial IP address information can be viewed through common:getNodes, in the form of 9.*.*.* / fe80:*:*:*:*:*:*:*. Used for displaying IP in some themes.",
       "title": "Site"
-    },
-    "sso": {
-      "callback_url_tips": "Configure your SSO provider with this callback URL: {{url}}",
-      "client_id": "Client ID",
-      "client_id_description": "OAuth application client ID",
-      "client_secret": "Client Secret",
-      "client_secret_description": "OAuth application client secret",
-      "enable": "Enable Single Sign-On",
-      "enable_description": "Allow users to login with third-party accounts (like GitHub)",
-      "generic": {
-        "auth_url": "Authorization URL",
-        "client_id": "Client ID",
-        "client_secret": "Client Secret",
-        "scope": "Scope",
-        "token_url": "Token URL",
-        "user_id_field": "User ID Field",
-        "user_info_url": "User Info URL"
-      },
-      "github": {
-        "client_id": "GitHub Client ID",
-        "client_secret": "GitHub Client Secret"
-      },
-      "provider": "Single Sign-On Provider",
-      "provider_description": "Choose the authentication provider for single sign-on",
-      "provider_fields": "OAuth Parameter",
-      "provider_fields_description": "Details of the login method you choose",
-      "title": "Single Sign-On"
     },
     "title": "Settings"
   },

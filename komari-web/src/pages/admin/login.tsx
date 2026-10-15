@@ -20,14 +20,14 @@ const AdminLoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { account, loading, refresh } = useAccount();
-  const { publicInfo, isLoading: publicInfoLoading } = usePublicInfo();
+  const { isLoading: publicInfoLoading } = usePublicInfo();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const redirect = resolveLoginRedirect(searchParams.get("redirect"));
-  const passwordLoginEnabled = !publicInfo?.disable_password_login;
-  const oauthEnabled = !!publicInfo?.oauth_enable;
+  const passwordLoginEnabled = true;
+
   const canSubmit =
     passwordLoginEnabled && username.trim() !== "" && password !== "";
 
@@ -98,8 +98,7 @@ const AdminLoginPage = () => {
             }}
           >
             <Flex direction="column" gap="3">
-              {passwordLoginEnabled && (
-                <>
+              <>
                 <label className="block">
                   <Text as="div" size="2" weight="bold" mb="1">
                     {t("login.username")}
@@ -148,29 +147,7 @@ const AdminLoginPage = () => {
                   {busy ? t("loading") : t("login.title")}
                 </Button>
                 </>
-              )}
-              {oauthEnabled && (
-                <Button
-                  variant={passwordLoginEnabled ? "soft" : "solid"}
-                  className="w-full"
-                  disabled={busy}
-                  type="button"
-                  onClick={() => {
-                    sessionStorage.setItem("oauth_redirect", redirect);
-                    window.location.href = "/api/oauth";
-                  }}
-                >
-                  {t("login.login_with", {
-                    provider:
-                      publicInfo?.oauth_provider === "generic"
-                        ? "OAuth"
-                        : publicInfo?.oauth_provider
-                          ? publicInfo.oauth_provider.charAt(0).toUpperCase() +
-                            publicInfo.oauth_provider.slice(1)
-                          : "",
-                  })}
-                </Button>
-              )}
+
             </Flex>
           </form>
         </Flex>

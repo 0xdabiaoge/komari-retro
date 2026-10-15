@@ -39,6 +39,7 @@ func IdentityMiddleware() gin.HandlerFunc {
 			c.Set("role", RoleAdmin)
 			c.Set("api_key", apiKey[7:])
 			c.Set("uuid", "00000000-0000-0000-0000-000000000000") // API Key
+			allowAuthenticatedStream(c, RoleAdmin)
 			c.Next()
 			return
 		}
@@ -51,6 +52,7 @@ func IdentityMiddleware() gin.HandlerFunc {
 				c.Set("role", RoleAdmin)
 				c.Set("session", session)
 				c.Set("uuid", user.UUID)
+				allowAuthenticatedStream(c, RoleAdmin)
 				if strings.HasPrefix(c.Request.URL.Path, "/api/") {
 					accounts.UpdateLatest(session, c.Request.UserAgent(), c.ClientIP())
 				}
@@ -66,12 +68,19 @@ func IdentityMiddleware() gin.HandlerFunc {
 			if err == nil && uuid != "" {
 				c.Set("role", RoleClient)
 				c.Set("client_uuid", uuid)
+				allowAuthenticatedStream(c, RoleClient)
 				c.Next()
 				return
 			}
 		}
 
 		// 4. 未识别身份，标记为访客
+		if c.Request.Method != http.MethodGet && (strings.HasPrefix(c.Request.URL.Path, "/api/admin/") || strings.HasPrefix(c.Request.URL.Path, "/api/clients/transfer/")) {
+			// Do not let net/http drain a large/chunked unauthorized upload after
+			// the handler returns; reject without buffering or holding the socket.
+			c.Header("Connection", "close")
+			c.Request.Close = true
+		}
 		c.Set("role", RoleGuest)
 		c.Next()
 	}
@@ -111,8 +120,6 @@ var publicPaths = []string{
 	"/api/public",
 	"/api/login",
 	"/api/me",
-	"/api/oauth",
-	"/api/oauth_callback",
 	"/api/version",
 	"/api/rpc2",
 	"/api/admin",    // 由 RequireRole 处理
@@ -248,7 +255,14 @@ func extractClientToken(c *gin.Context) string {
 		return strings.TrimSpace(clientToken)
 	}
 
-	if c.Request.Method != http.MethodGet && strings.Contains(c.GetHeader("Content-Type"), "application/json") {
+	// Legacy Agent reports may carry a token in JSON. Never buffer unrelated
+	// bodies before authorization: backup/stream routes allow much larger data.
+	bodyTokenRoute := false
+	switch c.Request.URL.Path {
+	case "/api/clients/report", "/api/clients/uploadBasicInfo", "/api/clients/v2/rpc", "/api/clients/task/result", "/api/clients/ping/result":
+		bodyTokenRoute = true
+	}
+	if bodyTokenRoute && c.Request.Method == http.MethodPost && strings.Contains(c.GetHeader("Content-Type"), "application/json") {
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			return ""

@@ -22,7 +22,6 @@ func UpdateUser(c *gin.Context) {
 		Uuid     string  `json:"uuid" binding:"required"`
 		Name     *string `json:"username"`
 		Password *string `json:"password"`
-		SsoType  *string `json:"sso_type"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.RespondError(c, 400, "Invalid or missing request body: "+err.Error())
@@ -40,7 +39,7 @@ func UpdateUser(c *gin.Context) {
 		api.RespondError(c, 400, "Password must be at least 6 characters long")
 		return
 	}
-	if err := accounts.UpdateUser(req.Uuid, req.Name, req.Password, req.SsoType); err != nil {
+	if err := accounts.UpdateUser(req.Uuid, req.Name, req.Password); err != nil {
 		api.RespondError(c, 500, "Failed to update user: "+err.Error())
 		return
 	}

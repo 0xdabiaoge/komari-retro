@@ -12,7 +12,6 @@ import (
 
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
-	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/utils"
 	"github.com/komari-monitor/komari/web/api"
 
@@ -33,6 +32,9 @@ type loginAttemptInfo struct {
 }
 
 var (
+	// Bound expensive bcrypt work even when failures arrive concurrently before
+	// the IP/account failure counters can be updated.
+	loginSlots      = make(chan struct{}, 4)
 	loginAttemptsMu sync.Mutex
 	loginAttempts   = make(map[string]*loginAttemptInfo)
 	lastLoginPrune  time.Time
@@ -111,15 +113,16 @@ func setSessionCookie(c *gin.Context, value string, maxAge int) {
 }
 
 func Login(c *gin.Context) {
+	select {
+	case loginSlots <- struct{}{}:
+		defer func() { <-loginSlots }()
+	default:
+		api.RespondError(c, http.StatusTooManyRequests, "Too many concurrent login attempts")
+		return
+	}
 	clientIP := c.ClientIP()
 	if err := checkLoginRateLimit(clientIP); err != nil {
 		api.RespondError(c, http.StatusTooManyRequests, err.Error())
-		return
-	}
-
-	DisablePasswordLogin, _ := config.GetAs[bool](config.DisablePasswordLoginKey, false)
-	if DisablePasswordLogin {
-		api.RespondError(c, http.StatusForbidden, "Password login is disabled")
 		return
 	}
 

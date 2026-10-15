@@ -1,8 +1,11 @@
 package terminal
 
 import (
+	"crypto/subtle"
 	"github.com/gin-gonic/gin"
+	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/clients"
+	"github.com/komari-monitor/komari/pkg/config"
 	v2 "github.com/komari-monitor/komari/protocol/v2"
 	"github.com/komari-monitor/komari/utils"
 	agentRuntime "github.com/komari-monitor/komari/web/agent"
@@ -30,10 +33,33 @@ func RequestTerminal(c *gin.Context) {
 	raw.SetReadLimit(1 << 20)
 	raw.SetCloseHandler(func(int, string) error { closeTerminal(id); return nil })
 	browser := connection.NewSafeConn(raw)
-	session := &TerminalSession{UUID: uuid, UserUUID: c.GetString("uuid"), Browser: browser, RequesterIp: c.ClientIP()}
+	sessionToken, apiKey := c.GetString("session"), c.GetString("api_key")
+	authorized := func() bool {
+		if apiKey != "" {
+			current, _ := config.GetAs[string](config.ApiKeyKey, "")
+			scope, _ := config.GetAs[string](config.ApiKeyScopeKey, "full")
+			return scope == "full" && subtle.ConstantTimeCompare([]byte(current), []byte(apiKey)) == 1
+		}
+		_, err := accounts.GetUserBySession(sessionToken)
+		return sessionToken != "" && err == nil
+	}
+	session := &TerminalSession{UUID: uuid, UserUUID: c.GetString("uuid"), Browser: browser, RequesterIp: c.ClientIP(), Done: make(chan struct{}), Authorized: authorized}
 	TerminalSessionsMutex.Lock()
+	owned := 0
+	for _, existing := range TerminalSessions {
+		if existing != nil && existing.UserUUID == session.UserUUID {
+			owned++
+		}
+	}
+	if len(TerminalSessions) >= 32 || owned >= 8 {
+		TerminalSessionsMutex.Unlock()
+		_ = browser.WriteMessage(1, []byte("Terminal capacity exceeded\n"))
+		_ = browser.Close()
+		return
+	}
 	TerminalSessions[id] = session
 	TerminalSessionsMutex.Unlock()
+	go watchAuthorization(id, session, 2*time.Second)
 	if !agentRuntime.IsAgentOnline(uuid) {
 		browser.WriteMessage(1, []byte("Client offline\n"))
 		closeTerminal(id)
@@ -55,13 +81,10 @@ func RequestTerminal(c *gin.Context) {
 	time.AfterFunc(30*time.Second, func() {
 		TerminalSessionsMutex.Lock()
 		waiting := TerminalSessions[id] == session && session.Agent == nil
-		if waiting {
-			delete(TerminalSessions, id)
-		}
 		TerminalSessionsMutex.Unlock()
 		if waiting {
 			browser.WriteMessage(1, []byte("被控端连接超时 timeout\n"))
-			browser.Close()
+			closeTerminal(id)
 		}
 	})
 }

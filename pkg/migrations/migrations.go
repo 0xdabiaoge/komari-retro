@@ -116,9 +116,6 @@ func Run(ctx Context) error {
 	legacyConfigTable := hasLegacyConfigTable(db)
 
 	if legacyConfigTable {
-		if err := migrateLegacyOidcConfig(db); err != nil {
-			return err
-		}
 		if err := migrateLegacyMessageSenderConfig(db); err != nil {
 			return err
 		}
@@ -139,7 +136,7 @@ func Run(ctx Context) error {
 		}
 	}
 
-	return nil
+	return removeLegacyExternalLogin(db)
 }
 
 func removeLegacyTwoFactor(db *gorm.DB) error {
@@ -180,43 +177,6 @@ func migrateLegacyLoadNotification(db *gorm.DB) error {
 		return db.Migrator().DropTable(&models.LoadNotification{})
 	}
 	return nil
-}
-
-func migrateLegacyOidcConfig(db *gorm.DB) error {
-	if db.Migrator().HasTable(&models.OidcProvider{}) {
-		return nil
-	}
-
-	log.Println("[>1.0.2] Merge OidcProvider table....")
-	var oldData struct {
-		OAuthClientID     string `gorm:"column:o_auth_client_id"`
-		OAuthClientSecret string `gorm:"column:o_auth_client_secret"`
-	}
-	if err := db.Raw("SELECT * FROM configs LIMIT 1").Scan(&oldData).Error; err != nil {
-		return fmt.Errorf("get legacy OIDC config: %w", err)
-	}
-
-	if err := db.AutoMigrate(&models.OidcProvider{}); err != nil {
-		return err
-	}
-	addition, err := json.Marshal(map[string]string{
-		"client_id":     oldData.OAuthClientID,
-		"client_secret": oldData.OAuthClientSecret,
-	})
-	if err != nil {
-		return fmt.Errorf("marshal legacy OIDC config: %w", err)
-	}
-	if err := db.Save(&models.OidcProvider{
-		Name:     "github",
-		Addition: string(addition),
-	}).Error; err != nil {
-		return err
-	}
-
-	if err := db.AutoMigrate(&legacyModelConfig{}); err != nil {
-		return err
-	}
-	return db.Model(&legacyModelConfig{}).Where("id = 1").Update("o_auth_provider", "github").Error
 }
 
 func migrateLegacyMessageSenderConfig(db *gorm.DB) error {

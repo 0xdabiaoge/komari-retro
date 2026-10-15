@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -43,8 +44,9 @@ type terminalSession struct {
 }
 
 var (
-	sessionsMu sync.Mutex
-	sessions   = make(map[string]*terminalSession)
+	sessionsMu      sync.Mutex
+	sessions        = make(map[string]*terminalSession)
+	pendingSessions int
 )
 
 // StartTerminal keeps a PTY alive briefly after its WebSocket drops. A new
@@ -81,15 +83,24 @@ func acquireSession(requestID string, conn *websocket.Conn) (*terminalSession, b
 	session := sessions[requestID]
 	firstConnection := false
 	if session == nil {
+		if len(sessions)+pendingSessions >= 8 {
+			sessionsMu.Unlock()
+			return nil, false, errors.New("terminal capacity exceeded")
+		}
+		pendingSessions++
 		sessionsMu.Unlock()
 
 		impl, err := newTerminalImpl()
 		if err != nil {
+			sessionsMu.Lock()
+			pendingSessions--
+			sessionsMu.Unlock()
 			return nil, false, err
 		}
 		session = &terminalSession{id: requestID, term: impl.term}
 
 		sessionsMu.Lock()
+		pendingSessions--
 		if sessions[requestID] != nil {
 			session = sessions[requestID]
 			orphan := impl.term

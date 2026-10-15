@@ -90,12 +90,6 @@
       "icon": "AtSign"
     },
     {
-      "labelKey": "common.documentation",
-      "path": "https://komari-document.pages.dev/",
-      "icon": "Book",
-      "newTab": true
-    },
-    {
       "labelKey": "common.home",
       "path": "/",
       "icon": "Home",

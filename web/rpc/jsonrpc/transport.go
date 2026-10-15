@@ -108,6 +108,8 @@ func serveWebSocket(c *gin.Context) {
 func servePost(c *gin.Context) {
 	body, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20))
 	if err != nil {
+		c.Header("Connection", "close")
+		c.Request.Close = true
 		c.JSON(http.StatusBadRequest, rpc.ErrorResponse(nil, rpc.ParseError, "read body error", err.Error()))
 		return
 	}
@@ -124,8 +126,23 @@ func servePost(c *gin.Context) {
 	meta := buildContextMeta(c, permissionGroup)
 
 	responses := make([]*rpc.JsonRpcResponse, 0, len(requests))
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	remaining := maxResultBytes
 	for _, rreq := range requests {
-		response := Dispatch(c.Request.Context(), meta, rreq)
+		var response *rpc.JsonRpcResponse
+		if ctx.Err() != nil || remaining <= 0 {
+			response = rpc.ErrorResponse(rreq.ID, rpc.OutOfRange, "Batch deadline or response budget exceeded; request not executed", nil)
+		} else {
+			response = Dispatch(ctx, meta, rreq)
+			if rreq.ID != nil {
+				encoded, _ := json.Marshal(response)
+				remaining -= len(encoded)
+				if remaining < 0 {
+					response = rpc.ErrorResponse(rreq.ID, rpc.OutOfRange, "Batch response exceeds 4 MiB; split the batch", nil)
+				}
+			}
+		}
 		if rreq.ID != nil {
 			responses = append(responses, response)
 		}

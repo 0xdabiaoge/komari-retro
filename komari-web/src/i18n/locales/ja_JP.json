@@ -22,18 +22,8 @@
     "title": "アカウント"
   },
   "account_settings": {
-    "bind_sso": "外部アカウントをバインド",
     "confirm_unbind": "バインド解除を確認",
     "looking_for_backup": "バックアップを探していますか？現在は設定-サイト-バックアップに移行しました。",
-    "sso_account": "外部アカウント",
-    "sso_account_bound": "{{name}}アカウント",
-    "sso_auth_failed": "SSO認証の処理に失敗しました",
-    "sso_bound": "外部アカウントがバインド済み",
-    "sso_not_bound": "未バインド",
-    "unbind_sso": "外部アカウントのバインド解除",
-    "unbind_sso_failed": "解除に失敗しました",
-    "unbind_sso_success": "解除に成功しました",
-    "unbind_sso_warning": "{{provider}} アカウントのバインド解除を確認しますか？",
     "upload_success": "アップロードに成功しました"
   },
   "admin": {
@@ -677,8 +667,6 @@
   },
   "login": {
     "desc": "Komari コントロールパネルにログインします。",
-    "login_with": "{{provider}} でログイン",
-    "login_with_github": "GitHubでログイン",
     "password": "パスワード",
     "password_placeholder": "パスワードを入力してください",
     "request_failed": "ログインに失敗しました。もう一度お試しください。",
@@ -1355,7 +1343,7 @@
       "enable_description": "好みの方法でタイムリーな通知を受け取ります。",
       "Javascript": {
         "script": "JavaScript コード",
-        "script_help": "sendMessage(message, title) およびオプションの sendEvent(event) 関数を実装する JavaScript コード（ES6 の一部をサポート）。両方とも Promise またはブール値を返す必要があります。使用可能な API：fetch()、xhr()、console.log()。ガイド: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "sendMessage(message, title) およびオプションの sendEvent(event) 関数を実装する JavaScript コード（ES6 の一部をサポート）。両方とも Promise またはブール値を返す必要があります。使用可能な API：fetch()、xhr()、console.log()。"
       },
       "method": "通知チャネル",
       "method_description": "通知プラットフォームを選択してください",
@@ -1380,7 +1368,6 @@
     "settings_save_failed": "設定の保存に失敗しました",
     "settings_saved": "設定が保存されました",
     "sign_on": {
-      "disable_password": "パスワードログインを禁止",
       "title": "ログイン"
     },
     "site": {
@@ -1416,35 +1403,6 @@
       "ws_allowed_origins": "WebSocket オリジン許可リスト",
       "ws_origin_check_enabled": "WebSocket オリジンチェック",
       "ws_origin_check_enabled_description": "有効にすると、WebSocket リクエストは同一オリジンまたは許可リストにあるオリジンのみを許可します"
-    },
-    "sso": {
-      "callback_url_tips": "コールバックURL：{{url}}",
-      "client_id_description": "OAuthアプリのクライアントID",
-      "client_secret_description": "OAuthアプリのクライアントシークレット",
-      "enable": "シングルサインオンを有効にする",
-      "enable_description": "ユーザーが第三者のアカウント（例：GitHub）を使用してログインできるようにします",
-      "generic": {
-        "auth_url": "認証URL",
-        "client_id": "クライアントID",
-        "client_secret": "クライアントシークレット",
-        "scope": "スコープ",
-        "token_url": "トークンURL",
-        "user_id_field": "ユーザーIDフィールド",
-        "user_info_url": "ユーザー情報URL"
-      },
-      "github": {
-        "client_id": "GitHubクライアントID",
-        "client_secret": "GitHubクライアントシークレット"
-      },
-      "not_implemented_suffix": " [未実装]",
-      "provider": "シングルサインオンプロバイダー",
-      "provider_description": "シングルサインオンに使用する認証プロバイダーを選択",
-      "provider_fetch_failed": "サインオンプロバイダー情報の読み込みに失敗しました",
-      "provider_fields": "ログインパラメータ",
-      "provider_fields_description": "選択したログイン方法の詳細を設定します",
-      "provider_save_failed": "サインオンプロバイダー設定の保存に失敗しました",
-      "provider_settings_fetch_failed": "サインオンプロバイダー設定の読み込みに失敗しました",
-      "title": "シングルサインオン"
     },
     "title": "設定",
     "update_1_2_7": {

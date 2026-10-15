@@ -23,7 +23,6 @@
   },
   "account_settings": {
     "bind_github": "綁定GitHub帳戶",
-    "bind_sso": "綁定外部帳戶",
     "cancel": "取消",
     "confirm_unbind": "確認解除綁定",
     "download_backup": "下載伺服器數據備份",
@@ -33,19 +32,10 @@
     "github_not_bound": "未綁定GitHub帳戶",
     "github_unbound": "未綁定",
     "looking_for_backup": "正在尋找備份？現已經遷移到設置-站點-備份。",
-    "sso_account": "外部帳戶",
-    "sso_auth_failed": "處理SSO認證失敗",
-    "sso_bound": "已綁定外部帳戶",
-    "sso_not_bound": "未綁定",
-    "sso_unbound": "未綁定",
     "unbind_github": "解除綁定GitHub帳戶",
     "unbind_github_failed": "解除綁定GitHub帳戶失敗",
     "unbind_github_success": "已成功解除綁定GitHub帳戶",
     "unbind_github_warning": "解除綁定後，您將無法使用GitHub帳戶登入。確定要解除綁定嗎？",
-    "unbind_sso": "解除綁定外部帳戶",
-    "unbind_sso_failed": "解除綁定失敗",
-    "unbind_sso_success": "成功解除綁定",
-    "unbind_sso_warning": "確定要解除綁定 {{provider}} 帳號嗎？",
     "unknown_error": "未知錯誤",
     "upload_backup": "上傳伺服器數據備份",
     "upload_failed": "上傳失敗，僅支持`.zip`格式",
@@ -330,8 +320,6 @@
   },
   "login": {
     "desc": "登入到 Komari 控制面板。",
-    "login_with": "使用 {{provider}} 登入",
-    "login_with_github": "使用 GitHub 登入",
     "password": "密碼",
     "password_placeholder": "請輸入您的密碼",
     "title": "登入",
@@ -539,7 +527,7 @@
       "enable_description": "通過首選方式獲取及時通知。",
       "Javascript": {
         "script": "JavaScript 代碼",
-        "script_help": "實現 sendMessage(message, title) 及可選的 sendEvent(event) 函數的 JavaScript 代碼（部分支持 ES6）。兩者均應返回 Promise 或布爾值。可用 API：fetch()、xhr()、console.log()。指南: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "實現 sendMessage(message, title) 及可選的 sendEvent(event) 函數的 JavaScript 代碼（部分支持 ES6）。兩者均應返回 Promise 或布爾值。可用 API：fetch()、xhr()、console.log()。"
       },
       "method": "通知渠道",
       "method_description": "選擇您偏好的通知平台",
@@ -587,7 +575,6 @@
     "settings_save_failed": "保存設置失敗",
     "settings_saved": "設置已保存",
     "sign_on": {
-      "disable_password": "禁止密碼登錄",
       "title": "登錄"
     },
     "site": {
@@ -611,33 +598,6 @@
       "send_ip_addr_to_guest": "向訪客顯示部分IP地址",
       "send_ip_addr_to_guest_description": "未登入的情況下可以透過 common:getNodes 查看部分IP地址資訊，形如 9.*.*.* / fe80:*:*:*:*:*:*:*。用於部分主題展示IP。",
       "title": "站點"
-    },
-    "sso": {
-      "callback_url_tips": "回調地址：{{url}}",
-      "client_id": "客戶端 ID",
-      "client_id_description": "OAuth 應用的客戶端 ID",
-      "client_secret": "客戶端密鑰",
-      "client_secret_description": "OAuth 應用的客戶端密鑰",
-      "enable": "啟用單點登錄",
-      "enable_description": "允許用戶通過第三方賬戶（如 GitHub）登錄",
-      "generic": {
-        "auth_url": "授權 URL",
-        "client_id": "客戶端 ID",
-        "client_secret": "客戶端密鑰",
-        "scope": "作用域",
-        "token_url": "令牌 URL",
-        "user_id_field": "用戶 ID 欄位",
-        "user_info_url": "用戶信息 URL"
-      },
-      "github": {
-        "client_id": "GitHub 客戶端 ID",
-        "client_secret": "GitHub 客戶端密鑰"
-      },
-      "provider": "單點登錄提供商",
-      "provider_description": "選擇用於單點登錄的身份驗證提供商",
-      "provider_fields": "登錄參數",
-      "provider_fields_description": "設置您選擇登錄方式的詳細信息",
-      "title": "單點登錄"
     },
     "title": "設置"
   },

@@ -9,7 +9,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.27.2-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
 [![React Version](https://img.shields.io/badge/React-19.x-61DAFB.svg?style=flat-square&logo=react)](https://react.dev)
 
-[简体中文](./README.md) | [Documentation](./komari-document) | [GitHub 仓库](https://github.com/0xdabiaoge/komari-retro)
+[简体中文](./README.md) | [GitHub 仓库](https://github.com/0xdabiaoge/komari-retro)
 
 </div>
 
@@ -19,7 +19,7 @@
 
 **Komari Retro** 是由 [@0xdabiaoge](https://github.com/0xdabiaoge) 维护的 Komari 独立定制分支。
 
-本项目脱离原项目的频繁滚动更新，旨在打造一个**结构完整、自成一体、长期稳定、自主可控**的现代化服务器监控与管理面板，采用 Monorepo 架构将主控服务端、监控探针、管理前端以及完整开发文档聚合为一体，开箱即用。
+本项目脱离原项目的频繁滚动更新，旨在打造一个**结构完整、自成一体、长期稳定、自主可控**的现代化服务器监控与管理面板，采用 Monorepo 架构将主控服务端、监控探针、管理前端聚合为一体，开箱即用。
 
 ---
 
@@ -32,7 +32,6 @@
 | **Komari Server (服务端)** | 根目录 `/` | **v1.2.5** | Go 1.25+ / Gin / GORM / SQLite / JSON-RPC 2.0 / WebSocket v2 / 静态资源内嵌 |
 | **Komari Agent (客户端探针)** | `/komari-agent` | **最新稳定版 (v1.1.x+)** | Go 1.25+ / gopsutil / 支持多网卡、GPU 监控、自定义 DNS、Web SSH 远程终端、自动重连 |
 | **Komari Web (前端仪表盘)** | `/komari-web` | **最新版 (React 19)** | React 19 / TypeScript / Vite 6 / Radix UI / Monaco Editor / PWA 支持 / 多语言适配 |
-| **Komari Document (官方文档)** | `/komari-document` | **最新版** | VitePress 1.6+ / 完整中英双语部署与开发接口文档 |
 
 ---
 
@@ -51,7 +50,6 @@ komari-retro/
 │   └── public/defaultTheme/    # 预编译的前端静态资源 (支持无 Node 环境一键构建 Go 二进制)
 ├── komari-agent/               # 独立探针客户端源码 (支持 Linux / Windows / macOS / Docker)
 ├── komari-web/                 # 现代化 React 19 仪表盘前端源码
-├── komari-document/            # VitePress 架构的完整使用与二次开发文档
 ├── install-komari.sh           # 服务端一键自动化部署脚本
 ├── Dockerfile                  # 容器化打包文件
 └── main.go                     # 主程序入口
@@ -144,6 +142,13 @@ Invoke-Expression (Invoke-RestMethod "https://raw.githubusercontent.com/0xdabiao
 ```
 
 ---
+
+<a id="agent-uninstall"></a>
+### Agent 卸载
+
+在管理后台的服务器列表中，打开目标节点的删除窗口，选择实际安装方式并填写自定义服务名、容器名或安装目录，复制窗口生成的卸载命令，在对应节点执行。仅删除面板中的节点记录不会卸载节点上的 Agent。
+
+如果设备并非由你授权接入，应先停止 Agent 服务，再检查该设备的访问记录。
 
 ## 🛠️ 本地从源码构建 (Build from Source)
 

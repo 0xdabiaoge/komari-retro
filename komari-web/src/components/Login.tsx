@@ -10,7 +10,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { TablerSettings } from "./Icones/Tabler";
 import { AccountProvider, useAccount } from "@/contexts/AccountContext";
-import { usePublicInfo } from "@/contexts/PublicInfoContext";
 
 type LoginDialogProps = {
   trigger?: React.ReactNode | string;
@@ -30,11 +29,10 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
     const [isLoading, setIsLoading] = React.useState(false);
     const [open, setOpen] = React.useState(autoOpen || false);
     const fieldId = React.useId().replace(/:/g, "");
-    const {publicInfo} = usePublicInfo();
+
   // 是否启用密码登录
-  const passwordLoginEnabled = !publicInfo?.disable_password_login;
-  const oauthEnabled = !!publicInfo?.oauth_enable;
-  const onlyOAuthLogin = oauthEnabled && !passwordLoginEnabled; // 只有 OAuth
+  const passwordLoginEnabled = true;
+
   // Validate inputs (仅在启用密码登录时需要)
   const isFormValid = passwordLoginEnabled && username.trim() !== "" && password.trim() !== "";
     //console.log(autoOpen, open);
@@ -108,34 +106,6 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
       );
     }
 
-    // 仅 OAuth 登录 且 不自动打开时：点击触发器直接跳转，不展示对话框
-    if (onlyOAuthLogin && !autoOpen) {
-      const redirect = () => {
-        window.location.href = "/api/oauth";
-      };
-      if (trigger) {
-        // 如果提供了自定义触发器，包装一层点击
-        if (typeof trigger === "string") {
-          return (
-            <Button onClick={redirect}>{trigger}</Button>
-          );
-        }
-        return (
-          <span
-            onClick={redirect}
-            role="button"
-            tabIndex={0}
-            style={{ cursor: "pointer", display: "inline-flex" }}
-          >
-            {trigger}
-          </span>
-        );
-      }
-      // 默认按钮
-      return (
-        <Button onClick={redirect}>{t("login.title")}</Button>
-      );
-    }
     return (
   <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Trigger>
@@ -164,8 +134,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
             }}
           >
             <Flex direction="column" gap="3">
-              {passwordLoginEnabled && (
-                <>
+              <>
                   <label>
                     <Text as="div" size="2" mb="1" weight="bold">
                       {t("login.username")}
@@ -211,28 +180,7 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
                     {isLoading ? "Logging in..." : t("login.title")}
                   </Button>
                 </>
-              )}
-              {/* OAuth 登录按钮：即使关闭密码登录也展示 */}
-              {publicInfo?.oauth_enable && (
-                <Button
-                  onClick={() => {
-                    window.location.href = "/api/oauth";
-                  }}
-                  variant={passwordLoginEnabled ? "soft" : "solid"}
-                  disabled={isLoading}
-                  type="button"
-                >
-                  {t("login.login_with", {
-                    provider:
-                      publicInfo?.oauth_provider === "generic"
-                        ? "OAuth"
-                        : publicInfo?.oauth_provider
-                        ? publicInfo.oauth_provider.charAt(0).toUpperCase() +
-                          publicInfo.oauth_provider.slice(1)
-                        : "",
-                  })}
-                </Button>
-              )}
+
             </Flex>
           </form>
         </Dialog.Content>

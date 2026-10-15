@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"golang.org/x/net/netutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,7 +18,6 @@ import (
 	"github.com/komari-monitor/komari/pkg/corn"
 	"github.com/komari-monitor/komari/web/api"
 
-	"github.com/komari-monitor/komari/database"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/database/auditlog"
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -32,7 +32,6 @@ import (
 	logutil "github.com/komari-monitor/komari/utils/log"
 	"github.com/komari-monitor/komari/utils/messageSender"
 	"github.com/komari-monitor/komari/utils/notifier"
-	"github.com/komari-monitor/komari/web/oauth"
 	report_cache "github.com/komari-monitor/komari/web/report"
 	"github.com/komari-monitor/komari/web/router"
 	"github.com/komari-monitor/komari/web/security"
@@ -71,26 +70,6 @@ func RunServer() {
 	go geoip.InitGeoIp()
 	go DoScheduledWork()
 	go messageSender.Initialize()
-	// oidcInit
-	go oauth.Initialize()
-
-	config.Subscribe(func(event config.ConfigEvent) {
-		if ok, t := config.IsChangedT[string](event, config.OAuthProviderKey); ok {
-			if t == "" || t == "none" {
-				t = "github"
-			}
-			oidcProvider, err := database.GetOidcConfigByName(t)
-			if err != nil {
-				log.Printf("Failed to get OIDC provider config: %v", err)
-			} else {
-				log.Printf("Using %s as OIDC provider", oidcProvider.Name)
-			}
-			err = oauth.LoadProvider(oidcProvider.Name, oidcProvider.Addition)
-			if err != nil {
-				auditlog.EventLog("error", fmt.Sprintf("Failed to load OIDC provider: %v", err))
-			}
-		}
-	})
 	// 初始化 cloudflared
 	if err := cloudflared.AutoStart(GetEnv("KOMARI_CLOUDFLARED_TOKEN", "")); err != nil {
 		log.Printf("failed to auto start cloudflared: %v", err)
@@ -108,6 +87,7 @@ func RunServer() {
 	}
 	r.Use(logutil.GinLogger())
 	r.Use(logutil.GinRecovery())
+	r.Use(security.ResponseHeaders())
 
 	config.Subscribe(func(event config.ConfigEvent) {
 		if event.IsChanged(config.GeoIpProviderKey) {
@@ -143,7 +123,14 @@ func RunServer() {
 	}
 	log.Printf("Starting server on %s ...", flags.Listen)
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		listener, err := net.Listen("tcp", srv.Addr)
+		if err != nil {
+			OnFatal(err)
+			log.Fatalf("Server listen failed: %v", err)
+		}
+		// Includes idle HTTP and hijacked WebSocket connections. Bound socket/FD
+		// use independently from per-request admission and body size limits.
+		if err := srv.Serve(netutil.LimitListener(listener, 256)); err != nil && err != http.ErrServerClosed {
 			OnFatal(err)
 			log.Fatalf("listen: %s\n", err)
 		}

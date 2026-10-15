@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
 	"github.com/komari-monitor/komari/pkg/config"
+	"github.com/komari-monitor/komari/utils"
 )
 
 // Next.js stores its exported theme assets under `_next`, which `go:embed`
@@ -427,14 +428,14 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 		// 1. 访问后台安全登录入口 (例如 /entry-xxxxxx) -> 设置凭证并跳转至 /admin/login
 		if cleanAdminPath != "" && cleanPath == cleanAdminPath {
-			c.SetCookie("admin_entrance_token", adminPath, 7*86400, "/", "", false, true)
+			setAccessCookie(c, "admin_entrance_token", adminPath, 7*86400, true)
 			c.Redirect(http.StatusFound, "/admin/login")
 			return
 		}
 
 		// 2. 访问管理员查看探针前台地址 (例如 /view-xxxxxx) -> 设置凭证并跳转至探针首页 /
 		if cleanAdminViewPath != "" && cleanPath == cleanAdminViewPath {
-			c.SetCookie("admin_entrance_token", adminPath, 7*86400, "/", "", false, true)
+			setAccessCookie(c, "admin_entrance_token", adminPath, 7*86400, true)
 			c.Redirect(http.StatusFound, "/")
 			return
 		}
@@ -452,7 +453,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 			// 永久分享验证
 			if permToken != "" && shareToken == permToken {
-				c.SetCookie("temp_key", shareToken, 365*86400*10, "/", "", false, false)
+				setAccessCookie(c, "temp_key", shareToken, 30*86400, false)
 				serveIndex(c)
 				return
 			}
@@ -461,7 +462,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			if tempToken != "" && shareToken == tempToken && expireAt >= now {
 				expireSeconds := int(expireAt - now)
 				if expireSeconds > 0 {
-					c.SetCookie("temp_key", shareToken, expireSeconds, "/", "", false, false)
+					setAccessCookie(c, "temp_key", shareToken, expireSeconds, false)
 				}
 				serveIndex(c)
 				return
@@ -528,4 +529,10 @@ func hasValidTempKey(c *gin.Context) bool {
 		return false
 	}
 	return expireAt >= time.Now().Unix()
+}
+
+// Share cookies currently remain script-readable for compatibility with
+// installed third-party themes; both capabilities require HTTPS when available.
+func setAccessCookie(c *gin.Context, name, value string, maxAge int, httpOnly bool) {
+	http.SetCookie(c.Writer, &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: maxAge, Secure: utils.GetScheme(c) == "https", HttpOnly: httpOnly, SameSite: http.SameSiteLaxMode})
 }
