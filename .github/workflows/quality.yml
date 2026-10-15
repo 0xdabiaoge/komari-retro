@@ -73,13 +73,25 @@ jobs:
           cache-dependency-path: |
             komari-web/package-lock.json
             komari-next/package-lock.json
-      - run: npm ci && npm audit --audit-level=low && npm test && npm run lint && npm run build
+      - run: npm ci && npm audit --audit-level=low && npm test && npm run lint && npm run build && npm run build:guest
         working-directory: komari-web
       - name: Build and audit the Komari Retro theme
-        run: npm ci && npm audit --audit-level=high && npm run lint && npm run build
+        run: npm ci && npm audit --audit-level=high && npm run lint && npm run build && npm run build:guest
         working-directory: komari-next
+      - name: 验证编译产物与游客资源隔离
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.2'
+      - name: 验证游客与管理资源隔离
+        run: |
+          node script/embed-frontends.mjs
+          go test ./web/public ./web/api ./web/rpc/jsonrpc
       - run: npx playwright install --with-deps chromium
         working-directory: komari-web
+      - name: 实际浏览器验收游客与管理员资源
+        run: |
+          go build -o /tmp/komari-audience .
+          python3 script/private-audience-fixture.py /tmp/komari-audience
       - run: |
           npm run dev -- --host 127.0.0.1 > /tmp/komari-vite.log 2>&1 &
           for attempt in $(seq 1 30); do

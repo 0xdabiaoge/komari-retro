@@ -20,8 +20,11 @@ import (
 // Next.js stores its exported theme assets under `_next`, which `go:embed`
 // skips when recursively embedding a directory unless the subtree uses `all:`.
 //
-//go:embed defaultTheme retroTheme all:retroTheme/dist/_next
+//go:embed defaultTheme retroTheme all:retroTheme/dist
 var PublicFS embed.FS
+
+//go:embed all:guest/default all:guest/retro
+var GuestFS embed.FS
 
 // 常量定义
 const (
@@ -176,6 +179,7 @@ func isSafePath(basePath, targetPath string) bool {
 
 // Static 注册静态资源和 SPA 路由处理
 func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
+	registerAudienceAssets(r)
 	// 初始化各内置主题的嵌入式文件系统。
 	embeddedThemes := make(map[string]fs.FS, len(builtinThemeDirs))
 	for themeID, root := range builtinThemeDirs {
@@ -268,6 +272,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 	// 核心逻辑：渲染 Index.html
 	serveIndex := func(c *gin.Context) {
+		audienceHeaders(c)
 		reqPath := c.Request.URL.Path
 		cfg := getConfig()
 
@@ -338,6 +343,11 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	// 2. 静态资源路由 /themes/:id/*path
 	// 允许访问 /themes/MyTheme/theme.json 和 /themes/MyTheme/dist/assets/a.js
 	r.GET("/themes/:id/*path", func(c *gin.Context) {
+		audienceHeaders(c)
+		if privateSite() && !managementAudience(c) {
+			c.Status(http.StatusNotFound)
+			return
+		}
 		themeID := c.Param("id")
 		if strings.EqualFold(themeID, "next") || strings.EqualFold(themeID, "nasdaq") || strings.HasPrefix(themeID, ".") {
 			c.Status(404)
@@ -356,6 +366,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 	// 3. SPA 路由 (noRoute)
 	noRoute(func(c *gin.Context) {
+		audienceHeaders(c)
 		if c.Request.Method != http.MethodGet {
 			c.Status(http.StatusNotFound)
 			return
@@ -370,11 +381,31 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		}
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)
+		if !managementAudience(c) {
+			ext := strings.ToLower(filepath.Ext(reqPath))
+			if ext == ".svg" || ext == ".png" || ext == ".webp" || ext == ".ico" || ext == ".woff" || ext == ".woff2" || reqPath == "/manifest.json" {
+				if privateSite() && !hasValidTempKey(c) {
+					c.Status(http.StatusNotFound)
+					return
+				}
+				if file, ok := ReadGuestThemeFile(guestThemeID(currentTheme), strings.TrimPrefix(reqPath, "/")); ok {
+					c.Data(http.StatusOK, getFallbackMimeType(reqPath), file)
+				} else {
+					c.Status(http.StatusNotFound)
+				}
+				return
+			}
+		}
 
-		// 静态资源文件优先检查与下发 (如 /assets/..., /favicon.ico 等)
+		// Legacy/unscoped assets are privileged. Check audience before any file
+		// lookup, including directly requested HTML, source maps and old workers.
 		distPath := path.Join(DistDir, reqPath)
 		content, mimeType, exists := getFileContent(currentTheme, distPath)
 		if exists {
+			if privateSite() && !managementAudience(c) {
+				c.Status(http.StatusNotFound)
+				return
+			}
 			c.Data(http.StatusOK, mimeType, content)
 			return
 		}
@@ -396,10 +427,14 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			}
 		}
 
-		privateSite, _ := config.GetAs[bool](config.PrivateSiteKey, false)
+		privateSite, privateErr := config.GetAs[bool](config.PrivateSiteKey, false)
+		privateSite = privateSite || privateErr != nil
 		if !privateSite {
-			// 非私有站点：正常下发 index.html 驱动 SPA
-			serveIndex(c)
+			if isAdmin || managementAudience(c) || strings.HasPrefix(reqPath, "/admin") || strings.HasPrefix(reqPath, "/install") || strings.HasPrefix(reqPath, "/database-recovery") {
+				serveIndex(c)
+			} else {
+				serveGuestIndex(c, currentTheme)
+			}
 			return
 		}
 
@@ -453,8 +488,8 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 			// 永久分享验证
 			if permToken != "" && shareToken == permToken {
-				setAccessCookie(c, "temp_key", shareToken, 30*86400, false)
-				serveIndex(c)
+				setAccessCookie(c, "temp_key", shareToken, 30*86400, true)
+				serveGuestIndex(c, currentTheme)
 				return
 			}
 
@@ -462,9 +497,9 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			if tempToken != "" && shareToken == tempToken && expireAt >= now {
 				expireSeconds := int(expireAt - now)
 				if expireSeconds > 0 {
-					setAccessCookie(c, "temp_key", shareToken, expireSeconds, false)
+					setAccessCookie(c, "temp_key", shareToken, expireSeconds, true)
 				}
-				serveIndex(c)
+				serveGuestIndex(c, currentTheme)
 				return
 			}
 
@@ -487,6 +522,9 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 		// 5. 持有有效 temp_key 访问机器详情页 /instance/:uuid 或返回专属分享页
 		if hasValidTempKey(c) {
+			if token := c.Query("temp_key"); token != "" {
+				issueViewerCookie(c, token)
+			}
 			if reqPath == "/" {
 				tempKey, _ := c.Cookie("temp_key")
 				if tempKey == "" {
@@ -498,7 +536,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 				}
 			}
 			if strings.HasPrefix(reqPath, "/instance/") {
-				serveIndex(c)
+				serveGuestIndex(c, currentTheme)
 				return
 			}
 		}
@@ -531,8 +569,7 @@ func hasValidTempKey(c *gin.Context) bool {
 	return expireAt >= time.Now().Unix()
 }
 
-// Share cookies currently remain script-readable for compatibility with
-// installed third-party themes; both capabilities require HTTPS when available.
+// Both audiences use server-issued cookies; no viewer script rewrites them.
 func setAccessCookie(c *gin.Context, name, value string, maxAge int, httpOnly bool) {
 	http.SetCookie(c.Writer, &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: maxAge, Secure: utils.GetScheme(c) == "https", HttpOnly: httpOnly, SameSite: http.SameSiteLaxMode})
 }

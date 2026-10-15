@@ -1,0 +1,64 @@
+{
+  "candidate_sha256": "e2f7c4359210159f856b0d25177f2df7674cf6ec30755f68139c71bfa7afbf2c",
+  "security": {
+    "checks": 398,
+    "passed": 398,
+    "failed": [],
+    "exit_code": 0,
+    "oom_killed": false,
+    "resources": {
+      "VmHWM": "39272 kB",
+      "VmRSS": "22528 kB",
+      "Threads": "11"
+    }
+  },
+  "upgrade_smoke": {
+    "script": {
+      "status": "PASS",
+      "users_preserved": 1,
+      "nodes_preserved": 2,
+      "private_settings_preserved": true,
+      "password_hashes_preserved": true,
+      "password_session_valid": true,
+      "provider_configs_preserved": true,
+      "sqlite_integrity": "ok"
+    },
+    "docker": {
+      "status": "PASS",
+      "users_preserved": 1,
+      "nodes_preserved": 4,
+      "private_settings_preserved": true,
+      "password_hashes_preserved": true,
+      "password_session_valid": true,
+      "provider_configs_preserved": true,
+      "sqlite_integrity": "ok"
+    }
+  },
+  "managed_process_unit": "PASS",
+  "audience_http_probe": {
+    "status": "PASS",
+    "guest_resources_scanned": 615,
+    "private_paths_rejected": 826,
+    "owner_session_and_full_key_stripped": true,
+    "hidden_node_redacted": true,
+    "share_cookie_http_only": true,
+    "nonce_csp": true
+  },
+  "production_preserved": true,
+  "production_before": {
+    "script": {
+      "version": {
+        "hash": "5f3dd9d233d865045f5386fd658b4b6769c3f02a",
+        "version": "v1.2.14"
+      },
+      "clients": 2
+    },
+    "docker": {
+      "version": {
+        "hash": "5f3dd9d233d865045f5386fd658b4b6769c3f02a",
+        "version": "v1.2.14"
+      },
+      "clients": 4
+    }
+  }
+}

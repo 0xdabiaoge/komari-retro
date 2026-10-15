@@ -37,6 +37,14 @@ func UpgradeWebSocket(c *gin.Context, options ...WebSocketUpgradeOption) (*webso
 
 func CheckWebSocketOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
+	private, privateErr := config.GetAs[bool](config.PrivateSiteKey, false)
+	if private || privateErr != nil {
+		for _, name := range []string{"session_token", "admin_entrance_token", "temp_key"} {
+			if _, err := r.Cookie(name); err == nil {
+				return origin != "" && security.OriginMatchesHost(origin, r.Host)
+			}
+		}
+	}
 	if strings.EqualFold(os.Getenv("KOMARI_WS_DISABLE_ORIGIN"), "true") {
 		return true
 	}

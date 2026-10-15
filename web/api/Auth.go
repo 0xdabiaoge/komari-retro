@@ -145,7 +145,11 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 
 		// 非私有站点直接放行
 		privateSite, err := config.GetAs[bool](config.PrivateSiteKey, false)
-		if err != nil || !privateSite {
+		if err != nil {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+		if !privateSite {
 			c.Next()
 			return
 		}
@@ -153,6 +157,9 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 		// --- 私有站点保护模式 ---
 		adminPath, _ := config.GetAs[string](config.AdminPathKey, "")
 		adminPath = strings.TrimSpace(adminPath)
+		if adminPath != "" && !strings.HasPrefix(adminPath, "/") {
+			adminPath = "/" + adminPath
+		}
 		entranceToken, _ := c.Cookie("admin_entrance_token")
 		hasAdminEntrance := adminPath != "" && entranceToken == adminPath
 
@@ -181,8 +188,15 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 3. /api/version, /api/me: 基础探测与状态放行
-		if path == "/api/version" || path == "/api/me" {
+		if path == "/api/me" {
+			if !hasAdminEntrance {
+				c.AbortWithStatus(http.StatusNotFound)
+				return
+			}
+			c.Next()
+			return
+		}
+		if path == "/api/version" {
 			c.Next()
 			return
 		}

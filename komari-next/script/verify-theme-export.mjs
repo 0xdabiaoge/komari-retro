@@ -1,13 +1,14 @@
 import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const outputDir = join(process.cwd(), 'dist');
+const outputDir = join(process.cwd(), process.env.KOMARI_AUDIENCE === 'guest' ? 'dist-guest' : 'dist');
 const indexPath = join(outputDir, 'index.html');
 const html = await readFile(indexPath, 'utf8');
 const references = [...html.matchAll(/(?:src|href)="([^"]*_next\/static\/[^"]+)"/g)]
   .map((match) => match[1]);
 const rootReferences = references.filter((reference) => reference.startsWith('/_next/static/'));
-const prefix = '/themes/retro/dist/_next/static/';
+const assetRoot = process.env.KOMARI_AUDIENCE === 'guest' ? '/share-assets/retro/' : '/private-assets/retro/';
+const prefix = assetRoot + '_next/static/';
 const prefixedReferences = references.filter((reference) => reference.startsWith(prefix));
 
 if (rootReferences.length > 0) {
@@ -19,7 +20,7 @@ if (prefixedReferences.length === 0) {
 }
 
 for (const reference of prefixedReferences) {
-  const assetPath = join(outputDir, reference.slice('/themes/retro/dist/'.length));
+  const assetPath = join(outputDir, reference.slice(assetRoot.length));
   await access(assetPath);
 }
 

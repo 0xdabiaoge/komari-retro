@@ -31,17 +31,20 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 
 	// 私有站点：未登录访客访问控制
 	if group == rpc.RoleGuest {
-		if privateSite, _ := config.GetAs[bool](config.PrivateSiteKey); privateSite {
+		if privateSite, err := config.GetAs[bool](config.PrivateSiteKey, false); err != nil || privateSite {
+			if (req.Method == "public:getMe" || req.Method == "common:getMe") && !meta.AdminEntranceValid {
+				return rpc.ErrorResponse(req.ID, rpc.MethodNotFound, "Method not found", nil)
+			}
 			// 1. 若持有有效分享许可或后台安全入口凭证，允许以访客权限正常访问公开/基础数据
 			if meta != nil && (meta.TempShareValid || meta.AdminEntranceValid) {
 				// 放行
 			} else {
 				// 2. 未持有有效凭据时，彻底屏蔽公开站点元信息，仅放行版本号及心跳
 				switch req.Method {
-				case "public:getVersion", "public:getMe", "rpc.ping", "rpc:ping":
+				case "public:getVersion", "rpc.ping", "rpc:ping":
 					// 放行基础探测/心跳
 				default:
-					return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Private site enabled, please login first", nil)
+					return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Not found", nil)
 				}
 			}
 		}

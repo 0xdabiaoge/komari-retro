@@ -805,7 +805,10 @@
     "totalTraffic": "總流量",
     "totalUpload": "總上傳",
     "uptime": "運作時間",
-    "virtualization": "虛擬化"
+    "virtualization": "虛擬化",
+    "arch": "架構",
+    "cpu": "CPU",
+    "price": "價格"
   },
   "nodes": {
     "empty": "暫無伺服器資料"

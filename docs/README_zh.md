@@ -130,23 +130,26 @@ Invoke-Expression (Invoke-RestMethod "https://raw.githubusercontent.com/0xdabiao
 - **pnpm**: 9+ 或 12+
 
 ### 方式 A：直接编译服务端（免 Node 环境）
-由于仓库内已预置编译好的最新前端资源（位于 `web/public/defaultTheme`），您可以直接编译 Go 二进制：
+由于仓库内已预置编译好的最新前端资源（两套主题各有管理员与游客产物，位于 `web/public`），您可以直接编译 Go 二进制：
 ```bash
 go build -o komari .
 ```
 
 ### 方式 B：全量编译（前端 + 服务端）
 ```bash
-# 1. 构建前端静态资源
+# 1. 分别构建两套主题的管理员与游客产物
 cd komari-web
-pnpm install
-pnpm run build
+npm ci
+npm run build
+npm run build:guest
+cd ../komari-next
+npm ci
+npm run build
+npm run build:guest
 cd ..
 
-# 2. 同步静态文件到服务端内嵌目录
-mkdir -p web/public/defaultTheme/dist
-cp -r komari-web/dist/* web/public/defaultTheme/dist/
-cp komari-web/komari-theme.json web/public/defaultTheme/
+# 2. 清理旧文件并同步四套产物到服务端内嵌目录
+node script/embed-frontends.mjs
 
 # 3. 编译服务端独立可执行文件
 go build -ldflags "-s -w" -o komari .

@@ -805,7 +805,10 @@
     "totalTraffic": "Traffic",
     "totalUpload": "Total Upload",
     "uptime": "Uptime",
-    "virtualization": "Virtualization"
+    "virtualization": "Virtualization",
+    "arch": "Architecture",
+    "cpu": "CPU",
+    "price": "Price"
   },
   "nodes": {
     "empty": "No server data available"

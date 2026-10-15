@@ -116,7 +116,7 @@ func RunServer() {
 
 	srv := &http.Server{
 		Addr:              flags.Listen,
-		Handler:           r,
+		Handler:           api.ViewerHandler(r),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20,

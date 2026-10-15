@@ -236,6 +236,9 @@ func buildContextMeta(c *gin.Context, permissionGroup string) *rpc.ContextMeta {
 func hasAdminEntranceAccess(c *gin.Context) bool {
 	adminPath, _ := config.GetAs[string](config.AdminPathKey, "")
 	adminPath = strings.TrimSpace(adminPath)
+	if adminPath != "" && !strings.HasPrefix(adminPath, "/") {
+		adminPath = "/" + adminPath
+	}
 	if adminPath == "" {
 		return false
 	}

@@ -761,7 +761,10 @@
     "totalTraffic": "Total Lalu Lintas",
     "totalUpload": "Total Unggahan",
     "uptime": "Waktu Aktif",
-    "virtualization": "Virtualisasi"
+    "virtualization": "Virtualisasi",
+    "arch": "Arsitektur",
+    "cpu": "CPU",
+    "price": "Harga"
   },
   "nodes": {
     "empty": "Tidak ada data server"

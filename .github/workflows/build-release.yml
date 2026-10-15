@@ -72,6 +72,7 @@ jobs:
           cd komari-web
           npm ci
           npm run build
+          npm run build:guest
           cd ..
           mkdir -p web/public/defaultTheme/dist
           rm -rf web/public/defaultTheme/dist/*
@@ -84,7 +85,9 @@ jobs:
           cd komari-next
           npm ci
           NEXT_PUBLIC_THEME_VERSION="$RELEASE_TAG" npm run build
+          NEXT_PUBLIC_THEME_VERSION="$RELEASE_TAG" npm run build:guest
           cd ..
+          node script/embed-frontends.mjs
           mkdir -p web/public/retroTheme
           rm -rf web/public/retroTheme/dist
           cp -r komari-next/dist web/public/retroTheme/dist
@@ -102,6 +105,7 @@ jobs:
           path: |
             web/public/defaultTheme/
             web/public/retroTheme/
+            web/public/guest/
           if-no-files-found: error
 
   build-binaries:
@@ -149,7 +153,10 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 下载前端产物
+      - name: 清理旧内嵌前端资源
+        run: rm -rf web/public/defaultTheme web/public/retroTheme web/public/guest
+
+      - name: 下载经过验证的前端产物
         uses: actions/download-artifact@v4
         with:
           name: frontend-assets

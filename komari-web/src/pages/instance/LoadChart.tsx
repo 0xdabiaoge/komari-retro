@@ -35,13 +35,11 @@ import {
   EyeOff,
   Menu,
   RotateCcw,
-  Save,
   Search,
   Trash2,
   X,
 } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { toast } from "sonner";
 import {
   ChartContainer,
   ChartTooltip,
@@ -53,7 +51,7 @@ import Loading from "@/components/loading";
 import MetricBoundaryAxisTick from "@/components/MetricBoundaryAxisTick";
 import PingMetricStatContent from "@/components/PingMetricStatContent";
 import Tips from "@/components/ui/tips";
-import { useAccount } from "@/contexts/AccountContext";
+import ChartTemplateAction from "@/components/ChartTemplateAction";
 import { useNodeList } from "@/contexts/NodeListContext";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import { useRPC2Call } from "@/contexts/RPC2Context";
@@ -953,7 +951,6 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
   const { t } = useTranslation();
   const { uuid } = useParams<{ uuid: string }>();
   const { call } = useRPC2Call();
-  const { account } = useAccount();
   const { publicInfo, refresh: refreshPublicInfo } = usePublicInfo();
   const { nodeList } = useNodeList();
   const node = nodeList?.find((item) => item.uuid === uuid);
@@ -1003,7 +1000,6 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
     parseDashboardTemplate(globalDashboardTemplate),
   );
   const charts = useMemo(() => normalizeDashboard(dashboard), [dashboard]);
-  const [savingGlobalTemplate, setSavingGlobalTemplate] = useState(false);
   const [pingTasks, setPingTasks] = useState<PublicPingTask[]>([]);
   const [pingStats, setPingStats] = useState<PingMetricStat[]>([]);
   const [metricSeries, setMetricSeries] = useState<MetricSeries[]>([]);
@@ -1279,44 +1275,6 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
     setCustomRangeError(null);
   };
 
-  const saveGlobalTemplate = async () => {
-    const theme = publicInfo?.theme;
-    if (!theme) return;
-
-    setSavingGlobalTemplate(true);
-    try {
-      const existingSettings =
-        publicInfo.theme_settings &&
-        typeof publicInfo.theme_settings === "object" &&
-        !Array.isArray(publicInfo.theme_settings)
-          ? publicInfo.theme_settings
-          : {};
-      const response = await fetch(
-        `/api/admin/theme/settings?theme=${encodeURIComponent(theme)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...existingSettings,
-            [DASHBOARD_TEMPLATE_KEY]: JSON.stringify(charts, null, 2),
-          }),
-        },
-      );
-      if (!response.ok) {
-        const result = await response.json().catch(() => null);
-        throw new Error(result?.message || `HTTP ${response.status}`);
-      }
-      toast.success(t("chart.globalTemplateSaved"));
-      refreshPublicInfo();
-    } catch (saveError) {
-      const message =
-        saveError instanceof Error ? saveError.message : String(saveError);
-      toast.error(`${t("chart.globalTemplateSaveFailed")}: ${message}`);
-    } finally {
-      setSavingGlobalTemplate(false);
-    }
-  };
-
   const addMetric = (chartId: string, metricKey: string) => {
     updateChart(chartId, (chart) => {
       if (!metricKey || chart.metrics.includes(metricKey)) return chart;
@@ -1473,18 +1431,7 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
             </label>
           </div>
           <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
-            {account?.logged_in && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={saveGlobalTemplate}
-                disabled={savingGlobalTemplate}
-              >
-                <Save className="size-4" />
-                {t("chart.saveGlobalTemplate")}
-              </Button>
-            )}
+            <ChartTemplateAction charts={charts} onSaved={refreshPublicInfo} />
             <Button type="button" variant="outline" size="sm" onClick={resetDashboard}>
               <RotateCcw className="size-4" />
               {t("common.reset", "Reset")}
@@ -1553,7 +1500,7 @@ const LoadChart = ({ data = [], onRealtimeActiveChange }: LoadChartProps) => {
               key={chart.id}
               chartId={chart.id}
               size={chart.size}
-              dragLabel={t("admin.nodeTable.dragToReorder")}
+              dragLabel={t("chart.dragToReorder", "Drag to reorder")}
             >
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="min-w-0">

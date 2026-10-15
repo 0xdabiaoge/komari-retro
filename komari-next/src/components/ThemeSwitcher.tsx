@@ -48,7 +48,7 @@ const ThemeSwitcher = () => {
     setCardBlurType,
     setCardTransparentIntensity,
     setCardExtraBlurIntensity,
-    isThemeSettingsAdmin,
+    canManageTheme,
     managedThemeSettings,
     setGuestDisplay,
   } = useTheme();
@@ -397,7 +397,7 @@ const ThemeSwitcher = () => {
             </div>
           </div>
 
-          {isThemeSettingsAdmin && (
+          {canManageTheme && (
             <div className="border-t pt-3">
               <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <Settings className="h-4 w-4" />

@@ -2,7 +2,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const distDir = fileURLToPath(new URL("../dist", import.meta.url));
+const distDir = fileURLToPath(new URL(process.env.KOMARI_AUDIENCE === "guest" ? "../dist-guest" : "../dist", import.meta.url));
 const descriptionPlaceholder = "A simple server monitor tool.";
 const escapedDescriptionPlaceholder = "A simple server monitor\\u0020tool.";
 const scriptTagPattern = /<script\b[^>]*>[\s\S]*?<\/script>/gi;

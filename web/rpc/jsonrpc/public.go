@@ -80,6 +80,12 @@ func publicGetPublicSettings(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *
 		p["private_site"] = false
 		p["is_share_view"] = true
 	}
+	meta := rpc.MetaFromContext(ctx)
+	if !isLoginFromCtx(ctx) && (meta == nil || !meta.AdminEntranceValid) {
+		delete(p, "custom_head")
+		delete(p, "custom_body")
+		p["is_share_view"] = true
+	}
 	return p, nil
 }
 

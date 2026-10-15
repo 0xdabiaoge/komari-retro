@@ -764,7 +764,10 @@
     "totalTraffic": "总流量",
     "totalUpload": "总上传",
     "uptime": "运行时间",
-    "virtualization": "虚拟化"
+    "virtualization": "虚拟化",
+    "arch": "架构",
+    "cpu": "CPU",
+    "price": "价格"
   },
   "nodes": {
     "empty": "暂无服务器数据"

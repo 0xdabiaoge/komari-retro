@@ -9,6 +9,8 @@ import type { Plugin, UserConfig } from "vite";
 import * as fs from "fs";
 import * as path from "path";
 import dotenv from "dotenv";
+import { createRequire } from "node:module";
+const filterGuestLocales = createRequire(import.meta.url)("../script/guest-locales.cjs");
 
 function localKomariThemePlugin(): Plugin {
   const themeRequestPath = "/themes/default/komari-theme.json";
@@ -49,17 +51,34 @@ function localKomariThemePlugin(): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
+  const guest = mode === "guest";
   const buildTime = new Date().toISOString();
 
   // Supports configuring BASE_URL via environment variables, defaulting to the root path.
-  const base: string = process.env.VITE_BASE_URL ? process.env.VITE_BASE_URL : '/';
+  const base: string = guest ? "/share-assets/default/" : (process.env.VITE_BASE_URL || (mode === "development" ? "/" : "/private-assets/default/"));
   const baseConfig: UserConfig = {
     base: base,
     plugins: [
       localKomariThemePlugin(),
       react(),
       tailwindcss(),
-      VitePWA({
+      ...(guest ? [{
+        name: "viewer-locales",
+        enforce: "pre" as const,
+        transform(code: string, id: string) {
+          if (/\/i18n\/locales\/[^/]+\.json$/.test(id.replaceAll("\\", "/"))) return JSON.stringify(filterGuestLocales(JSON.parse(code)));
+          if (id.includes("/src/") && /\.tsx?$/.test(id)) return code.replaceAll("/api/", "/viewer-api/");
+        },
+        generateBundle(_options: unknown, bundle: Record<string, unknown>) {
+          for (const item of Object.values(bundle)) {
+            const chunk = item as { type?: string; moduleIds?: string[] };
+            for (const id of chunk.moduleIds || []) {
+              if (/\/src\/(?:pages\/admin|contexts\/AccountContext|components\/(?:Login|ChartTemplateAction)|utils\/loginRedirect)/.test(id.replaceAll("\\", "/"))) throw new Error(`Privileged module reached viewer bundle: ${id}`);
+            }
+          }
+        },
+      }] : []),
+      ...(!guest && mode === "development" ? [VitePWA({
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "assets/pwa-icon.webp"],
         manifest: {
@@ -96,7 +115,7 @@ export default defineConfig(({ mode }) => {
           navigateFallback: null,
           runtimeCaching: [],
         },
-      }),
+      })] : []),
       visualizer({
         open: false,
         filename: "bundle-analysis.html",
@@ -109,6 +128,7 @@ export default defineConfig(({ mode }) => {
     },
       resolve: {
         alias: [
+          ...(guest ? [{ find: "@/components/ChartTemplateAction", replacement: path.resolve(__dirname, "src/guest/NoAction.tsx") }] : []),
           { find: "@", replacement: path.resolve(__dirname, "./src") },
           {
             find: /^monaco-editor-codicon\.css$/,
@@ -126,9 +146,10 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       assetsDir: "assets",
-      outDir: "dist",
+      outDir: guest ? "dist-guest" : "dist",
       chunkSizeWarningLimit: 800,
       rollupOptions: {
+        ...(guest ? { input: path.resolve(__dirname, "guest.html") } : {}),
         output: {
           // go embed ignore files start with '_'
           chunkFileNames: "assets/chunk-[name]-[hash].js",

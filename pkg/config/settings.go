@@ -2,6 +2,7 @@ package config
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"strings"
 	"time"
 )
@@ -100,13 +101,7 @@ func GetOrGenerateAdminPath() string {
 		}
 		return path
 	}
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, 6)
-	_, _ = rand.Read(b)
-	for i := range b {
-		b[i] = chars[int(b[i])%len(chars)]
-	}
-	newPath := "/entry-" + string(b)
+	newPath := randomPrivatePath("/entry-")
 	_ = Set(AdminPathKey, newPath)
 	return newPath
 }
@@ -121,13 +116,15 @@ func GetOrGenerateAdminViewPath() string {
 		}
 		return path
 	}
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, 6)
-	_, _ = rand.Read(b)
-	for i := range b {
-		b[i] = chars[int(b[i])%len(chars)]
-	}
-	newPath := "/view-" + string(b)
+	newPath := randomPrivatePath("/view-")
 	_ = Set(AdminViewPathKey, newPath)
 	return newPath
+}
+
+func randomPrivatePath(prefix string) string {
+	var random [24]byte
+	if _, err := rand.Read(random[:]); err != nil {
+		panic("cannot generate private entry: " + err.Error())
+	}
+	return prefix + hex.EncodeToString(random[:])
 }

@@ -70,13 +70,13 @@ func CorsMiddleware(initialEnabled bool, initialAllowedOrigins string) gin.Handl
 			if allowOrigin != "" {
 				c.AbortWithStatus(http.StatusNoContent)
 			} else {
-				c.AbortWithStatus(http.StatusForbidden)
+				abortOrigin(c)
 			}
 			return
 		}
 
 		if origin != "" && allowOrigin == "" {
-			c.AbortWithStatus(http.StatusForbidden)
+			abortOrigin(c)
 			return
 		}
 

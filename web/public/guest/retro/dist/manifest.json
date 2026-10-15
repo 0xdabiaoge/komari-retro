@@ -1,0 +1,28 @@
+{
+  "name": "Komari Retro",
+  "short_name": "Komari Retro",
+  "description": "A focused, real-time view of your Komari server fleet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1020",
+  "theme_color": "#6259dc",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "zh-CN",
+  "categories": ["utilities", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/assets/komari-retro-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/komari-retro-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

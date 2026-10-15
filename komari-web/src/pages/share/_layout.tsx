@@ -1,20 +1,11 @@
-import { useEffect } from "react";
 import { LiveDataProvider } from "@/contexts/LiveDataContext";
 import Footer from "@/components/Footer";
 import ShareNavBar from "@/components/ShareNavBar";
-import { Outlet, useParams } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const ShareLayout = () => {
-  const { token } = useParams<{ token: string }>();
-
-  useEffect(() => {
-    if (token) {
-      document.cookie = `temp_key=${encodeURIComponent(token)}; path=/; max-age=${60 * 60 * 24 * 30}`;
-    }
-  }, [token]);
-
   const InnerLayout = () => {
     const { publicInfo } = usePublicInfo();
     const isMobile = useIsMobile();

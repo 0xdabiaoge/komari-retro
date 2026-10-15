@@ -11,7 +11,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useTheme as useNextTheme } from "next-themes";
-import { updateSettings } from "@/lib/api";
+import { useThemeWriter } from "@/hooks/useThemeWriter";
 import i18n, { detectClientLanguage, normalizeLanguage } from "@/i18n/config";
 
 export type ColorTheme = "default" | "ocean" | "sunset" | "forest" | "midnight" | "rose";
@@ -67,9 +67,9 @@ export interface ManagedThemeSettings extends Partial<ThemeConfig> {
 interface ThemeContextType {
   themeConfig: ThemeConfig;
   managedThemeSettings: ManagedThemeSettings;
-  isThemeSettingsAdmin: boolean;
+  canManageTheme: boolean;
   isThemeLoaded: boolean;
-  isLoggedIn: boolean;
+  hasFullView: boolean;
   statusCardsVisibility: StatusCardsVisibility;
   guestDisplay: GuestDisplaySettings;
   nodeViewMode: NodeViewMode;
@@ -177,7 +177,6 @@ export const DEFAULT_GUEST_DISPLAY_SETTINGS: GuestDisplaySettings = {
 export const DEFAULT_NODE_VIEW_MODE: NodeViewMode = "grid";
 export const DEFAULT_APPEARANCE: Appearance = "system";
 
-type AdminState = "loading" | "yes" | "no";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -758,7 +757,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [managedSettingsSignature, setManagedSettingsSignature] = useState(
     getManagedSettingsSignature({})
   );
-  const [adminState, setAdminState] = useState<AdminState>("loading");
+  const { state: adminState, write: updateSettings } = useThemeWriter();
   const rawManagedSettingsRef = useRef<Record<string, unknown>>({});
   const pendingAdminPatchRef = useRef<ManagedThemeSettings>({});
   const queuedSaveRef = useRef<Record<string, unknown> | null>(null);
@@ -782,11 +781,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     [localStatusCardsOverrides, managedThemeSettings.statusCardsVisibility]
   );
 
-  const isLoggedIn = adminState === "yes";
+  const hasFullView = adminState === "yes";
 
   const guestDisplay = useMemo<GuestDisplaySettings>(
     () => {
-      if (isLoggedIn) {
+      if (hasFullView) {
         return {
           showPrice: true,
           showExpiredAt: true,
@@ -798,7 +797,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         ...(managedThemeSettings.guestDisplay || {}),
       };
     },
-    [isLoggedIn, managedThemeSettings.guestDisplay]
+    [hasFullView, managedThemeSettings.guestDisplay]
   );
 
   const nodeViewMode =
@@ -873,7 +872,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         queuedSaveRef.current = null;
 
         try {
-          await updateSettings({ theme_settings: value });
+          await updateSettings(value);
         } catch (error) {
           console.warn("Failed to save theme settings:", error);
         }
@@ -882,7 +881,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     void run();
-  }, [clearLocalOverrides]);
+  }, [clearLocalOverrides, updateSettings]);
 
   const applyAdminOrLocalPatch = useCallback(
     (patch: ManagedThemeSettings) => {
@@ -1016,27 +1015,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       mounted = false;
     };
   }, [applyManagedSettings]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    fetch("/api/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (mounted) {
-          setAdminState(data?.logged_in ? "yes" : "no");
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setAdminState("no");
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (adminState === "loading") {
@@ -1274,9 +1252,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     () => ({
       themeConfig,
       managedThemeSettings,
-      isThemeSettingsAdmin: adminState === "yes",
+      canManageTheme: adminState === "yes",
       isThemeLoaded,
-      isLoggedIn,
+      hasFullView,
       statusCardsVisibility,
       guestDisplay,
       nodeViewMode,
@@ -1309,7 +1287,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       adminState,
       guestDisplay,
       isThemeLoaded,
-      isLoggedIn,
+      hasFullView,
       language,
       managedThemeSettings,
       nodeViewMode,

@@ -11,6 +11,7 @@ node_modules/
 
 # Build output
 dist/
+dist-guest/
 dist-ssr/
 *.local
 bundle-analysis.html

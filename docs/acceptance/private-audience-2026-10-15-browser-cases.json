@@ -1,0 +1,46 @@
+[
+  {
+    "case": "real-owner-password-entry-and-management",
+    "status": "PASS"
+  },
+  {
+    "case": "default-real-browser-dashboard-details-mobile-resource-audit",
+    "status": "PASS",
+    "responses": 52,
+    "filters": true,
+    "table_grid": true,
+    "historical_cache_retired": true
+  },
+  {
+    "case": "default-temporary-share-real-browser",
+    "status": "PASS"
+  },
+  {
+    "case": "retro-real-browser-dashboard-details-mobile-resource-audit",
+    "status": "PASS",
+    "responses": 74,
+    "filters": true,
+    "table_grid": true,
+    "historical_cache_retired": true
+  },
+  {
+    "case": "retro-temporary-share-real-browser",
+    "status": "PASS"
+  },
+  {
+    "case": "owner-browser-share-tab-cannot-inherit-management",
+    "status": "PASS"
+  },
+  {
+    "case": "retro-owner-view-entry-password-dialog",
+    "status": "PASS"
+  },
+  {
+    "case": "cookie-authority-origin-check-independent-of-cors-toggle",
+    "status": "PASS"
+  },
+  {
+    "case": "expired-share-real-server-rejected",
+    "status": "PASS"
+  }
+]
