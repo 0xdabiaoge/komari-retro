@@ -105,6 +105,9 @@ func SendTextMessage(message string, title string) error {
 	return err
 }
 func SendEvent(event models.EventMessage) error {
+	if event.Time.IsZero() {
+		event.Time = time.Now().In(models.GetAppLocation())
+	}
 	if CurrentProvider() == nil {
 		return fmt.Errorf("message sender provider is not initialized")
 	}
@@ -157,6 +160,9 @@ func escapeTelegramHTML(s string) string {
 var templateVariable = regexp.MustCompile(`\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}`)
 
 func parseTemplate(messageTemplate string, event models.EventMessage) string {
+	if event.Time.IsZero() {
+		event.Time = time.Now().In(models.GetAppLocation())
+	}
 	clientNames := make([]string, 0, len(event.Clients))
 	clientIPs := make([]string, 0, len(event.Clients))
 	clientRegions := make([]string, 0, len(event.Clients))
@@ -239,12 +245,14 @@ func parseTemplate(messageTemplate string, event models.EventMessage) string {
 			emoji = "🔴"
 		case "online":
 			emoji = "🟢"
-		case "load":
+		case "load", "alert":
 			emoji = "📈"
 		case "traffic":
 			emoji = "📊"
-		case "traffic_report":
+		case "traffic_report", "dreport", "wreport", "mreport":
 			emoji = "📑"
+		case "renew":
+			emoji = "🔄"
 		case "expire", "renewal":
 			emoji = "⏰"
 		case "login":
@@ -263,16 +271,24 @@ func parseTemplate(messageTemplate string, event models.EventMessage) string {
 		statusText = "节点离线 ⚠️"
 	case "online":
 		statusText = "节点恢复上线 ✅"
-	case "load":
+	case "load", "alert":
 		statusText = "系统高负载预警 📈"
 	case "traffic":
 		statusText = "流量超额预警 📊"
 	case "traffic_report":
 		statusText = "月度流量报告 📑"
+	case "dreport":
+		statusText = "每日流量报告 📑"
+	case "wreport":
+		statusText = "每周流量报告 📑"
+	case "mreport":
+		statusText = "每月流量报告 📑"
 	case "expire":
 		statusText = "服务器即将到期 ⏰"
 	case "renewal":
 		statusText = "服务器续费提醒 ⏰"
+	case "renew":
+		statusText = "服务器自动续期 🔄"
 	case "login":
 		statusText = "后台登录提醒 🔐"
 	case "test":

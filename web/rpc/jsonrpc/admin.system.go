@@ -245,7 +245,8 @@ func adminExec(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcE
 func adminTestSendMessage(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	err := messageSender.SendEvent(models.EventMessage{
 		Event:   "Test",
-		Message: "This is a test message from Komari.",
+		Message: "这是一条 Komari Retro 测试通知，用于检查消息发送与模板排版。",
+		Time:    time.Now(),
 	})
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to send message: "+err.Error(), nil)

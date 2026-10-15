@@ -36,7 +36,7 @@ func TestScheduledExpiryAndTrafficCallbacksDeliverToIsolatedSink(t *testing.T) {
 	if err := messageSender.LoadProvider("telegram", string(addition)); err != nil {
 		t.Fatal(err)
 	}
-	for key, value := range map[string]any{"notification_enabled": true, "expire_notification_enabled": true, "expire_notification_lead_days": 7, "notification_template": "{{status}}|{{message}}"} {
+	for key, value := range map[string]any{"notification_enabled": true, "expire_notification_enabled": true, "expire_notification_lead_days": 7, "notification_template": "{{status}}|{{message}}|{{client_count}}|{{client_list}}"} {
 		if err := config.Set(key, value); err != nil {
 			t.Fatal(err)
 		}
@@ -54,7 +54,7 @@ func TestScheduledExpiryAndTrafficCallbacksDeliverToIsolatedSink(t *testing.T) {
 	CheckExpireScheduledWork()
 	select {
 	case event := <-events:
-		if !strings.Contains(event, "NEAR_EXPIRY") || strings.Contains(event, "OUTSIDE_WINDOW") || strings.Contains(event, "ALREADY_EXPIRED") {
+		if !strings.Contains(event, "NEAR_EXPIRY") || !strings.Contains(event, "|1|• NEAR_EXPIRY") || !strings.Contains(event, "天后到期") || strings.Contains(event, "OUTSIDE_WINDOW") || strings.Contains(event, "ALREADY_EXPIRED") {
 			t.Fatalf("wrong expiry recipients: %s", event)
 		}
 	case <-time.After(time.Second):
@@ -96,7 +96,8 @@ func TestScheduledExpiryAndTrafficCallbacksDeliverToIsolatedSink(t *testing.T) {
 			sendTrafficReport(cadence == "daily", cadence == "weekly", cadence == "monthly")
 			select {
 			case event := <-events:
-				if !strings.Contains(event, node.Name) || !strings.Contains(event, "1000 B") {
+				status := map[string]string{"daily": "每日流量报告", "weekly": "每周流量报告", "monthly": "每月流量报告"}[cadence]
+				if !strings.Contains(event, status) || !strings.Contains(event, node.Name) || !strings.Contains(event, "1000 B") {
 					t.Fatalf("wrong traffic report: %s", event)
 				}
 			case <-time.After(time.Second):
@@ -104,4 +105,38 @@ func TestScheduledExpiryAndTrafficCallbacksDeliverToIsolatedSink(t *testing.T) {
 			}
 		})
 	}
+	t.Run("offline-online-details-and-first-connection-suppression", func(t *testing.T) {
+		node := models.Client{UUID: "connectivity", Token: "connectivity", Name: "连接测试节点"}
+		if err := db.Create(&node).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Create(&models.OfflineNotification{Client: node.UUID, Enable: true, GracePeriod: 1}).Error; err != nil {
+			t.Fatal(err)
+		}
+		clientStates.Delete(node.UUID)
+		OnlineNotification(node.UUID, 1)
+		select {
+		case message := <-events:
+			t.Fatalf("first connection unexpectedly notified: %s", message)
+		default:
+		}
+		OfflineNotification(node.UUID, 1)
+		select {
+		case message := <-events:
+			if !strings.Contains(message, "已离线超过 1 秒") || !strings.Contains(message, node.Name) {
+				t.Fatalf("offline details missing: %s", message)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("offline callback failed")
+		}
+		OnlineNotification(node.UUID, 2)
+		select {
+		case message := <-events:
+			if !strings.Contains(message, "已重新连接") || !strings.Contains(message, node.Name) {
+				t.Fatalf("online details missing: %s", message)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("online callback failed")
+		}
+	})
 }

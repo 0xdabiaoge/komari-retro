@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/komari-monitor/komari/database/models"
+	messageevent "github.com/komari-monitor/komari/database/models/messageEvent"
 	"github.com/komari-monitor/komari/pkg/config"
 	"github.com/komari-monitor/komari/pkg/notification"
 	"github.com/komari-monitor/komari/utils/messageSender/telegram"
@@ -80,5 +81,21 @@ func TestNotificationTemplatesAndWireDelivery(t *testing.T) {
 	got := parseTemplate("{{client_count}}|{{client_list}}|{{ipv4}}|{{arch}}|{{status}}|{{client_name}}|{{client_ip}}|{{raw_time}}", empty)
 	if !strings.Contains(got, "0|无关联节点|未提供|未提供|服务器续费提醒") || strings.Contains(got, "{{") {
 		t.Fatalf("empty event fallback: %s", got)
+	}
+	// Use the event names emitted by real notifiers, not only preview aliases.
+	for kind, status := range map[string]string{
+		messageevent.Alert: "系统高负载预警", messageevent.Renew: "服务器自动续期",
+		messageevent.DReport: "每日流量报告", messageevent.WReport: "每周流量报告", messageevent.MReport: "每月流量报告",
+	} {
+		result := parseTemplate("{{status}}|{{emoji}}", models.EventMessage{Event: kind, Time: event.Time})
+		if !strings.Contains(result, status) || strings.Contains(result, "🔔") {
+			t.Errorf("production event %s not localized: %s", kind, result)
+		}
+	}
+	before := time.Now().Add(-time.Second)
+	zeroTime := parseTemplate("{{raw_time}}", models.EventMessage{Event: "Test"})
+	parsed, err := time.Parse(time.RFC3339, zeroTime)
+	if err != nil || parsed.Before(before) || parsed.After(time.Now().Add(time.Second)) {
+		t.Fatalf("missing event time did not use current time: %s", zeroTime)
 	}
 }

@@ -111,7 +111,7 @@ func CheckAndAutoRenewal(client models.Client) {
 				Clients: []models.Client{client},
 				Time:    time.Now(),
 				Emoji:   "🔄",
-				Message: fmt.Sprintf("• %s until %s\n", client.Name, newExpireTime.Format("2006-01-02")),
+				Message: fmt.Sprintf("节点 %s 的到期日已自动顺延至 %s。", client.Name, newExpireTime.Format("2006-01-02")),
 			})
 		}
 	}

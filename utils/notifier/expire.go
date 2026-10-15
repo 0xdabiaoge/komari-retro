@@ -43,6 +43,7 @@ func CheckExpire() {
 		}
 
 		var clientLeadToExpire []clientToExpireInfo
+		var eventClients []models.Client
 
 		for _, client := range clients_all {
 			clientExpireTime := client.ExpiredAt.ToTime()
@@ -61,16 +62,18 @@ func CheckExpire() {
 					Name:     client.Name,
 					DaysLeft: daysLeft,
 				})
+				eventClients = append(eventClients, client)
 			}
 		}
 
 		if len(clientLeadToExpire) > 0 {
 			message := ""
 			for _, clientInfo := range clientLeadToExpire {
-				message += fmt.Sprintf("• %s (%dd)\n", clientInfo.Name, clientInfo.DaysLeft)
+				message += fmt.Sprintf("• %s（%d 天后到期）\n", clientInfo.Name, clientInfo.DaysLeft)
 			}
 			messageSender.SendEvent(models.EventMessage{
 				Event:   messageevent.Expire,
+				Clients: eventClients,
 				Time:    time.Now(),
 				Message: message,
 				Emoji:   "⏳",
