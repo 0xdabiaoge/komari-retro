@@ -1,5 +1,6 @@
 """Run real browser acceptance against a disposable loopback server, never production."""
-import http.cookiejar,json,os,pathlib,secrets,socket,sqlite3,subprocess,sys,tempfile,time,urllib.request
+import http.cookiejar,json,os,pathlib,secrets,socket,sqlite3,subprocess,sys,tempfile,threading,time,urllib.parse,urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 root=pathlib.Path(__file__).resolve().parents[1]
 binary=pathlib.Path(sys.argv[1]).resolve()
@@ -26,6 +27,15 @@ env={key:value for key,value in os.environ.items() if not key.startswith('KOMARI
 env.update(KOMARI_DB_TYPE='sqlite',KOMARI_DB_FILE=str(data/'komari.db'),KOMARI_LISTEN='127.0.0.1:'+str(port),KOMARI_CLOUDFLARED_TOKEN='')
 log=(work/'server.log').open('w',encoding='utf-8')
 process=subprocess.Popen([str(binary),'server'],cwd=work,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+deliveries=[]
+class NotificationSink(BaseHTTPRequestHandler):
+ def do_POST(self):
+  deliveries.append((self.path,urllib.parse.parse_qs(self.rfile.read(int(self.headers['Content-Length'])).decode())))
+  self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers()
+  self.wfile.write(b'{"ok":true,"result":{"message_id":1}}')
+ def log_message(self,*args):pass
+sink=ThreadingHTTPServer(('127.0.0.1',0),NotificationSink)
+threading.Thread(target=sink.serve_forever,daemon=True).start()
 try:
  for _ in range(120):
   if process.poll() is not None:raise RuntimeError('fixture server exited; inspect private fixture log')
@@ -45,7 +55,9 @@ try:
  public=rpc('admin:addClient',{'name':'Visitor Node'})
  hidden=rpc('admin:addClient',{'name':'Hidden Operations Canary'})
  rpc('admin:editClient',{'uuid':hidden['uuid'],'hidden':True})
- rpc('admin:editSettings',{'theme':'default','theme_settings':{'guestDisplay':{'showPrice':True,'showExpiredAt':True}},'notification_enabled':False})
+ rpc('admin:setNotificationChannelConfiguration',{'id':'telegram','data':{'bot_token':'fixture-before-login','chat_id':'123456','endpoint':f'http://127.0.0.1:{sink.server_port}/bot','message_thread_id':''}})
+ rpc('admin:editSettings',{'notification_method':'telegram','notification_enabled':True})
+ rpc('admin:editSettings',{'theme':'default','theme_settings':{'guestDisplay':{'showPrice':True,'showExpiredAt':True}}})
  # The onboarding suite covers tours separately. Seed the real theme settings
  # before starting this browser so a first-login tour cannot cover the editor.
  theme_settings={'guestDisplay':{'showPrice':True,'showExpiredAt':True},'_komari_onboarding_v1':{'seen':['install','workbench','notifications','markets'],'workbenchOpened':True}}
@@ -55,8 +67,14 @@ try:
  info=work/'browser-fixture.json';info.write_text(json.dumps(fixture),encoding='utf-8')
  child_env={**os.environ,'PRIVATE_AUDIENCE_FIXTURE':str(info)}
  result=subprocess.run(['node',str(root/'script/private-audience.browser.mjs')],cwd=root,env=child_env,timeout=240)
+ if result.returncode==0:
+  assert len(deliveries)==1, 'Expected one isolated notification, with no duplicate mutation retry'
+  path,fields=deliveries[0]
+  assert path=='/botfixture-after-login/sendMessage'
+  assert fields['chat_id']==['7654321'] and '登录后立即保存验收' in fields['text'][0]
  sys.exit(result.returncode)
 finally:
+ sink.shutdown();sink.server_close()
  process.terminate()
  try:process.wait(timeout=15)
  except subprocess.TimeoutExpired:process.kill();process.wait(timeout=5)

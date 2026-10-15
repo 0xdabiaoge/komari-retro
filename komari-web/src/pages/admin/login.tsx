@@ -8,6 +8,7 @@ import ThemeSwitch from "@/components/ThemeSwitch";
 import ColorSwitch from "@/components/ColorSwitch";
 import { AccountProvider, useAccount } from "@/contexts/AccountContext";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { useRPC2 } from "@/contexts/RPC2Context";
 import Loading from "@/components/loading";
 import { resolveLoginRedirect } from "@/utils/loginRedirect";
 
@@ -20,6 +21,7 @@ const AdminLoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { account, loading, refresh } = useAccount();
+  const { client } = useRPC2();
   const { isLoading: publicInfoLoading } = usePublicInfo();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -60,6 +62,12 @@ const AdminLoginPage = () => {
       if (!response.ok) {
         throw new Error(payload.message || `HTTP ${response.status}`);
       }
+      // WebSocket cookies are fixed at the opening handshake. Replace the
+      // pre-login socket before SPA navigation can issue administrative writes.
+      client.disconnect();
+      void client.connect().catch(() => {
+        // HTTP RPC remains available if WebSocket reconnection fails.
+      });
       await refresh();
       navigate(redirect, { replace: true });
     } catch (loginError) {

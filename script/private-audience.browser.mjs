@@ -29,6 +29,29 @@ try {
   await owner.waitForURL('**/admin/dashboard', { timeout: 30000 });
   assert.equal((await rpc('admin:listClients')).length, 2);
   rows.push({ case: 'real-owner-password-entry-and-management', status: 'PASS' });
+  // Keep the SPA and its RPC client alive across login. A full page navigation
+  // would conceal a stale guest WebSocket by opening a fresh authenticated one.
+  await owner.evaluate(() => {
+    history.pushState({}, '', '/admin/notification/channels');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await owner.waitForURL('**/admin/notification/channels');
+  const freshTemplate = owner.getByRole('textbox', { name: '通知模板代码' });
+  await freshTemplate.fill('登录后立即保存验收 {{message}}');
+  await owner.getByRole('button', { name: '保存通知模板', exact: true }).click();
+  await owner.getByText('当前模板已保存', { exact: true }).waitFor();
+  assert.equal((await rpc('admin:getSettings')).notification_template, '登录后立即保存验收 {{message}}');
+  await owner.locator('#bot_token input').fill('fixture-after-login');
+  await owner.locator('#chat_id input').fill('7654321');
+  await owner.locator('.km-notification-channel-config').getByRole('button', { name: 'Save', exact: true }).click();
+  await owner.getByText('Success', { exact: true }).first().waitFor();
+  const savedChannel = await rpc('admin:getNotificationChannelConfiguration', { id: 'telegram' });
+  assert.equal(savedChannel.data.bot_token, 'fixture-after-login');
+  assert.equal(savedChannel.data.chat_id, '7654321');
+  await owner.getByRole('button', { name: 'Send test message', exact: true }).click();
+  await owner.getByText('Success', { exact: true }).first().waitFor();
+  assert.ok(!(await owner.locator('body').innerText()).includes('RPC Error -32041'));
+  rows.push({ case: 'fresh-login-spa-notification-write-and-isolated-delivery', status: 'PASS', external_messages_sent: 0 });
   // Exercise the editor without sending notifications or using real secrets.
   const originalTemplate='保留自定义模板\n{{client}}\n{{message}}';
   await rpc('admin:setNotificationChannelConfiguration',{id:'telegram',data:{bot_token:'fixture-bot-token',chat_id:'123456',endpoint:'http://127.0.0.1:9/bot',message_thread_id:''}});
