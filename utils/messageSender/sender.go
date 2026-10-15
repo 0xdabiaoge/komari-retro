@@ -3,7 +3,10 @@ package messageSender
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +15,7 @@ import (
 	"github.com/komari-monitor/komari/database/auditlog"
 	"github.com/komari-monitor/komari/database/models"
 	"github.com/komari-monitor/komari/pkg/config"
+	"github.com/komari-monitor/komari/pkg/notification"
 	"github.com/komari-monitor/komari/utils/messageSender/factory"
 )
 
@@ -107,7 +111,7 @@ func SendEvent(event models.EventMessage) error {
 	var err error
 	cfg, err := config.GetMany(map[string]any{
 		config.NotificationEnabledKey:  false,
-		config.NotificationTemplateKey: "{{emoji}} <b>【Komari 监控告警】</b> {{emoji}}\n━━━━━━━━━━━━━━━\n📌 <b>告警事件</b>: <code>{{status}}</code>\n🖥 <b>监控节点</b>: <b>{{client}}</b>\n🌐 <b>节点网络</b>: <code>{{ip}}</code> ({{region}})\n📝 <b>告警详情</b>: {{message}}\n⏰ <b>告警时间</b>: <code>{{time}}</code>\n━━━━━━━━━━━━━━━\n🔔 <i>来自 {{site_name}} 监控平台</i>",
+		config.NotificationTemplateKey: notification.DefaultTemplate,
 	})
 	if err != nil {
 		return err
@@ -147,11 +151,10 @@ func SendEvent(event models.EventMessage) error {
 }
 
 func escapeTelegramHTML(s string) string {
-	s = strings.ReplaceAll(s, "&", "&amp;")
-	s = strings.ReplaceAll(s, "<", "&lt;")
-	s = strings.ReplaceAll(s, ">", "&gt;")
-	return s
+	return html.EscapeString(s)
 }
+
+var templateVariable = regexp.MustCompile(`\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}`)
 
 func parseTemplate(messageTemplate string, event models.EventMessage) string {
 	clientNames := make([]string, 0, len(event.Clients))
@@ -159,6 +162,10 @@ func parseTemplate(messageTemplate string, event models.EventMessage) string {
 	clientRegions := make([]string, 0, len(event.Clients))
 	clientOSs := make([]string, 0, len(event.Clients))
 	clientGroups := make([]string, 0, len(event.Clients))
+	clientIPv4s := make([]string, 0, len(event.Clients))
+	clientIPv6s := make([]string, 0, len(event.Clients))
+	clientArchs := make([]string, 0, len(event.Clients))
+	clientLines := make([]string, 0, len(event.Clients))
 
 	for _, c := range event.Clients {
 		name := c.Name
@@ -174,6 +181,23 @@ func parseTemplate(messageTemplate string, event models.EventMessage) string {
 		if ip != "" {
 			clientIPs = append(clientIPs, ip)
 		}
+		if c.IPv4 != "" {
+			clientIPv4s = append(clientIPv4s, c.IPv4)
+		}
+		if c.IPv6 != "" {
+			clientIPv6s = append(clientIPv6s, c.IPv6)
+		}
+		if c.Arch != "" {
+			clientArchs = append(clientArchs, c.Arch)
+		}
+		line := "• " + name
+		if ip != "" {
+			line += " — " + ip
+		}
+		if c.Region != "" {
+			line += "（" + c.Region + "）"
+		}
+		clientLines = append(clientLines, line)
 
 		if c.Region != "" {
 			clientRegions = append(clientRegions, c.Region)
@@ -247,6 +271,8 @@ func parseTemplate(messageTemplate string, event models.EventMessage) string {
 		statusText = "月度流量报告 📑"
 	case "expire":
 		statusText = "服务器即将到期 ⏰"
+	case "renewal":
+		statusText = "服务器续费提醒 ⏰"
 	case "login":
 		statusText = "后台登录提醒 🔐"
 	case "test":
@@ -261,27 +287,47 @@ func parseTemplate(messageTemplate string, event models.EventMessage) string {
 	}
 
 	replaceMap := map[string]string{
-		"{{event}}":       escapeTelegramHTML(event.Event),
-		"{{status}}":      escapeTelegramHTML(statusText),
-		"{{status_text}}": escapeTelegramHTML(statusText),
-		"{{client}}":      escapeTelegramHTML(joinedClients),
-		"{{client_name}}": escapeTelegramHTML(joinedClients),
-		"{{ip}}":          escapeTelegramHTML(joinedIPs),
-		"{{client_ip}}":   escapeTelegramHTML(joinedIPs),
-		"{{region}}":      escapeTelegramHTML(joinedRegions),
-		"{{os}}":          escapeTelegramHTML(joinedOSs),
-		"{{group}}":       escapeTelegramHTML(joinedGroups),
-		"{{time}}":        timeStr,
-		"{{date}}":        dateStr,
-		"{{raw_time}}":    event.Time.Format(time.RFC3339),
-		"{{message}}":     escapeTelegramHTML(event.Message),
-		"{{emoji}}":       emoji,
-		"{{site_name}}":   escapeTelegramHTML(siteName),
-		"{{server}}":      escapeTelegramHTML(siteName),
+		"{{event}}":        escapeTelegramHTML(event.Event),
+		"{{status}}":       escapeTelegramHTML(statusText),
+		"{{status_text}}":  escapeTelegramHTML(statusText),
+		"{{client}}":       escapeTelegramHTML(joinedClients),
+		"{{client_name}}":  escapeTelegramHTML(joinedClients),
+		"{{ip}}":           escapeTelegramHTML(joinedIPs),
+		"{{client_ip}}":    escapeTelegramHTML(joinedIPs),
+		"{{region}}":       escapeTelegramHTML(joinedRegions),
+		"{{os}}":           escapeTelegramHTML(joinedOSs),
+		"{{group}}":        escapeTelegramHTML(joinedGroups),
+		"{{client_count}}": strconv.Itoa(len(event.Clients)),
+		"{{client_list}}":  escapeTelegramHTML(strings.Join(clientLines, "\n")),
+		"{{ipv4}}":         escapeTelegramHTML(joinOrUnknown(clientIPv4s)),
+		"{{ipv6}}":         escapeTelegramHTML(joinOrUnknown(clientIPv6s)),
+		"{{arch}}":         escapeTelegramHTML(joinOrUnknown(clientArchs)),
+		"{{timezone}}":     event.Time.Format("UTC-07:00"),
+		"{{time}}":         timeStr,
+		"{{date}}":         dateStr,
+		"{{raw_time}}":     event.Time.Format(time.RFC3339),
+		"{{message}}":      escapeTelegramHTML(event.Message),
+		"{{emoji}}":        escapeTelegramHTML(emoji),
+		"{{site_name}}":    escapeTelegramHTML(siteName),
+		"{{server}}":       escapeTelegramHTML(siteName),
 	}
-	result := messageTemplate
-	for placeholder, value := range replaceMap {
-		result = strings.ReplaceAll(result, placeholder, value)
+	if len(clientLines) == 0 {
+		replaceMap["{{client_list}}"] = "无关联节点"
 	}
-	return result
+	// Substitute once. A node name or message containing {{time}} is data, not
+	// another template, and must not depend on Go map iteration order.
+	return templateVariable.ReplaceAllStringFunc(messageTemplate, func(placeholder string) string {
+		key := "{{" + strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(placeholder, "{{"), "}}")) + "}}"
+		if value, ok := replaceMap[key]; ok {
+			return value
+		}
+		return placeholder
+	})
+}
+
+func joinOrUnknown(values []string) string {
+	if len(values) == 0 {
+		return "未提供"
+	}
+	return strings.Join(values, ", ")
 }

@@ -46,6 +46,11 @@ try:
  hidden=rpc('admin:addClient',{'name':'Hidden Operations Canary'})
  rpc('admin:editClient',{'uuid':hidden['uuid'],'hidden':True})
  rpc('admin:editSettings',{'theme':'default','theme_settings':{'guestDisplay':{'showPrice':True,'showExpiredAt':True}},'notification_enabled':False})
+ # The onboarding suite covers tours separately. Seed the real theme settings
+ # before starting this browser so a first-login tour cannot cover the editor.
+ theme_settings={'guestDisplay':{'showPrice':True,'showExpiredAt':True},'_komari_onboarding_v1':{'seen':['install','workbench','notifications','markets'],'workbenchOpened':True}}
+ theme_request=urllib.request.Request(base+'/api/admin/theme/settings?theme=default',data=json.dumps(theme_settings).encode(),headers={'Content-Type':'application/json'})
+ assert opener.open(theme_request).status==200
  fixture={'base':base,'entry':entry,'view':view,'share':share,'temporary':temporary,'username':creds['Username'],'password':creds['Password'],'node':public['uuid'],'hidden':hidden['uuid'],'work':str(work)}
  info=work/'browser-fixture.json';info.write_text(json.dumps(fixture),encoding='utf-8')
  child_env={**os.environ,'PRIVATE_AUDIENCE_FIXTURE':str(info)}

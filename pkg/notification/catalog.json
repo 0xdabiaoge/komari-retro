@@ -1,0 +1,138 @@
+{
+  "presets": [
+    {
+      "id": "card",
+      "name": "状态卡片",
+      "description": "突出状态与告警详情，适合日常通知",
+      "template": "{{emoji}} <b>{{site_name}} · {{status}}</b>\n<blockquote>{{message}}</blockquote>\n\n🖥 <b>节点</b>  {{client}}\n🌐 <b>地址</b>  <code>{{ip}}</code>\n📍 <b>地区</b>  {{region}} · {{group}}\n\n<i>{{time}} · {{timezone}}</i>"
+    },
+    {
+      "id": "operations",
+      "name": "运维详情",
+      "description": "完整展示网络、系统和分组信息",
+      "template": "{{emoji}} <b>{{status}}</b> · {{site_name}}\n━━━━━━━━━━━━━━\n🖥 <b>节点</b>：{{client}}\n📦 <b>数量</b>：{{client_count}} 台\n🌐 <b>IPv4</b>：<code>{{ipv4}}</code>\n🔗 <b>IPv6</b>：<code>{{ipv6}}</code>\n📍 <b>地区</b>：{{region}}\n🧩 <b>系统</b>：{{os}} · {{arch}}\n🗂 <b>分组</b>：{{group}}\n━━━━━━━━━━━━━━\n<blockquote>{{message}}</blockquote>\n<i>{{time}} · {{timezone}}</i>"
+    },
+    {
+      "id": "compact",
+      "name": "极简摘要",
+      "description": "减少通知占屏，适合手机与高频事件",
+      "template": "{{emoji}} <b>{{status}}</b> · {{client}}\n{{message}}\n<i>{{site_name}} · {{time}}</i>"
+    },
+    {
+      "id": "batch",
+      "name": "多节点汇总",
+      "description": "逐行对应节点与地址，避免多节点信息混淆",
+      "template": "{{emoji}} <b>{{site_name}} · {{status}}</b>\n涉及 <b>{{client_count}}</b> 台节点\n\n{{client_list}}\n\n<blockquote>{{message}}</blockquote>\n<i>{{time}} · {{timezone}}</i>"
+    }
+  ],
+  "variables": [
+    {
+      "key": "emoji",
+      "label": "状态图标",
+      "description": "随告警类型变化的图标",
+      "group": "告警内容"
+    },
+    {
+      "key": "status",
+      "label": "状态文本",
+      "description": "中文状态说明",
+      "group": "告警内容"
+    },
+    {
+      "key": "message",
+      "label": "告警详情",
+      "description": "事件实际提供的详细信息",
+      "group": "告警内容"
+    },
+    {
+      "key": "event",
+      "label": "事件代码",
+      "description": "offline、online、load 等原始代码",
+      "group": "告警内容"
+    },
+    {
+      "key": "client",
+      "label": "节点名称",
+      "description": "多个节点以逗号分隔",
+      "group": "节点信息"
+    },
+    {
+      "key": "client_count",
+      "label": "节点数量",
+      "description": "本次事件关联的节点数",
+      "group": "节点信息"
+    },
+    {
+      "key": "client_list",
+      "label": "节点列表",
+      "description": "逐行展示节点、地址和地区",
+      "group": "节点信息"
+    },
+    {
+      "key": "ip",
+      "label": "首选地址",
+      "description": "优先 IPv4，没有时使用 IPv6",
+      "group": "节点信息"
+    },
+    {
+      "key": "ipv4",
+      "label": "IPv4 地址",
+      "description": "事件节点的 IPv4 地址",
+      "group": "节点信息"
+    },
+    {
+      "key": "ipv6",
+      "label": "IPv6 地址",
+      "description": "事件节点的 IPv6 地址",
+      "group": "节点信息"
+    },
+    {
+      "key": "region",
+      "label": "所属地区",
+      "description": "事件节点的地区",
+      "group": "节点信息"
+    },
+    {
+      "key": "os",
+      "label": "操作系统",
+      "description": "事件节点的系统名称",
+      "group": "节点信息"
+    },
+    {
+      "key": "arch",
+      "label": "系统架构",
+      "description": "如 amd64、arm64",
+      "group": "节点信息"
+    },
+    {
+      "key": "group",
+      "label": "节点分组",
+      "description": "事件节点的分组",
+      "group": "节点信息"
+    },
+    {
+      "key": "time",
+      "label": "触发时间",
+      "description": "按事件时间自带的时区显示",
+      "group": "时间与站点"
+    },
+    {
+      "key": "date",
+      "label": "触发日期",
+      "description": "年-月-日",
+      "group": "时间与站点"
+    },
+    {
+      "key": "timezone",
+      "label": "事件时区",
+      "description": "如 UTC+08:00",
+      "group": "时间与站点"
+    },
+    {
+      "key": "site_name",
+      "label": "站点名称",
+      "description": "当前站点的名称",
+      "group": "时间与站点"
+    }
+  ]
+}

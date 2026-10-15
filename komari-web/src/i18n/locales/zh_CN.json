@@ -1359,10 +1359,14 @@
       "provider_fields_description": "详细设置您选择的信息发送渠道",
       "provider_settings_fetch_failed": "加载通知设置失败",
       "telegram": {
-        "bot_token": "Telegram Bot Token",
-        "chat_id": "Chat ID",
-        "endpoint": "请求端点",
-        "endpoint_help": "Telegram Bot API 的请求端点，通常为 `https://api.telegram.org/bot`"
+        "bot_token": "机器人密钥",
+        "chat_id": "接收会话 ID",
+        "endpoint": "接口地址",
+        "endpoint_help": "通常保留 https://api.telegram.org/bot；使用自建 Bot API 或可信代理时再修改。",
+        "bot_token_help": "从 BotFather 获取的机器人 Token。请妥善保管，不要公开截图。",
+        "chat_id_help": "私聊填写用户的正数 ID，并先向机器人发送 /start；群组或频道使用对应的负数 ID，并确保机器人有发送权限。",
+        "message_thread_id": "群组话题 ID（可选）",
+        "message_thread_id_help": "仅发送到已开启话题功能的超级群组时填写；私聊和普通群组留空。"
       },
       "template": "消息通知模板",
       "template_description": "Komari 将按照消息通知模板发送通知",

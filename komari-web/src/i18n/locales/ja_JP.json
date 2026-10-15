@@ -1356,10 +1356,14 @@
       "provider_fields_description": "選択した情報送信チャネルの詳細設定",
       "provider_settings_fetch_failed": "通知設定の読み込みに失敗しました",
       "telegram": {
-        "bot_token": "Telegramボットトークン",
-        "chat_id": "チャットID",
-        "endpoint": "リクエストエンドポイント",
-        "endpoint_help": "Telegram ボット API のリクエストエンドポイント、通常は `https://api.telegram.org/bot`"
+        "bot_token": "Bot token",
+        "chat_id": "Recipient chat ID",
+        "endpoint": "API endpoint",
+        "endpoint_help": "Usually https://api.telegram.org/bot. Change only for a self-hosted Bot API or trusted proxy.",
+        "bot_token_help": "Token issued by BotFather. Keep it private and out of screenshots.",
+        "chat_id_help": "For a private chat, use the positive user ID and send /start first. For a group/channel, use its negative ID and grant the bot permission to post.",
+        "message_thread_id": "Topic ID (optional)",
+        "message_thread_id_help": "Only for topics in forum-enabled supergroups. Leave empty for private chats and regular groups."
       },
       "template": "メッセージ通知テンプレート",
       "template_description": "Komariはメッセージ通知テンプレートに従って通知を送信します",

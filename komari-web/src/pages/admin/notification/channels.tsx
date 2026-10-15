@@ -123,7 +123,19 @@ const NotificationSettings = () => {
     (channel) => channel.id === currentChannel,
   );
   const items = Array.isArray(configuration?.data)
-    ? (configuration.data as ConfigFormItem[])
+    ? (configuration.data as ConfigFormItem[]).map((item) =>
+        currentChannel === "telegram" &&
+        ["bot_token", "chat_id", "message_thread_id", "endpoint"].includes(
+          item.key || "",
+        )
+          ? {
+              ...item,
+              name: t(`settings.notification.telegram.${item.key}`),
+              help: t(`settings.notification.telegram.${item.key}_help`),
+              secret: item.key === "bot_token",
+            }
+          : item,
+      )
     : [];
 
   const saveConfiguration = async () => {
@@ -160,20 +172,14 @@ const NotificationSettings = () => {
         description={t("settings.notification.enable_description")}
         defaultChecked={settings.notification_enabled}
         onChange={async (checked) => {
-          await updateSettingsWithToast(
-            { notification_enabled: checked },
-            t,
-          );
+          await updateSettingsWithToast({ notification_enabled: checked }, t);
         }}
         className="km-page-admin-settings-notification km-setting-card"
       />
       <NotificationTemplateCard
         defaultValue={settings.notification_template}
         onSave={async (value) => {
-          await updateSettingsWithToast(
-            { notification_template: value },
-            t,
-          );
+          await updateSettingsWithToast({ notification_template: value }, t);
         }}
       />
       <SettingCardSelect
@@ -183,10 +189,7 @@ const NotificationSettings = () => {
         value={currentChannel}
         OnSave={async (value) => {
           if (value === currentChannel) return;
-          await updateSettingsWithToast(
-            { notification_method: value },
-            t,
-          );
+          await updateSettingsWithToast({ notification_method: value }, t);
           setCurrentChannel(value);
         }}
       />
@@ -239,7 +242,7 @@ const NotificationSettings = () => {
         }}
         className="km-setting-card"
       >
-        GO
+        {t("settings.notification.test_title")}
       </SettingCardButton>
     </>
   );

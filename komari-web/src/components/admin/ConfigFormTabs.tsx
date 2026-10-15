@@ -28,6 +28,7 @@ export interface ConfigFormItem {
   options?: string;
   default?: unknown;
   required?: boolean;
+  secret?: boolean;
 }
 
 interface Group {
@@ -175,6 +176,9 @@ const ConfigFormTabs = ({
   const { call } = useRPC2Call();
   const [activeTab, setActiveTab] = useState(0);
   const [pingTasks, setPingTasks] = useState<PingTaskResponse[]>([]);
+  const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(
+    new Set(),
+  );
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastTabRef = useRef(0);
@@ -447,11 +451,34 @@ const ConfigFormTabs = ({
             <SettingCardShortTextInput
               title={title}
               description={description}
+              type={
+                item.secret && !revealedSecrets.has(key) ? "password" : "text"
+              }
+              autoComplete={item.secret ? "new-password" : undefined}
               value={value !== undefined ? String(value) : ""}
               required={item.required}
               showSaveButton={false}
               onChange={(e) => onValueChange(key, e.target.value)}
-            />
+            >
+              {item.secret ? (
+                <Button
+                  type="button"
+                  size="1"
+                  variant="soft"
+                  aria-pressed={revealedSecrets.has(key)}
+                  onClick={() =>
+                    setRevealedSecrets((current) => {
+                      const next = new Set(current);
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    })
+                  }
+                >
+                  {revealedSecrets.has(key) ? "隐藏密钥" : "显示密钥"}
+                </Button>
+              ) : null}
+            </SettingCardShortTextInput>
           </Box>
         );
     }
@@ -479,9 +506,7 @@ const ConfigFormTabs = ({
   return (
     <Flex
       direction="column"
-      className={
-        fillHeight ? `h-full min-h-0 ${className}` : className
-      }
+      className={fillHeight ? `h-full min-h-0 ${className}` : className}
     >
       {/* titlearea：固定顶部，不随滚动移动 */}
       <Box className="shrink-0 mb-5">

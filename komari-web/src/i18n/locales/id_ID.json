@@ -1356,10 +1356,14 @@
       "provider_fields_description": "Pengaturan detail untuk saluran pengiriman informasi yang Anda pilih",
       "provider_settings_fetch_failed": "Gagal memuat pengaturan notifikasi",
       "telegram": {
-        "bot_token": "Token Bot Telegram",
-        "chat_id": "ID Chat",
-        "endpoint": "Endpoint Permintaan",
-        "endpoint_help": "Endpoint permintaan untuk API Bot Telegram, biasanya `https://api.telegram.org/bot`"
+        "bot_token": "Bot token",
+        "chat_id": "Recipient chat ID",
+        "endpoint": "API endpoint",
+        "endpoint_help": "Usually https://api.telegram.org/bot. Change only for a self-hosted Bot API or trusted proxy.",
+        "bot_token_help": "Token issued by BotFather. Keep it private and out of screenshots.",
+        "chat_id_help": "For a private chat, use the positive user ID and send /start first. For a group/channel, use its negative ID and grant the bot permission to post.",
+        "message_thread_id": "Topic ID (optional)",
+        "message_thread_id_help": "Only for topics in forum-enabled supergroups. Leave empty for private chats and regular groups."
       },
       "template": "Template pemberitahuan pesan",
       "template_description": "Komari akan mengirim pemberitahuan sesuai dengan template pemberitahuan pesan",
