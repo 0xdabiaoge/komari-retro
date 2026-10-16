@@ -12,10 +12,180 @@ import NodeSelectorDialog from "@/components/NodeSelectorDialog";
 import { usePingTask } from "@/contexts/PingTaskContext";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import {
-  filterPingPresets,
+  groupPingPresets,
+  normalizePingPresetEdit,
+  pingPresetTargetKey,
   togglePingPresetSelection,
+  type PingPreset,
   type PingPresetCatalog,
+  type PingPresetOverride,
 } from "@/utils/pingPresets";
+
+function PresetTarget({
+  preset,
+  checked,
+  existing,
+  customized,
+  editing,
+  onCheck,
+  onEdit,
+  onApply,
+  onReset,
+}: {
+  preset: PingPreset;
+  checked: boolean;
+  existing: boolean;
+  customized: boolean;
+  editing: boolean;
+  onCheck: (checked: boolean) => void;
+  onEdit: (editing: boolean) => void;
+  onApply: (edit: PingPresetOverride) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState<PingPresetOverride>(preset);
+  const [error, setError] = useState("");
+  return (
+    <div className="min-w-0" data-testid={`preset-${preset.id}`}>
+      <div className="flex items-start gap-2">
+        <label
+          className="flex flex-1 min-w-0 items-start gap-2 text-xs cursor-pointer"
+          title={preset.note}
+        >
+          <Checkbox
+            aria-label={preset.name}
+            className="mt-0.5 shrink-0"
+            checked={checked}
+            onCheckedChange={(v) => onCheck(v === true)}
+          />
+          <span className="min-w-0">
+            <span className="font-medium break-words">{preset.name}</span>{" "}
+            <span className="text-muted-foreground">
+              {preset.type.toUpperCase()}
+            </span>
+            {customized && (
+              <span className="ml-1 text-amber-600">已自定义</span>
+            )}
+            {existing && <span className="ml-1 text-sky-600">已存在</span>}
+            <code className="block break-all text-[10px] text-muted-foreground mt-0.5">
+              {preset.target}
+            </code>
+          </span>
+        </label>
+        <Button
+          type="button"
+          variant="ghost"
+          size="1"
+          aria-label={`自定义编辑${preset.name}`}
+          onClick={() => {
+            setDraft(preset);
+            setError("");
+            onEdit(!editing);
+          }}
+        >
+          编辑
+        </Button>
+      </div>
+      {editing && (
+        <div
+          className="mt-2 rounded-md border bg-muted/30 p-2 flex flex-col gap-2"
+          role="group"
+          aria-label="自定义探测目标"
+        >
+          <label className="text-xs">
+            探测名称
+            <TextField.Root
+              aria-label="探测名称"
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+          </label>
+          <Select.Root
+            value={draft.type}
+            onValueChange={(type) =>
+              setDraft({ ...draft, type: type as PingPreset["type"] })
+            }
+          >
+            <Select.Trigger aria-label="探测方式" />
+            <Select.Content position="popper">
+              <Select.Item value="icmp">ICMP</Select.Item>
+              <Select.Item value="tcp">TCP</Select.Item>
+              <Select.Item value="http">HTTP</Select.Item>
+            </Select.Content>
+          </Select.Root>
+          <label className="text-xs">
+            探测地址
+            <TextField.Root
+              aria-label="探测地址"
+              value={draft.target}
+              onChange={(e) => setDraft({ ...draft, target: e.target.value })}
+              placeholder={
+                draft.type === "tcp"
+                  ? "域名:端口 或 [IPv6]:端口"
+                  : draft.type === "http"
+                    ? "https://example.com"
+                    : "IP 或域名"
+              }
+            />
+          </label>
+          {error && (
+            <p role="alert" className="text-xs text-red-600">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            {customized && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="1"
+                onClick={() => {
+                  onReset();
+                  onEdit(false);
+                }}
+              >
+                恢复默认
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="soft"
+              size="1"
+              onClick={() => onEdit(false)}
+            >
+              取消编辑
+            </Button>
+            <Button
+              type="button"
+              size="1"
+              onClick={() => {
+                try {
+                  onApply(normalizePingPresetEdit(draft));
+                  onEdit(false);
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "无效的探测目标");
+                }
+              }}
+            >
+              应用修改并选中
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function selectionState(
+  targets: PingPreset[],
+  selected: string[],
+): boolean | "indeterminate" {
+  const count = targets.filter((p) => selected.includes(p.id)).length;
+  return count === targets.length && count > 0
+    ? true
+    : count > 0
+      ? "indeterminate"
+      : false;
+}
 
 export default function PingPresetDialog() {
   const { callViaHTTP } = useRPC2Call();
@@ -25,10 +195,11 @@ export default function PingPresetDialog() {
     [loading, setLoading] = useState(false);
   const [catalog, setCatalog] = useState<PingPresetCatalog | null>(null),
     [error, setError] = useState("");
-  const [group, setGroup] = useState("mainland"),
-    [family, setFamily] = useState("ipv4"),
-    [carrier, setCarrier] = useState("all"),
-    [search, setSearch] = useState("");
+  const [group, setGroup] = useState("mainland");
+  const [overrides, setOverrides] = useState<
+    Record<string, PingPresetOverride>
+  >({});
+  const [editing, setEditing] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]),
     [clients, setClients] = useState<string[]>([]),
     [defaultOn, setDefaultOn] = useState(false),
@@ -56,21 +227,15 @@ export default function PingPresetDialog() {
       cancelled = true;
     };
   }, [open, catalog, callViaHTTP]);
-  const visible = useMemo(
+  const regions = useMemo(
     () =>
-      filterPingPresets(
-        catalog?.entries ?? [],
+      groupPingPresets(
+        (catalog?.entries ?? []).map((p) => ({ ...p, ...overrides[p.id] })),
         group,
-        family,
-        group === "mainland" ? carrier : "all",
-        search,
       ),
-    [catalog, group, family, carrier, search],
+    [catalog, overrides, group],
   );
-  const regions = [...new Set(visible.map((p) => p.region))];
-  const allChecked =
-    visible.length > 0 && visible.every((p) => selected.includes(p.id));
-  const someChecked = visible.some((p) => selected.includes(p.id));
+  const visible = regions.flatMap((r) => r.targets);
   const seconds = Number(interval),
     validInterval =
       Number.isInteger(seconds) && seconds >= 10 && seconds <= 86400;
@@ -78,13 +243,23 @@ export default function PingPresetDialog() {
     selected.length > 0 &&
     (clients.length > 0 || defaultOn) &&
     validInterval &&
-    !saving;
+    !saving &&
+    !editing;
   const estimatedDaily = validInterval
     ? Math.round((selected.length * clients.length * 86400) / seconds)
     : 0;
   const existing = new Set(
-    (pingTasks ?? []).map((p) => `${p.type}|${p.target}`.toLowerCase()),
+    (pingTasks ?? []).map((p) => pingPresetTargetKey(p.type, p.target)),
   );
+  function changeOpen(value: boolean) {
+    if (saving) return;
+    if (!value) {
+      setSelected([]);
+      setOverrides({});
+      setEditing(null);
+    }
+    setOpen(value);
+  }
   async function save() {
     if (!canSave) return;
     setSaving(true);
@@ -95,6 +270,7 @@ export default function PingPresetDialog() {
           clients: string[];
           default_on: boolean;
           interval: number;
+          overrides: PingPresetOverride[];
         },
         { created: number; updated: number; unchanged: number }
       >("admin:importPingPresets", {
@@ -102,12 +278,17 @@ export default function PingPresetDialog() {
         clients,
         default_on: defaultOn,
         interval: seconds,
+        overrides: selected.flatMap((id) =>
+          overrides[id] ? [overrides[id]] : [],
+        ),
       });
       toast.success(
         `已保存：新增 ${result.created}，合并 ${result.updated}，保持不变 ${result.unchanged}`,
       );
       refresh();
       setSelected([]);
+      setOverrides({});
+      setEditing(null);
       setOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "预设保存失败");
@@ -116,12 +297,7 @@ export default function PingPresetDialog() {
     }
   }
   return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={(v) => {
-        if (!saving) setOpen(v);
-      }}
-    >
+    <Dialog.Root open={open} onOpenChange={changeOpen}>
       <Dialog.Trigger>
         <Button variant="soft">批量添加预设</Button>
       </Dialog.Trigger>
@@ -132,7 +308,8 @@ export default function PingPresetDialog() {
       >
         <Dialog.Title>选择延迟探测预设</Dialog.Title>
         <Dialog.Description size="2" color="gray">
-          勾选目标后统一选择服务器和间隔，再保存。目录不会自动启用。
+          在各地区卡片中勾选 IPv4、IPv6
+          目标，可逐项编辑名称、地址和探测方式，再统一选择服务器和间隔保存。
         </Dialog.Description>
         <Flex direction="column" gap="3" className="mt-4">
           <div
@@ -151,67 +328,34 @@ export default function PingPresetDialog() {
                 variant={group === id ? "solid" : "soft"}
                 onClick={() => {
                   setGroup(id);
-                  setFamily("ipv4");
-                  setSearch("");
+                  setEditing(null);
                 }}
               >
                 {label}
               </Button>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <TextField.Root
-              aria-label="搜索探测预设"
-              placeholder="搜索省份、地区、运营商或地址"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-40"
-            />
-            <Select.Root value={family} onValueChange={setFamily}>
-              <Select.Trigger aria-label="IP 协议" />
-              <Select.Content>
-                <Select.Item value="ipv4">IPv4</Select.Item>
-                <Select.Item value="ipv6">IPv6</Select.Item>
-                <Select.Item value="all">IPv4 + IPv6</Select.Item>
-              </Select.Content>
-            </Select.Root>
-            {group === "mainland" && (
-              <Select.Root value={carrier} onValueChange={setCarrier}>
-                <Select.Trigger aria-label="运营商" />
-                <Select.Content>
-                  <Select.Item value="all">全部运营商</Select.Item>
-                  {["电信", "联通", "移动"].map((v) => (
-                    <Select.Item key={v} value={v}>
-                      {v}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            )}
-          </div>
           <div className="rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-            大陆预设采用 TCP 80 端口；IPv6 需服务器具备可用 IPv6。Google 与
-            Cloudflare 按 ICMP 探测，其 Anycast
-            地址不代表固定城市。海外地区使用服务商公开测试地址。
+            大陆内置目标采用 TCP 80 端口；IPv6 需服务器具备可用 IPv6。Google 与
+            Cloudflare 默认按 ICMP 探测，其 Anycast
+            地址不代表固定城市。海外地区使用服务商公开测试地址。目录不会自动启用。
           </div>
           <Flex justify="between" align="center" gap="2" wrap="wrap">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
-                aria-label="全选当前筛选结果"
-                checked={
-                  allChecked ? true : someChecked ? "indeterminate" : false
-                }
-                onCheckedChange={(checked) =>
+                aria-label="全选当前地区目标"
+                checked={selectionState(visible, selected)}
+                onCheckedChange={(v) =>
                   setSelected((s) =>
                     togglePingPresetSelection(
                       s,
                       visible.map((p) => p.id),
-                      checked === true,
+                      v === true,
                     ),
                   )
                 }
               />
-              全选当前结果（{visible.length}）
+              全选当前地区（{visible.length}）
             </label>
             <span className="text-sm">
               已选 {selected.length} 个目标{" "}
@@ -226,7 +370,7 @@ export default function PingPresetDialog() {
             </span>
           </Flex>
           <div
-            className="max-h-[42dvh] overflow-y-auto rounded-lg border p-3"
+            className="max-h-[48dvh] overflow-y-auto rounded-lg border p-3"
             aria-label="预设目标列表"
           >
             {loading ? (
@@ -235,78 +379,87 @@ export default function PingPresetDialog() {
               <p role="alert" className="text-sm text-red-600">
                 {error}
               </p>
-            ) : !visible.length ? (
-              <p className="text-sm text-muted-foreground p-4">
-                没有匹配的预设
-              </p>
+            ) : !regions.length ? (
+              <p className="text-sm text-muted-foreground p-4">暂无预设</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                {regions.map((region) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
+                {regions.map(({ region, targets, families }) => (
                   <section
                     key={region}
                     className="min-w-0 rounded-lg border p-3"
+                    aria-label={`${region}探测预设`}
                   >
-                    <label className="flex items-center gap-2 font-semibold text-sm mb-2">
+                    <label className="flex items-center gap-2 font-semibold text-sm mb-3">
                       <Checkbox
                         aria-label={`选择${region}全部目标`}
-                        checked={visible
-                          .filter((p) => p.region === region)
-                          .every((p) => selected.includes(p.id))}
-                        onCheckedChange={(checked) =>
+                        checked={selectionState(targets, selected)}
+                        onCheckedChange={(v) =>
                           setSelected((s) =>
                             togglePingPresetSelection(
                               s,
-                              visible
-                                .filter((p) => p.region === region)
-                                .map((p) => p.id),
-                              checked === true,
+                              targets.map((p) => p.id),
+                              v === true,
                             ),
                           )
                         }
                       />
                       {region}
                     </label>
-                    <div className="flex flex-col gap-2">
-                      {visible
-                        .filter((p) => p.region === region)
-                        .map((p) => (
-                          <label
-                            key={p.id}
-                            className="flex items-start gap-2 text-xs cursor-pointer"
-                            title={p.note}
-                          >
+                    <div className="flex flex-col gap-3">
+                      {families.map(({ family, targets }) => (
+                        <div
+                          key={family}
+                          className="min-w-0 flex flex-col gap-2"
+                        >
+                          <label className="flex items-center gap-2 text-xs font-semibold rounded bg-muted/40 p-1.5">
                             <Checkbox
-                              aria-label={p.name}
-                              className="mt-0.5 shrink-0"
-                              checked={selected.includes(p.id)}
-                              onCheckedChange={(checked) =>
+                              aria-label={`选择${region}${family === "ipv4" ? "IPv4" : "IPv6"}全部目标`}
+                              checked={selectionState(targets, selected)}
+                              onCheckedChange={(v) =>
                                 setSelected((s) =>
                                   togglePingPresetSelection(
                                     s,
-                                    [p.id],
-                                    checked === true,
+                                    targets.map((p) => p.id),
+                                    v === true,
                                   ),
                                 )
                               }
                             />
-                            <span className="min-w-0">
-                              <span className="font-medium">{p.name}</span>{" "}
-                              <span className="text-muted-foreground">
-                                {p.type.toUpperCase()}
-                              </span>
-                              {existing.has(
-                                `${p.type}|${p.target}`.toLowerCase(),
-                              ) && (
-                                <span className="text-sky-600 ml-1">
-                                  已存在
-                                </span>
-                              )}
-                              <code className="block break-all text-[10px] text-muted-foreground mt-0.5">
-                                {p.target}
-                              </code>
-                            </span>
+                            {family === "ipv4" ? "IPv4" : "IPv6"}
                           </label>
-                        ))}
+                          {targets.map((p) => (
+                            <PresetTarget
+                              key={p.id}
+                              preset={p}
+                              checked={selected.includes(p.id)}
+                              existing={existing.has(
+                                pingPresetTargetKey(p.type, p.target),
+                              )}
+                              customized={!!overrides[p.id]}
+                              editing={editing === p.id}
+                              onCheck={(v) =>
+                                setSelected((s) =>
+                                  togglePingPresetSelection(s, [p.id], v),
+                                )
+                              }
+                              onEdit={(v) => setEditing(v ? p.id : null)}
+                              onApply={(edit) => {
+                                setOverrides((s) => ({ ...s, [p.id]: edit }));
+                                setSelected((s) =>
+                                  togglePingPresetSelection(s, [p.id], true),
+                                );
+                              }}
+                              onReset={() =>
+                                setOverrides((s) => {
+                                  const next = { ...s };
+                                  delete next[p.id];
+                                  return next;
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      ))}
                     </div>
                   </section>
                 ))}
@@ -354,7 +507,7 @@ export default function PingPresetDialog() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            同类型、同目标的任务会合并服务器并保留原名称、间隔和历史数据，不会重复创建；已开启的默认启用设置保持不变。目录日期：
+            同类型、同目标的任务会合并服务器并保留原名称、间隔和历史数据，不会重复创建；已开启的默认启用设置保持不变。自定义编辑只应用到本次导入的任务，不会改写内置目录。目录日期：
             {catalog?.updated_at ?? "—"}。
           </p>
           {!validInterval && (

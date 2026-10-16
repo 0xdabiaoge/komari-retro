@@ -113,3 +113,83 @@ func TestPingPresetFullCatalogCanBeSavedWithoutActiveClients(t *testing.T) {
 		}
 	}
 }
+
+func TestPingPresetCustomEditImportAndReplay(t *testing.T) {
+	db := presetDB(t)
+	edit := PingPresetOverride{ID: "global-google-ipv4", Name: " 自定义地址 ", Type: "http", Target: " https://example.com/check "}
+	ids := []string{edit.ID, "global-cloudflare-ipv4"}
+	result, err := importPingPresets(db, ids, []string{"node-a"}, false, 60, edit)
+	if err != nil || result.Created != 2 {
+		t.Fatalf("custom import: %+v %v", result, err)
+	}
+	var task models.PingTask
+	db.First(&task, result.TaskIDs[0])
+	if task.Name != "自定义地址" || task.Type != "http" || task.Target != "https://example.com/check" {
+		t.Fatalf("custom edit lost: %+v", task)
+	}
+	edit.Name = "重复导入不应覆盖现有任务"
+	result, err = importPingPresets(db, ids, []string{"node-b"}, false, 30, edit)
+	if err != nil || result.Created != 0 || result.Updated != 2 {
+		t.Fatalf("custom replay: %+v %v", result, err)
+	}
+	db.First(&task, task.Id)
+	if task.Name != "自定义地址" || task.Interval != 60 || len(task.Clients) != 2 {
+		t.Fatalf("history/config overwritten: %+v", task)
+	}
+	original, _ := pingpresets.Find(edit.ID)
+	if original.Target != "8.8.8.8" || original.Type != "icmp" {
+		t.Fatal("custom import mutated the built-in catalog")
+	}
+}
+
+func TestPingPresetCustomEditValidationIsAtomic(t *testing.T) {
+	db := presetDB(t)
+	valid := PingPresetOverride{ID: "global-google-ipv4", Name: "自定义", Type: "icmp", Target: "9.9.9.9"}
+	for _, edits := range [][]PingPresetOverride{
+		{valid, valid},
+		{{ID: "global-cloudflare-ipv6", Name: "未勾选", Type: "icmp", Target: "::1"}},
+		{{ID: valid.ID, Name: "", Type: "icmp", Target: "9.9.9.9"}},
+		{{ID: valid.ID, Name: "错误端口", Type: "tcp", Target: "example.com:99999"}},
+		{{ID: valid.ID, Name: "无端口", Type: "tcp", Target: "example.com"}},
+		{{ID: valid.ID, Name: "不支持的协议", Type: "udp", Target: "example.com:80"}},
+		{{ID: valid.ID, Name: "错误 ICMP", Type: "icmp", Target: "https://example.com"}},
+		{{ID: valid.ID, Name: "错误 HTTP", Type: "http", Target: "ftp://example.com"}},
+		{{ID: valid.ID, Name: "包含凭据", Type: "http", Target: "https://user:pass@example.com"}},
+	} {
+		if _, err := importPingPresets(db, []string{valid.ID, "global-cloudflare-ipv4"}, []string{"node-a"}, false, 60, edits...); err == nil {
+			t.Fatalf("invalid edit accepted: %+v", edits)
+		}
+		var count int64
+		db.Model(&models.PingTask{}).Count(&count)
+		if count != 0 {
+			t.Fatal("invalid edit partially persisted tasks")
+		}
+	}
+	for _, edit := range []PingPresetOverride{
+		{ID: valid.ID, Name: "IPv6 ICMP", Type: "icmp", Target: "2001:4860:4860::8888"},
+		{ID: valid.ID, Name: "IPv6 TCP", Type: "tcp", Target: "[2001:db8::1]:443"},
+		{ID: valid.ID, Name: "HTTP query", Type: "http", Target: "https://example.com/check?q=1"},
+	} {
+		if err := validatePingPresetOverride(edit); err != nil {
+			t.Fatalf("valid edit rejected: %+v %v", edit, err)
+		}
+	}
+}
+
+func TestPingPresetCustomHTTPPathsAreNotMerged(t *testing.T) {
+	db := presetDB(t)
+	ids := []string{"global-google-ipv4", "global-cloudflare-ipv4"}
+	edits := []PingPresetOverride{
+		{ID: ids[0], Name: "大写路径", Type: "http", Target: "https://example.com/Status?key=A"},
+		{ID: ids[1], Name: "小写路径", Type: "http", Target: "https://example.com/status?key=A"},
+	}
+	result, err := importPingPresets(db, ids, []string{"node-a"}, false, 60, edits...)
+	if err != nil || result.Created != 2 {
+		t.Fatalf("distinct HTTP paths merged: %+v %v", result, err)
+	}
+	edits[0].Target = "https://EXAMPLE.com/Status?key=A"
+	result, err = importPingPresets(db, ids[:1], []string{"node-a"}, false, 60, edits[:1]...)
+	if err != nil || result.Created != 0 || result.Unchanged != 1 {
+		t.Fatalf("HTTP hostname case did not merge: %+v %v", result, err)
+	}
+}

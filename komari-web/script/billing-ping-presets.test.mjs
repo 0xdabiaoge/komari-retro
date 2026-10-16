@@ -19,12 +19,28 @@ test('canonical currencies distinguish yen/yuan and preserve existing unknown va
  assert.equal(billing.formatBillingAmount('JPY',500),'JP¥500');assert.equal(billing.formatBillingAmount('CNY',500),'¥500');assert.equal(billing.formatBillingAmount('$',5),'$5');assert.equal(billing.normalizeBillingCurrency('legacy-unit'),'legacy-unit');
  assert.equal(new Set(currencies.map(c=>c.code)).size,currencies.length);
 });
-test('preset filters and selection retain hidden selections and never duplicate ids',()=>{
+test('billing offers exactly five cycles and never silently shortens legacy periods',()=>{
+ assert.deepEqual(billing.BILLING_CYCLES.map(p=>p.label),['天','月','季','年','免费/一次性']);
+ assert.deepEqual(billing.BILLING_CYCLES.map(p=>p.value),['1','30','92','365','-1']);
+ for(const [days,value] of [[1,'1'],[0,'30'],[30,'30'],[90,'92'],[92,'92'],[366,'365'],[-1,'-1'],[7,''],[184,''],[730,'']])assert.equal(billing.billingCycleOption(days),value);
+});
+
+test('region cards expose both IP families and selection stays independent across groups',()=>{
  const catalog=JSON.parse(fs.readFileSync(new URL('../../pkg/pingpresets/catalog.json',import.meta.url),'utf8')).entries;
- assert.equal(presets.filterPingPresets(catalog,'mainland','ipv4','all','').length,93);
- assert.equal(presets.filterPingPresets(catalog,'mainland','ipv6','all','').length,93);
- assert.equal(presets.filterPingPresets(catalog,'mainland','all','电信','北京').length,2);
- assert.equal(presets.filterPingPresets(catalog,'global','ipv4','all','').length,2);
- assert.equal(presets.filterPingPresets(catalog,'overseas','ipv4','all','').length,11);
+ const mainland=presets.groupPingPresets(catalog,'mainland');assert.equal(mainland.length,31);
+ assert.equal(mainland.flatMap(r=>r.targets).length,186);
+ const beijing=mainland.find(r=>r.region==='北京');assert.deepEqual(beijing.families.map(f=>[f.family,f.targets.length]),[['ipv4',3],['ipv6',3]]);
+ assert.equal(presets.groupPingPresets(catalog,'global').flatMap(r=>r.targets).length,4);
+ assert.equal(presets.groupPingPresets(catalog,'overseas').length,11);
  assert.deepEqual(presets.togglePingPresetSelection(['hidden','a'],['a','b'],true),['hidden','a','b']);assert.deepEqual(presets.togglePingPresetSelection(['hidden','a','b'],['a','b'],false),['hidden']);
+});
+
+test('custom probe edits validate name, address and protocol before import',()=>{
+ const make=(type,target,name=' 自定义探测 ')=>({id:'global-google-ipv4',name,type,target});
+ for(const [type,target] of [['icmp','8.8.8.8'],['icmp','2001:4860:4860::8888'],['icmp','example.com'],['tcp','example.com:80'],['tcp','[2001:db8::1]:443'],['http','https://example.com/check?q=1']])assert.equal(presets.normalizePingPresetEdit(make(type,target)).name,'自定义探测');
+ for(const [type,target] of [['tcp','example.com'],['tcp','[::1]:65536'],['icmp','https://example.com'],['icmp','example.com:80'],['icmp','8.8.8.8\nother'],['http','ftp://example.com'],['http','https://user:pass@example.com']])assert.throws(()=>presets.normalizePingPresetEdit(make(type,target)));
+ assert.throws(()=>presets.normalizePingPresetEdit(make('icmp','8.8.8.8',' ')));
+ assert.throws(()=>presets.normalizePingPresetEdit(make('icmp','8.8.8.8','a'.repeat(129))));
+ assert.equal(presets.pingPresetTargetKey('http','https://EXAMPLE.com/Status?key=A'),'http|https://example.com/Status?key=A');
+ assert.notEqual(presets.pingPresetTargetKey('http','https://example.com/Status'),presets.pingPresetTargetKey('http','https://example.com/status'));
 });

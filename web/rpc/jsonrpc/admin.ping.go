@@ -46,15 +46,16 @@ func init() {
 
 func adminImportPingPresets(_ context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
-		PresetIDs []string `json:"preset_ids"`
-		Clients   []string `json:"clients"`
-		DefaultOn bool     `json:"default_on"`
-		Interval  int      `json:"interval"`
+		PresetIDs []string                   `json:"preset_ids"`
+		Clients   []string                   `json:"clients"`
+		DefaultOn bool                       `json:"default_on"`
+		Interval  int                        `json:"interval"`
+		Overrides []tasks.PingPresetOverride `json:"overrides"`
 	}
 	if err := req.BindParams(&params); err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, "无效的预设参数", nil)
 	}
-	result, err := tasks.ImportPingPresets(params.PresetIDs, params.Clients, params.DefaultOn, params.Interval)
+	result, err := tasks.ImportPingPresets(params.PresetIDs, params.Clients, params.DefaultOn, params.Interval, params.Overrides...)
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, err.Error(), nil)
 	}

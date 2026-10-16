@@ -12,9 +12,10 @@ import { CircleDollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useNodeDetails, type NodeDetail } from "@/contexts/NodeDetailsContext";
-import { SelectOrInput } from "@/components/ui/select-or-input";
 import {
   BILLING_CURRENCIES,
+  BILLING_CYCLES,
+  billingCycleOption,
   billingPrice,
   normalizeBillingCurrency,
   priceModeFromPrice,
@@ -38,7 +39,7 @@ export default function BillingButton({ node }: { node: NodeDetail }) {
       setMode(priceModeFromPrice(node.price));
       setAmount(node.price > 0 ? String(node.price) : "");
       setCurrency(normalizeBillingCurrency(node.currency || "$") || "USD");
-      setCycle(String(node.billing_cycle || 30));
+      setCycle(billingCycleOption(node.billing_cycle || 0));
       const date = node.expired_at ? new Date(node.expired_at) : null;
       setExpiry(
         date && Number.isFinite(date.getTime()) && date.getUTCFullYear() > 1
@@ -56,10 +57,7 @@ export default function BillingButton({ node }: { node: NodeDetail }) {
     try {
       const price = billingPrice(mode, amount);
       const billingCycle = Number(cycle);
-      if (
-        !Number.isInteger(billingCycle) ||
-        (billingCycle <= 0 && billingCycle !== -1)
-      )
+      if (!BILLING_CYCLES.some((option) => option.value === cycle))
         throw new Error("请选择有效计费周期");
       const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
@@ -151,23 +149,33 @@ export default function BillingButton({ node }: { node: NodeDetail }) {
             <span className="text-xs text-muted-foreground">
               按币种代码保存，区分人民币与日元、美元与其他元。
             </span>
-            <label className="font-bold">计费周期</label>
-            <SelectOrInput
-              options={[
-                { label: "每月", value: "30" },
-                { label: "每季度", value: "92" },
-                { label: "每半年", value: "184" },
-                { label: "每年", value: "365" },
-                { label: "每两年", value: "730" },
-                { label: "每三年", value: "1095" },
-                { label: "每五年", value: "1825" },
-                { label: "一次性", value: "-1" },
-              ]}
-              type="number"
-              name="billingCycle"
-              value={cycle}
-              onChange={setCycle}
-            />
+            <label htmlFor="billing-cycle" className="font-bold">
+              计费周期
+            </label>
+            <Select.Root value={cycle} onValueChange={setCycle}>
+              <Select.Trigger
+                id="billing-cycle"
+                aria-label="计费周期"
+                placeholder="请选择计费周期"
+              />
+              <Select.Content position="popper">
+                {BILLING_CYCLES.map((option) => (
+                  <Select.Item key={option.value} value={option.value}>
+                    {option.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
+            {!cycle && (
+              <span className="text-xs text-muted-foreground">
+                原计费周期为 {node.billing_cycle} 天，请选择新的周期后保存。
+              </span>
+            )}
+            {cycle === "-1" && (
+              <span className="text-xs text-muted-foreground">
+                不按周期续期；价格仍以上方价格模式和金额为准。
+              </span>
+            )}
             <label htmlFor="billing-expiry" className="font-bold">
               到期时间
             </label>
