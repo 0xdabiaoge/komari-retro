@@ -1,7 +1,7 @@
 package models
 
 type PingRecord struct {
-	Client     string    `json:"client" gorm:"type:varchar(36);not null;index"`
+	Client     string    `json:"client" gorm:"type:varchar(36);not null"`
 	ClientInfo Client    `json:"client_info" gorm:"foreignKey:Client;references:UUID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 	TaskId     uint      `json:"task_id" gorm:"not null;index"`
 	Task       PingTask  `json:"task" gorm:"foreignKey:TaskId;references:Id;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;"`

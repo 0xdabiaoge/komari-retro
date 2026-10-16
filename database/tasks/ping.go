@@ -131,10 +131,8 @@ func SavePingRecord(record models.PingRecord) error {
 	return db.Create(&record).Error
 }
 
-func DeletePingRecordsBefore(time time.Time) error {
-	db := dbcore.GetDBInstance()
-	err := db.Where("time < ?", time).Delete(&models.PingRecord{}).Error
-	return err
+func DeletePingRecordsBefore(before time.Time) error {
+	return dbcore.DeleteHistoryBefore(dbcore.GetDBInstance(), "ping_records", before)
 }
 
 func DeletePingRecords(id []uint) error {

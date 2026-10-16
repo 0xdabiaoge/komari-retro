@@ -110,7 +110,7 @@ func RunServer() {
 		Handler:           api.ViewerHandler(r),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
-		MaxHeaderBytes:    1 << 20,
+		MaxHeaderBytes:    64 << 10,
 	}
 	log.Printf("Starting server on %s ...", flags.Listen)
 	go func() {
@@ -121,7 +121,7 @@ func RunServer() {
 		}
 		// Includes idle HTTP and hijacked WebSocket connections. Bound socket/FD
 		// use independently from per-request admission and body size limits.
-		if err := srv.Serve(netutil.LimitListener(listener, 256)); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(netutil.LimitListener(listener, serverConnectionLimit())); err != nil && err != http.ErrServerClosed {
 			OnFatal(err)
 			log.Fatalf("listen: %s\n", err)
 		}
@@ -165,7 +165,7 @@ func DoScheduledWork() {
 	}
 	records.CompactRecord()
 
-	if err := corn.AddFunc("records:cleanup", "@every 30m", cleanupScheduledData); err != nil {
+	if err := corn.AddFunc("records:cleanup", "@every 5m", cleanupScheduledData); err != nil {
 		log.Println("Failed to add cleanup scheduled task:", err)
 	}
 	if err := corn.AddFunc("records:minute", "@every 1m", minuteScheduledWork); err != nil {
@@ -188,14 +188,25 @@ func getRecordRetentionDays() int {
 
 func cleanupScheduledData() {
 	cfg, _ := config.GetManyAs[config.Settings]()
-	// 1. 清理短期原始监控数据（默认按设置，如 24 小时）
-	records.DeleteRawRecordBefore(time.Now().Add(-time.Hour * time.Duration(cfg.RecordPreserveTime)))
-	records.CompactRecord()
+	// Aggregate first. Never delete raw history after failed compaction.
+	if err := records.CompactRecord(); err != nil {
+		log.Printf("History retention deferred: %v", err)
+		return
+	}
+	rawHours := cfg.RecordPreserveTime
+	if rawHours < 6 {
+		rawHours = 6 // Preserve the four-hour raw tier and its compaction overlap.
+	}
+	if err := records.DeleteRawRecordBefore(time.Now().Add(-time.Hour * time.Duration(rawHours))); err != nil {
+		log.Printf("Raw history cleanup deferred: %v", err)
+	}
 
 	// 2. 清理长期聚合监控数据与 ping 数据（默认保留 30 天，或按 KOMARI_RECORD_RETENTION_DAYS 配置）
 	retentionDays := getRecordRetentionDays()
 	longTermCutoff := time.Now().AddDate(0, 0, -retentionDays)
-	records.DeleteLongTermRecordsBefore(longTermCutoff)
+	if err := records.DeleteLongTermRecordsBefore(longTermCutoff); err != nil {
+		log.Printf("Rollup cleanup deferred: %v", err)
+	}
 
 	tasks.ClearTaskResultsByTimeBefore(time.Now().Add(-time.Hour * time.Duration(cfg.RecordPreserveTime)))
 
@@ -203,7 +214,9 @@ func cleanupScheduledData() {
 	if pingPreserveHours <= 0 {
 		pingPreserveHours = retentionDays * 24
 	}
-	tasks.DeletePingRecordsBefore(time.Now().Add(-time.Hour * time.Duration(pingPreserveHours)))
+	if err := tasks.DeletePingRecordsBefore(time.Now().Add(-time.Hour * time.Duration(pingPreserveHours))); err != nil {
+		log.Printf("Ping retention cleanup deferred: %v", err)
+	}
 
 	auditlog.RemoveOldLogs()
 	accounts.RemoveExpiredSessions()
@@ -215,6 +228,14 @@ func cleanupScheduledData() {
 func minuteScheduledWork() {
 	cfg, _ := config.GetManyAs[config.Settings]()
 	report_cache.SaveClientReportToDB()
+	// Keep ping retention close to its configured boundary even with many nodes.
+	pingHours := cfg.PingRecordPreserveTime
+	if pingHours <= 0 {
+		pingHours = getRecordRetentionDays() * 24
+	}
+	if err := tasks.DeletePingRecordsBefore(time.Now().Add(-time.Duration(pingHours) * time.Hour)); err != nil {
+		log.Printf("Minute ping cleanup deferred: %v", err)
+	}
 	if !cfg.RecordEnabled {
 		records.DeleteAll()
 		tasks.DeleteAllPingRecords()

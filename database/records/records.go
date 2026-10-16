@@ -87,14 +87,17 @@ func GetLatestRecord(uuid string) (Record []models.Record, err error) {
 
 func DeleteRawRecordBefore(before time.Time) error {
 	db := dbcore.GetDBInstance()
-	db.Where("time < ?", before).Delete(&models.GPURecord{})
-	return db.Where("time < ?", before).Delete(&models.Record{}).Error
+	if err := dbcore.DeleteHistoryBefore(db, "gpu_records", before); err != nil {
+		return err
+	}
+	return dbcore.DeleteHistoryBefore(db, "records", before)
 }
-
 func DeleteLongTermRecordsBefore(before time.Time) error {
 	db := dbcore.GetDBInstance()
-	db.Table("records_long_term").Where("time < ?", before).Delete(&models.Record{})
-	return db.Table("gpu_records_long_term").Where("time < ?", before).Delete(&models.GPURecord{}).Error
+	if err := dbcore.DeleteHistoryBefore(db, "records_long_term", before); err != nil {
+		return err
+	}
+	return dbcore.DeleteHistoryBefore(db, "gpu_records_long_term", before)
 }
 
 func DeleteRecordBefore(before time.Time) error {
@@ -104,6 +107,9 @@ func DeleteRecordBefore(before time.Time) error {
 func OptimizeDatabase() {
 	db := dbcore.GetDBInstance()
 	db.Exec("PRAGMA optimize")
+	if err := dbcore.ReclaimIdlePages(db); err != nil {
+		log.Printf("Incremental database reclamation deferred: %v", err)
+	}
 }
 
 func GetRecordsByClientAndTime(uuid string, start, end time.Time) ([]models.Record, error) {

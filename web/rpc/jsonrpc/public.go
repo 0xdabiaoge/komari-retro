@@ -502,33 +502,8 @@ func publicGetPingMetricStats(ctx context.Context, req *rpc.JsonRpcRequest) (any
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InvalidParams, err.Error(), nil)
 	}
-	type pingMetricStat struct {
-		EntityID string   `json:"entity_id"`
-		TaskID   string   `json:"task_id"`
-		Name     string   `json:"name"`
-		Total    int      `json:"total"`
-		Valid    int      `json:"valid"`
-		Loss     float64  `json:"loss"`
-		Avg      *float64 `json:"avg"`
-		Min      *float64 `json:"min"`
-		Max      *float64 `json:"max"`
-		Latest   *float64 `json:"latest"`
-	}
-	stats := make([]pingMetricStat, 0)
-	query := `WITH filtered AS (
-        SELECT p.*, ROW_NUMBER() OVER (PARTITION BY p.client,p.task_id ORDER BY p.time DESC,p.rowid DESC) AS recency
-        FROM ping_records p JOIN clients c ON c.uuid=p.client
-        WHERE p.time>=? AND p.time<? AND (? OR c.hidden=0) AND (?='' OR p.client=?)
-    ) SELECT f.client AS entity_id, CAST(f.task_id AS TEXT) AS task_id, t.name,
-        COUNT(*) AS total, SUM(CASE WHEN f.value>=0 THEN 1 ELSE 0 END) AS valid,
-        100.0*SUM(CASE WHEN f.value<0 THEN 1 ELSE 0 END)/COUNT(*) AS loss,
-        AVG(CASE WHEN f.value>=0 THEN f.value END) AS avg,
-        MIN(CASE WHEN f.value>=0 THEN f.value END) AS min,
-        MAX(CASE WHEN f.value>=0 THEN f.value END) AS max,
-        MAX(CASE WHEN f.recency=1 AND f.value>=0 THEN f.value END) AS latest
-        FROM filtered f JOIN ping_tasks t ON t.id=f.task_id GROUP BY f.client,f.task_id,t.name
-        ORDER BY f.client,f.task_id`
-	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(query, models.FromTime(startTime), models.FromTime(endTime), isLoginFromCtx(ctx), params.EntityID, params.EntityID).Scan(&stats).Error; err != nil {
+	stats, err := queryPingStats(ctx, params.EntityID, startTime, endTime, isLoginFromCtx(ctx), true)
+	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to query ping statistics", nil)
 	}
 	return map[string]any{"start": startTime.Format(time.RFC3339), "end": endTime.Format(time.RFC3339), "stats": stats, "count": len(stats)}, nil

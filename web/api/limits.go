@@ -8,6 +8,8 @@ import (
 )
 
 var requestSlots = make(chan struct{}, 16)
+var agentRequestSlots = make(chan struct{}, 32)
+var agentRequestWaiters = make(chan struct{}, 64)
 var largeUploadSlots = make(chan struct{}, 2)
 
 // Bound uploads before any authentication or JSON middleware reads their body.
@@ -30,13 +32,43 @@ func RequestLimits() gin.HandlerFunc {
 			return
 		}
 		if strings.HasPrefix(p, "/api/") && p != "/api/version" && !IsWebSocketUpgrade(c) {
-			select {
-			case requestSlots <- struct{}{}:
-				defer func() { <-requestSlots }()
-			default:
-				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "request capacity exceeded"})
-				return
+			// A reporting burst must not consume the administrator's capacity.
+			// The path selects a bounded admission pool, never authentication.
+			agentReport := p == "/api/clients/report" || p == "/api/clients/v2/rpc" || p == "/api/clients/uploadBasicInfo"
+			slots := requestSlots
+			if agentReport {
+				slots = agentRequestSlots
 			}
+			select {
+			case slots <- struct{}{}:
+			default:
+				if agentReport {
+					select {
+					case agentRequestWaiters <- struct{}{}:
+					default:
+						rejectCapacity(c)
+						return
+					}
+					timer := time.NewTimer(time.Second)
+					acquired := false
+					select {
+					case slots <- struct{}{}:
+						acquired = true
+					case <-c.Request.Context().Done():
+					case <-timer.C:
+					}
+					timer.Stop()
+					<-agentRequestWaiters
+					if !acquired {
+						rejectCapacity(c)
+						return
+					}
+				} else {
+					c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "request capacity exceeded"})
+					return
+				}
+			}
+			defer func() { <-slots }()
 			if limit > 2<<20 {
 				select {
 				case largeUploadSlots <- struct{}{}:
@@ -60,6 +92,11 @@ func RequestLimits() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func rejectCapacity(c *gin.Context) {
+	c.Header("Retry-After", "1")
+	c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "request capacity exceeded"})
 }
 
 func allowAuthenticatedStream(c *gin.Context, role string) {

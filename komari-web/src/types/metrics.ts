@@ -58,6 +58,7 @@ export type PingMetricStat = {
   avg?: number | null;
   latest?: number | null;
   p50?: number | null;
+  p95?: number | null;
   p99?: number | null;
   stddev?: number | null;
   p99_p50_ratio?: number;

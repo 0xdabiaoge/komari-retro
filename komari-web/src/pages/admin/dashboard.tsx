@@ -47,8 +47,6 @@ import type {
   MetricSeries,
   MetricTags,
   PingMetricStat,
-  PingMetricStatsResponse,
-  PublicPingTask,
   QueryMetricsResponse,
 } from "@/types/metrics";
 import {
@@ -56,8 +54,6 @@ import {
   metricSeriesColor,
   normalizeMetricSeriesList,
   pingMetricStatKey,
-  pingTaskId,
-  pingTaskName,
 } from "@/utils/metricSeries";
 
 const formatSpeed = (bytes: number): string => {
@@ -70,45 +66,6 @@ const formatSpeed = (bytes: number): string => {
   if (i <= 1) decimals = 0;
   if (size >= 100) decimals = 0;
   return `${size.toFixed(decimals)} ${units[i]}`;
-};
-
-const weightedP95 = (
-  points: { value: number; count?: number }[],
-): number | null => {
-  const valid = points.filter(
-    (point) =>
-      Number.isFinite(point.value) &&
-      point.value >= 0 &&
-      (point.count ?? 1) > 0,
-  );
-  if (valid.length === 0) return null;
-  const total = valid.reduce((sum, point) => sum + (point.count ?? 1), 0);
-  const sorted = [...valid].sort((a, b) => a.value - b.value);
-  let cumulative = 0;
-  for (const point of sorted) {
-    cumulative += point.count ?? 1;
-    if (cumulative >= total * 0.95) return point.value;
-  }
-  return sorted[sorted.length - 1].value;
-};
-
-const weightedAverage = (
-  points: { value: number; count?: number }[],
-): number | null => {
-  const valid = points.filter(
-    (point) => Number.isFinite(point.value) && (point.count ?? 1) > 0,
-  );
-  if (valid.length === 0) return null;
-  const totalCount = valid.reduce(
-    (sum, point) => sum + (point.count ?? 1),
-    0,
-  );
-  return (
-    valid.reduce(
-      (sum, point) => sum + point.value * (point.count ?? 1),
-      0,
-    ) / totalCount
-  );
 };
 
 const formatPeakTime = (t: TFunction, timestamp: number): string => {
@@ -207,197 +164,15 @@ type PingRankItem = {
 const CPU_METRIC_KEYS = ["cpu.usage"];
 const MEM_METRIC_KEYS = ["memory.used"];
 const NET_METRIC_KEYS = ["net.in.rate", "net.out.rate"];
-const NET_TOTAL_METRIC_KEYS = ["net.total.up", "net.total.down"];
 const PING_METRIC_KEYS = [PING_LATENCY_METRIC];
-
-// 首页所有指标卡共用一个 24h 查询（流量/CPU/内存/延迟），
-// 这里从响应中分别派生流量汇总与 TOP p95 排行。
 type TrafficSummary = {
-  points: {
-    time: number;
-    upRate: number;
-    downRate: number;
-    upCum: number;
-    downCum: number;
-  }[];
+  points: { time: number; upRate: number; downRate: number; upCum: number; downCum: number }[];
   nodeTotals: TrafficNodeTotals[];
   totalUp: number;
   totalDown: number;
 };
-
-const computeTrafficSummary = (
-  res: QueryMetricsResponse | null,
-): TrafficSummary | null => {
-  if (!res) return null;
-
-  // The first cumulative counter after a collection gap/reset is a baseline,
-  // not traffic observed during that chart bucket.
-  const discontinuities = new Set<string>();
-  for (const series of res.series ?? []) {
-    if (!NET_TOTAL_METRIC_KEYS.includes(series.metric_key)) continue;
-    const direction = series.metric_key === "net.total.up" ? "up" : "down";
-    let previousValue: number | null = null;
-    let gapAfterValue = false;
-    let reboundBaseline: number | null = null;
-    for (const point of series.points ?? []) {
-      if (point.value == null) {
-        if (previousValue !== null) gapAfterValue = true;
-        continue;
-      }
-      const ts = new Date(point.time).getTime();
-      let discontinuity = gapAfterValue;
-      if (previousValue !== null && point.value < previousValue) {
-        discontinuity = true;
-        reboundBaseline = previousValue;
-      } else if (reboundBaseline !== null) {
-        if (point.value >= reboundBaseline) discontinuity = true;
-        reboundBaseline = null;
-      }
-      if (discontinuity) {
-        discontinuities.add(`${series.entity_id}\0${direction}\0${ts}`);
-      }
-      previousValue = point.value;
-      gapAfterValue = false;
-    }
-  }
-
-  const byTime = new Map<
-    number,
-    { upRate: number; downRate: number; upDelta: number; downDelta: number }
-  >();
-  const byEntity = new Map<string, { up: number; down: number }>();
-  const byEntityRate = new Map<
-    string,
-    Map<number, { up: number; down: number }>
-  >();
-  for (const series of res.series ?? []) {
-    const isRate =
-      series.metric_key === "net.in.rate" ||
-      series.metric_key === "net.out.rate";
-    const isUp =
-      series.metric_key === "net.out.rate" ||
-      series.metric_key === "traffic.up";
-    if (
-      !isRate &&
-      series.metric_key !== "traffic.up" &&
-      series.metric_key !== "traffic.down"
-    ) {
-      continue;
-    }
-    const entity = series.entity_id;
-    for (const point of series.points ?? []) {
-      if (point.value == null) continue;
-      const ts = new Date(point.time).getTime();
-      const entry =
-        byTime.get(ts) ?? { upRate: 0, downRate: 0, upDelta: 0, downDelta: 0 };
-      if (isRate) {
-        if (isUp) entry.upRate += point.value;
-        else entry.downRate += point.value;
-        const rateMap = byEntityRate.get(entity) ?? new Map();
-        const rateEntry = rateMap.get(ts) ?? { up: 0, down: 0 };
-        if (isUp) rateEntry.up += point.value;
-        else rateEntry.down += point.value;
-        rateMap.set(ts, rateEntry);
-        byEntityRate.set(entity, rateMap);
-      } else if (isUp) {
-        if (discontinuities.has(`${entity}\0up\0${ts}`)) continue;
-        entry.upDelta += point.value;
-      } else {
-        if (discontinuities.has(`${entity}\0down\0${ts}`)) continue;
-        entry.downDelta += point.value;
-      }
-      byTime.set(ts, entry);
-      if (!isRate) {
-        const entityEntry = byEntity.get(entity) ?? { up: 0, down: 0 };
-        if (isUp) entityEntry.up += point.value;
-        else entityEntry.down += point.value;
-        byEntity.set(entity, entityEntry);
-      }
-    }
-  }
-  const rate = Array.from(byTime.entries())
-    .map(([time, value]) => ({ time, ...value }))
-    .sort((a, b) => a.time - b.time);
-  const points: TrafficSummary["points"] = [];
-  let totalUp = 0;
-  let totalDown = 0;
-  for (const point of rate) {
-    totalUp += point.upDelta;
-    totalDown += point.downDelta;
-    points.push({
-      time: point.time,
-      upRate: point.upRate,
-      downRate: point.downRate,
-      upCum: totalUp,
-      downCum: totalDown,
-    });
-  }
-  const nodeTotals: TrafficNodeTotals[] = Array.from(byEntity.entries())
-    .map(([uuid, value]) => {
-      let peakRate = 0;
-      let peakTime = 0;
-      for (const [ts, rateEntry] of byEntityRate.get(uuid) ?? []) {
-        const combined = rateEntry.up + rateEntry.down;
-        if (combined > peakRate) {
-          peakRate = combined;
-          peakTime = ts;
-        }
-      }
-      return {
-        uuid,
-        up: value.up,
-        down: value.down,
-        total: value.up + value.down,
-        peakRate,
-        peakTime,
-      };
-    })
-    .sort((a, b) => b.total - a.total);
-  return { points, nodeTotals, totalUp, totalDown };
-};
-
-const computeTopAverageItems = (
-  res: QueryMetricsResponse | null,
-  metricKey: string,
-  nodeNameMap: Map<string, string>,
-  toPercent: (uuid: string, value: number) => number,
-): TopRankItem[] => {
-  if (!res) return [];
-  const bucket = new Map<
-    string,
-    { values: { value: number; count?: number }[]; peak: number; peakTime: number }
-  >();
-  for (const series of res.series ?? []) {
-    if (series.metric_key !== metricKey) continue;
-    const entry =
-      bucket.get(series.entity_id) ?? { values: [], peak: 0, peakTime: 0 };
-    for (const point of series.points ?? []) {
-      if (point.value == null) continue;
-      entry.values.push({ value: point.value, count: point.count });
-      if (point.value > entry.peak) {
-        entry.peak = point.value;
-        entry.peakTime = new Date(point.time).getTime();
-      }
-    }
-    bucket.set(series.entity_id, entry);
-  }
-  const items: TopRankItem[] = [];
-  for (const [uuid, entry] of bucket) {
-    const average = weightedAverage(entry.values);
-    if (average == null) continue;
-    const value = toPercent(uuid, average);
-    if (!Number.isFinite(value)) continue;
-    items.push({
-      uuid,
-      name: nodeNameMap.get(uuid) ?? uuid.slice(0, 8),
-      value,
-      peak: toPercent(uuid, entry.peak),
-      peakTime: entry.peakTime,
-    });
-  }
-  items.sort((a, b) => b.value - a.value);
-  return items;
-};
+type DashboardMetrics = { traffic: TrafficSummary; cpu: Omit<TopRankItem, "name">[]; memory: Omit<TopRankItem, "name">[] };
+type DashboardPing = { stable: PingMetricStat[]; unstable: PingMetricStat[]; loss: PingMetricStat[]; count: number };
 
 const miniChartCache = new Map<string, MetricSeries[]>();
 
@@ -408,7 +183,7 @@ const Dashboard = () => {
 const DashboardContent = () => {
   const { t } = useTranslation();
   const { nodeList, isLoading, error, refresh } = useNodeList();
-  const { call } = useRPC2Call();
+  const { call, callViaHTTP } = useRPC2Call();
 
   const [latest, setLatest] = useState<Record<string, any> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -416,11 +191,12 @@ const DashboardContent = () => {
     main: number | null;
     monitoring: number | null;
   } | null>(null);
-  const [metricsRes, setMetricsRes] = useState<QueryMetricsResponse | null>(
-    null,
-  );
-  const [pingStats, setPingStats] = useState<PingMetricStat[]>([]);
-  const [pingTasks, setPingTasks] = useState<PublicPingTask[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [pingRanks, setPingRanks] = useState<DashboardPing | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [pingLoading, setPingLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [pingError, setPingError] = useState<string | null>(null);
   const [renewingUuid, setRenewingUuid] = useState<string | null>(null);
   const [renewedUuids, setRenewedUuids] = useState<Set<string>>(new Set());
 
@@ -456,11 +232,6 @@ const DashboardContent = () => {
     [nodeList],
   );
 
-  const memTotalMap = useMemo(
-    () => new Map((nodeList ?? []).map((node) => [node.uuid, node.mem_total])),
-    [nodeList],
-  );
-
   const expiringNodes = useMemo(() => {
     const now = Date.now();
     const deadline = now + EXPIRING_SOON_DAYS * DAY_MS;
@@ -489,37 +260,16 @@ const DashboardContent = () => {
   }, [call]);
 
   const fetchMetrics = useCallback(async () => {
-    const now = new Date();
-    const start = new Date(now.getTime() - 24 * 3600 * 1000);
+    setMetricsLoading(true);
+    setMetricsError(null);
     try {
-      const res = await call<any, QueryMetricsResponse>("public:queryMetrics", {
-        metric_keys: [
-          ...NET_METRIC_KEYS,
-          ...NET_TOTAL_METRIC_KEYS,
-          "traffic.up",
-          "traffic.down",
-          ...CPU_METRIC_KEYS,
-          ...MEM_METRIC_KEYS,
-          PING_LATENCY_METRIC,
-        ],
-        start: start.toISOString(),
-        end: now.toISOString(),
-        aggregation: "p95",
-        aggregation_by_metric: {
-          "traffic.up": "sum",
-          "traffic.down": "sum",
-          "net.total.up": "last",
-          "net.total.down": "last",
-          "cpu.usage": "avg",
-          "memory.used": "avg",
-        },
-        fill_empty: true,
-      });
-      setMetricsRes(res ?? null);
+      setMetrics(await callViaHTTP<unknown, DashboardMetrics>("admin:getDashboardMetrics"));
     } catch (e) {
-      console.error("Failed to fetch dashboard metrics:", e);
+      setMetricsError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMetricsLoading(false);
     }
-  }, [call]);
+  }, [callViaHTTP]);
 
   const fetchDbSize = useCallback(async () => {
     try {
@@ -536,21 +286,16 @@ const DashboardContent = () => {
   }, []);
 
   const fetchPingStats = useCallback(async () => {
+    setPingLoading(true);
+    setPingError(null);
     try {
-      const [statsRes, tasksRes] = await Promise.all([
-        call<unknown, PingMetricStatsResponse>("public:getPingMetricStats", {
-          hours: 24,
-        }),
-        call<unknown, PublicPingTask[]>("public:getPublicPingTasks").catch(
-          () => [],
-        ),
-      ]);
-      setPingStats(Array.isArray(statsRes?.stats) ? statsRes.stats : []);
-      setPingTasks(Array.isArray(tasksRes) ? tasksRes : []);
+      setPingRanks(await callViaHTTP<unknown, DashboardPing>("admin:getDashboardPing"));
     } catch (e) {
-      console.error("Failed to fetch ping stats:", e);
+      setPingError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPingLoading(false);
     }
-  }, [call]);
+  }, [callViaHTTP]);
 
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
@@ -572,34 +317,9 @@ const DashboardContent = () => {
     void fetchAll();
   }, [fetchAll]);
 
-  // 由一次 queryMetrics 响应派生各指标卡数据；nodeList 就绪后
-  // nodeNameMap/memTotalMap 变化会自动重算，无需再次请求。
-  const traffic = useMemo(() => computeTrafficSummary(metricsRes), [metricsRes]);
-
-  const topCpu = useMemo<TopRankItem[]>(
-    () =>
-      computeTopAverageItems(
-        metricsRes,
-        CPU_METRIC_KEYS[0],
-        nodeNameMap,
-        (_uuid, value) => value,
-      ),
-    [metricsRes, nodeNameMap],
-  );
-
-  const topMem = useMemo<TopRankItem[]>(
-    () =>
-      computeTopAverageItems(
-        metricsRes,
-        MEM_METRIC_KEYS[0],
-        nodeNameMap,
-        (uuid, value) => {
-          const totalBytes = memTotalMap.get(uuid) ?? 0;
-          return totalBytes > 0 ? (value / totalBytes) * 100 : 0;
-        },
-      ),
-    [metricsRes, nodeNameMap, memTotalMap],
-  );
+  const traffic = metrics?.traffic ?? null;
+  const topCpu = useMemo(() => (metrics?.cpu ?? []).map(item => ({...item, name: nodeNameMap.get(item.uuid) ?? item.uuid.slice(0, 8)})), [metrics, nodeNameMap]);
+  const topMem = useMemo(() => (metrics?.memory ?? []).map(item => ({...item, name: nodeNameMap.get(item.uuid) ?? item.uuid.slice(0, 8)})), [metrics, nodeNameMap]);
 
   const handleRenew = async (node: NodeBasicInfo) => {
     const expiry = computeRenewalDate(
@@ -685,72 +405,19 @@ const DashboardContent = () => {
     },
   } satisfies ChartConfig;
 
-  const pingP95Map = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const series of metricsRes?.series ?? []) {
-      const taskId = pingTaskId(series.tags);
-      if (!taskId) continue;
-      const p95 = weightedP95(
-        (series.points ?? []).map((point) => ({
-          value: point.value ?? NaN,
-          count: point.count,
-        })),
-      );
-      if (p95 != null) {
-        map.set(pingMetricStatKey(series.entity_id, taskId), p95);
-      }
-    }
-    return map;
-  }, [metricsRes]);
-
-  const pingRankItems = useMemo(() => {
-    const taskMap = new Map(
-      pingTasks.map((task) => [String(task.id), task]),
-    );
-    return pingStats.map((stat) => {
-      const taskName = pingTaskName(
-        stat.task_id,
-        taskMap,
-        (id) => `${t("ping.task", "Ping task")} ${id}`,
-      );
-      const nodeName =
-        nodeNameMap.get(stat.entity_id) ?? stat.entity_id.slice(0, 8);
-      const p95 =
-        pingP95Map.get(pingMetricStatKey(stat.entity_id, stat.task_id)) ?? null;
-      return {
-        key: pingMetricStatKey(stat.entity_id, stat.task_id),
-        entityId: stat.entity_id,
-        taskId: stat.task_id,
-        label: `${nodeName} · ${taskName}`,
-        p95,
-        volatility: stat.p99_p50_ratio ?? 0,
-        loss: stat.loss ?? 0,
-        valid: stat.valid,
-      } satisfies PingRankItem;
-    });
-  }, [pingStats, pingP95Map, pingTasks, nodeNameMap, t]);
-
-  // 无有效延迟样本(如 100% 丢包)的节点波动无意义，不参与稳定性排名
-  const stableLatencyItems = useMemo(
-    () =>
-      [...pingRankItems]
-        .filter((item) => item.valid > 0)
-        .sort((a, b) => a.volatility - b.volatility),
-    [pingRankItems],
-  );
-
-  const unstableLatencyItems = useMemo(
-    () =>
-      [...pingRankItems]
-        .filter((item) => item.valid > 0)
-        .sort((a, b) => b.volatility - a.volatility),
-    [pingRankItems],
-  );
-
-  const highestLossItems = useMemo(
-    () => [...pingRankItems].sort((a, b) => b.loss - a.loss),
-    [pingRankItems],
-  );
+  const pingRankItems = useCallback((stats: PingMetricStat[]) => stats.map((stat) => ({
+    key: pingMetricStatKey(stat.entity_id, stat.task_id),
+    entityId: stat.entity_id,
+    taskId: stat.task_id,
+    label: `${nodeNameMap.get(stat.entity_id) ?? stat.entity_id.slice(0, 8)} · ${stat.name ?? stat.task_id}`,
+    p95: stat.p95 ?? null,
+    volatility: stat.p99_p50_ratio ?? 0,
+    loss: stat.loss,
+    valid: stat.valid,
+  } satisfies PingRankItem)), [nodeNameMap]);
+  const stableLatencyItems = useMemo(() => pingRankItems(pingRanks?.stable ?? []), [pingRankItems, pingRanks]);
+  const unstableLatencyItems = useMemo(() => pingRankItems(pingRanks?.unstable ?? []), [pingRankItems, pingRanks]);
+  const highestLossItems = useMemo(() => pingRankItems(pingRanks?.loss ?? []), [pingRankItems, pingRanks]);
 
   const renderLatencyColumn = (
     title: string,
@@ -869,6 +536,16 @@ const DashboardContent = () => {
         </Button>
       </Flex>
 
+      {(metricsError || pingError) && (
+        <div role="alert" className="rounded-lg border border-red-300 p-3 text-sm text-red-700">
+          {metricsError && <div>流量和资源统计加载失败：{metricsError}</div>}
+          {pingError && <div>延迟统计加载失败：{pingError}</div>}
+          <Button size="1" variant="soft" disabled={refreshing} onClick={() => void fetchAll()}>重试失败的统计</Button>
+          {metrics && <Text as="div" size="1">当前保留上次成功加载的数据。</Text>}
+        </div>
+      )}
+      {pingLoading && <Text size="2" color="gray" role="status">正在更新延迟统计，其他功能可正常使用。</Text>}
+      <Text size="1" color="gray">统计范围：最近 24 小时。资源和流量缓存 30 秒，延迟排行缓存 2 分钟；排行榜最多显示前 100 项，详细曲线点击后加载。</Text>
       <DashboardBoard>
         <DashboardWidget id="overview">
           <Flex gap="4" align="center">
@@ -1097,11 +774,11 @@ const DashboardContent = () => {
                 </Text>
               </Flex>
             </Flex>
-            {traffic === null ? (
+            {traffic === null && metricsLoading ? (
               <Flex align="center" justify="center" style={{ height: 180 }}>
                 <Loading text="" />
               </Flex>
-            ) : traffic.points.length === 0 ? (
+            ) : !traffic || traffic.points.length === 0 ? (
               <Flex align="center" justify="center" style={{ height: 180 }}>
                 <Text size="2" color="gray">
                   {t("dashboard.noData", "No data")}

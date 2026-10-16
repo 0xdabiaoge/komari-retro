@@ -26,6 +26,14 @@ var (
 // Close releases the database and stable process lock during graceful shutdown.
 func Close() error {
 	var err error
+	readerMu.RLock()
+	readDB := reader
+	readerMu.RUnlock()
+	if readDB != nil && readDB != instance {
+		if pool, e := readDB.DB(); e == nil {
+			_ = pool.Close()
+		}
+	}
 	if instance != nil {
 		if sqlDB, e := instance.DB(); e == nil {
 			err = sqlDB.Close()
@@ -92,6 +100,9 @@ func GetDBInstance() *gorm.DB {
 			if poolErr != nil {
 				log.Fatal(poolErr)
 			}
+			if err := ConfigureReclamation(instance); err != nil {
+				log.Fatal(err)
+			}
 			sqlDB.SetMaxOpenConns(1)
 			sqlDB.SetMaxIdleConns(1)
 			if err := instance.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
@@ -99,7 +110,7 @@ func GetDBInstance() *gorm.DB {
 			}
 			instance.Exec("PRAGMA synchronous = NORMAL;")
 			instance.Exec("PRAGMA cache_size = -65536;")
-			instance.Exec("PRAGMA temp_store = MEMORY;")
+			instance.Exec("PRAGMA temp_store = FILE;")
 			instance.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
 		default:
 			log.Fatalf("Unsupported database type: %s (supported: %s)", flags.DatabaseType, flags.SupportedDatabaseTypes())
@@ -184,6 +195,10 @@ func GetDBInstance() *gorm.DB {
 			instance.Exec("CREATE INDEX IF NOT EXISTS idx_gpu_record_client_time ON gpu_records(client, time)")
 			instance.Exec("CREATE INDEX IF NOT EXISTS idx_gpu_record_lt_client_time ON gpu_records_long_term(client, time)")
 			instance.Exec("CREATE INDEX IF NOT EXISTS idx_ping_record_client_time ON ping_records(client, time)")
+			if err := instance.Exec("CREATE INDEX IF NOT EXISTS idx_ping_stats_cover ON ping_records(client,task_id,value,time)").Error; err != nil {
+				log.Fatal(err)
+			}
+			instance.Exec("DROP INDEX IF EXISTS idx_ping_records_client")
 		}
 
 	})

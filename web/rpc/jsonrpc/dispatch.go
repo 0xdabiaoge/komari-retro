@@ -61,7 +61,7 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	switch req.Method {
-	case "public:queryMetrics", "common:getRecords", "public:getRecordsByUUID", "public:getClientRecentRecords", "public:getPingRecords":
+	case "public:getPingMetricStats", "public:queryMetrics", "common:getRecords", "public:getRecordsByUUID", "public:getClientRecentRecords", "public:getPingRecords":
 		select {
 		case metricSlots <- struct{}{}:
 			defer func() { <-metricSlots }()

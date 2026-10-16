@@ -13,6 +13,7 @@ import {
 } from "@/components/admin/SettingCard";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
+import { DatabaseStorageCard } from "@/components/admin/DatabaseStorageCard";
 import { DownloadIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import UploadDialog from "@/components/UploadDialog";
@@ -75,6 +76,7 @@ export default function SiteSettings() {
 
   return (
     <>
+      <DatabaseStorageCard />
       <SettingCardLabel>{t("settings.site.title")}</SettingCardLabel>
       <SettingCardShortTextInput
         title={t("settings.site.name")}

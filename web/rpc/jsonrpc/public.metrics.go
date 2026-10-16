@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/komari-monitor/komari/database/dbcore"
@@ -56,6 +57,7 @@ func publicListMetricDefinitions(_ context.Context, _ *rpc.JsonRpcRequest) (any,
 
 func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	var params struct {
+		Tags                map[string]string `json:"tags"`
 		MetricKeys          []string          `json:"metric_keys"`
 		EntityID            string            `json:"entity_id"`
 		Hours               *float64          `json:"hours"`
@@ -103,6 +105,14 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 			return invalid("Unknown metric: " + key)
 		}
 	}
+	for key, value := range params.Tags {
+		if key != "task_id" && key != "device_index" {
+			return invalid("Unsupported metric tag")
+		}
+		if _, err := strconv.ParseUint(value, 10, 32); err != nil {
+			return invalid("Invalid metric tag value")
+		}
+	}
 	start, end, rangeErr := metricQueryRange(params.Hours, params.Start, params.End)
 	if rangeErr != nil {
 		return invalid(rangeErr.Error())
@@ -123,7 +133,7 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 		if override := params.AggregationByMetric[key]; override != "" {
 			aggregation = override
 		}
-		items, err := querySQLiteMetric(ctx, key, params.EntityID, start, end, interval, aggregation, params.FillEmpty, params.MaxPoints)
+		items, err := querySQLiteMetric(ctx, key, params.EntityID, start, end, interval, aggregation, params.FillEmpty, params.MaxPoints, params.Tags)
 		if err != nil {
 			return nil, rpc.MakeError(rpc.InternalError, "Unable to query metric series", nil)
 		}
@@ -138,15 +148,23 @@ func publicQueryMetrics(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc
 	return map[string]any{"start": start.Format(time.RFC3339), "end": end.Format(time.RFC3339), "series": series, "count": count}, nil
 }
 
-func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.Time, interval int64, aggregation string, fill bool, maxPoints int) ([]MetricSeriesItem, error) {
+func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.Time, interval int64, aggregation string, fill bool, maxPoints int, tags map[string]string) ([]MetricSeriesItem, error) {
 	projection := metricProjections[key]
 	filter := ` r.time>=? AND r.time<? AND (?='' OR r.client=?) AND (? OR c.hidden=0)`
 	args := []any{models.FromTime(start), models.FromTime(end), entity, entity, isLoginFromCtx(ctx)}
 	var source string
 	switch projection.source {
 	case "gpu":
+		if value, ok := tags["device_index"]; ok {
+			filter += " AND r.device_index=?"
+			args = append(args, value)
+		}
 		source = `SELECT r.client,r.time,r.` + projection.column + ` AS value,json_object('device_index',CAST(r.device_index AS TEXT),'device_name',r.device_name) AS tags FROM gpu_records r JOIN clients c ON c.uuid=r.client WHERE` + filter
 	case "ping":
+		if value, ok := tags["task_id"]; ok {
+			filter += " AND r.task_id=?"
+			args = append(args, value)
+		}
 		source = `SELECT r.client,r.time,r.value AS value,json_object('task_id',CAST(r.task_id AS TEXT)) AS tags FROM ping_records r JOIN clients c ON c.uuid=r.client WHERE` + filter + ` AND r.value>=0`
 	default:
 		// Keep the same raw/rollup boundary as the legacy history path. Compute
@@ -166,15 +184,19 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 		fraction := `(` + position + `-` + lower + `)`
 		expression = `(1-` + fraction + `)*MAX(CASE WHEN value_rank=` + lower + ` THEN value END)+` + fraction + `*COALESCE(MAX(CASE WHEN value_rank=` + lower + `+1 THEN value END),MAX(CASE WHEN value_rank=` + lower + ` THEN value END))`
 	}
+	ranked := "SELECT * FROM bucketed"
+	switch aggregation {
+	case "first":
+		ranked = "SELECT *,ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time) AS time_rank FROM bucketed"
+	case "last":
+		ranked = "SELECT *,ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time DESC) AS reverse_rank FROM bucketed"
+	case "p70", "p95", "p99":
+		ranked = "SELECT *,ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY value) AS value_rank,COUNT(*) OVER (PARTITION BY client,tags,bucket) AS sample_count FROM bucketed"
+	}
 	sql := `WITH source AS (` + source + `), bucketed AS (
-	 SELECT *,CAST(((CAST(strftime('%s',substr(time,1,19)) AS INTEGER)-CAST(strftime('%s',substr(?,1,19)) AS INTEGER))*10000000
-	 +CAST(substr(substr(time,21,7)||'0000000',1,7) AS INTEGER)-?)/(?*10000000) AS INTEGER) AS bucket FROM source
- ), ranked AS (
- SELECT *,ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time) AS time_rank,
- ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY time DESC) AS reverse_rank,
- ROW_NUMBER() OVER (PARTITION BY client,tags,bucket ORDER BY value) AS value_rank,
- COUNT(*) OVER (PARTITION BY client,tags,bucket) AS sample_count FROM bucketed
- ) SELECT client,tags,bucket,` + expression + ` AS value FROM ranked GROUP BY client,tags,bucket ORDER BY client,tags,bucket LIMIT 100001`
+ SELECT *,CAST(((CAST(strftime('%s',substr(time,1,19)) AS INTEGER)-CAST(strftime('%s',substr(?,1,19)) AS INTEGER))*10000000
+ +CAST(substr(substr(time,21,7)||'0000000',1,7) AS INTEGER)-?)/(?*10000000) AS INTEGER) AS bucket FROM source
+ ), ranked AS (` + ranked + `) SELECT client,tags,bucket,` + expression + ` AS value FROM ranked GROUP BY client,tags,bucket ORDER BY client,tags,bucket LIMIT 100001`
 	// LocalTime persists seven fractional digits. Preserve them when assigning
 	// buckets, otherwise a row just before end can create an extra final bucket.
 	args = append(args, models.FromTime(start), start.Nanosecond()/100, interval)
@@ -185,7 +207,7 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 		Value  float64
 	}
 	var rows []metricRow
-	if err := dbcore.GetDBInstance().WithContext(ctx).Raw(sql, args...).Scan(&rows).Error; err != nil {
+	if err := dbcore.GetReadDB().WithContext(ctx).Raw(sql, args...).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	if len(rows) > 100000 {

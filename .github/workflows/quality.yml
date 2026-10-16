@@ -92,6 +92,7 @@ jobs:
         run: |
           go build -o /tmp/komari-audience .
           python3 script/private-audience-fixture.py /tmp/komari-audience
+          python3 script/dashboard-acceptance.py /tmp/komari-audience
       - run: |
           npm run dev -- --host 127.0.0.1 > /tmp/komari-vite.log 2>&1 &
           for attempt in $(seq 1 30); do
