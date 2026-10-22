@@ -2,7 +2,7 @@ module github.com/komari-monitor/komari
 
 go 1.26.0
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	github.com/gin-gonic/gin v1.10.0

@@ -3,6 +3,8 @@ package update
 import (
 	"bytes"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"net/http"
@@ -13,7 +15,48 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	flags "github.com/komari-monitor/komari-agent/cmd/flags"
 )
+
+func TestUpdateClientKeepsCertificateVerificationAndRejectsHTTPDowngrade(t *testing.T) {
+	old := flags.GlobalConfig.IgnoreUnsafeCert
+	flags.GlobalConfig.IgnoreUnsafeCert = true
+	t.Cleanup(func() { flags.GlobalConfig.IgnoreUnsafeCert = old })
+	previousDefault := http.DefaultTransport
+	http.DefaultTransport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	t.Cleanup(func() { http.DefaultTransport = previousDefault })
+
+	plaintext := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("software updater sent a plaintext request")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer plaintext.Close()
+	secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, plaintext.URL, http.StatusFound)
+	}))
+	defer secure.Close()
+	client := getHTTPClient()
+	if _, err := client.Get(secure.URL); err == nil {
+		t.Fatal("updater accepted an untrusted TLS certificate")
+	}
+	if _, err := client.Get(plaintext.URL); err == nil {
+		t.Fatal("updater accepted a plaintext URL")
+	}
+
+	// Trust this fixture's CA, then prove a valid HTTPS origin cannot redirect
+	// update requests to plaintext either.
+	transport := client.Transport.(verifiedUpdateTransport).base.(*http.Transport).Clone()
+	transport.TLSClientConfig = transport.TLSClientConfig.Clone()
+	roots := x509.NewCertPool()
+	roots.AddCert(secure.Certificate())
+	transport.TLSClientConfig.RootCAs = roots
+	t.Cleanup(transport.CloseIdleConnections)
+	trusted := *client
+	trusted.Transport = verifiedUpdateTransport{base: transport}
+	if _, err := trusted.Get(secure.URL); err == nil {
+		t.Fatal("updater followed an HTTPS-to-HTTP redirect")
+	}
+}
 
 // TestParseVersion 验证 parseVersion 能够解析各种版本号格式，包括带 v/V 前缀、预发布和构建元数据
 func TestParseVersion(t *testing.T) {

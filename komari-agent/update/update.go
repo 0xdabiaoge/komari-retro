@@ -105,17 +105,38 @@ var (
 	updateCheckMu sync.Mutex
 
 	// updateClient 是升级模块专用的 HTTP 客户端，惰性创建一次。
-	// 依赖启动阶段加载的 flags（如 ignore_unsafe_cert），因此不能在包初始化时构建，
-	// 也不再像旧实现那样反复改写 http.DefaultClient（数据竞争）。
+	// Uses the configured resolver, but always verifies TLS certificates. The
+	// monitoring-only ignore_unsafe_cert setting must not weaken software updates.
 	updateClient   *http.Client
 	httpClientOnce sync.Once
 )
 
 func getHTTPClient() *http.Client {
 	httpClientOnce.Do(func() {
-		updateClient = dnsresolver.GetHTTPClient(60 * time.Second)
+		client := *dnsresolver.GetVerifiedHTTPClient(60 * time.Second)
+		client.Transport = verifiedUpdateTransport{base: client.Transport}
+		updateClient = &client
 	})
 	return updateClient
+}
+
+// Reject plaintext requests as well as HTTPS redirects to HTTP before sending
+// any update metadata, authentication headers, or executable downloads.
+type verifiedUpdateTransport struct {
+	base http.RoundTripper
+}
+
+func (t verifiedUpdateTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	if request.URL.Scheme != "https" {
+		return nil, fmt.Errorf("software updates require HTTPS")
+	}
+	return t.base.RoundTrip(request)
+}
+
+func (t verifiedUpdateTransport) CloseIdleConnections() {
+	if transport, ok := t.base.(interface{ CloseIdleConnections() }); ok {
+		transport.CloseIdleConnections()
+	}
 }
 
 // parseVersion 解析可能带有 v/V 前缀，以及预发布或构建元数据的版本字符串

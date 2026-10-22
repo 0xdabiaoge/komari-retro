@@ -181,6 +181,12 @@ func GetHTTPClient(timeout time.Duration) *http.Client {
 	return getHTTPClient(timeout, "", true)
 }
 
+// GetVerifiedHTTPClient keeps software-update TLS verification independent of
+// the monitoring-only option for accepting an untrusted panel certificate.
+func GetVerifiedHTTPClient(timeout time.Duration) *http.Client {
+	return getHTTPClientWithTLSOptions(timeout, "", true, false)
+}
+
 // GetHTTPClientWithPreference 返回一个使用自定义解析器并按指定 IP 版本排序的 HTTP 客户端。
 // preferIPVersion 为 "4" 或 "6" 时固定优先对应地址；为空时保留自动选择逻辑。
 func GetHTTPClientWithPreference(timeout time.Duration, preferIPVersion string) *http.Client {
@@ -195,10 +201,14 @@ func GetHTTPClientWithoutHTTP2(timeout time.Duration, preferIPVersion string) *h
 }
 
 func getHTTPClient(timeout time.Duration, preferIPVersion string, forceHTTP2 bool) *http.Client {
+	return getHTTPClientWithTLSOptions(timeout, preferIPVersion, forceHTTP2, flags.IgnoreUnsafeCert)
+}
+
+func getHTTPClientWithTLSOptions(timeout time.Duration, preferIPVersion string, forceHTTP2, ignoreUnsafeCert bool) *http.Client {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
-	key := httpClientKey{timeout: timeout, ignoreUnsafeCert: flags.IgnoreUnsafeCert, preferIPVersion: preferIPVersion, forceHTTP2: forceHTTP2}
+	key := httpClientKey{timeout: timeout, ignoreUnsafeCert: ignoreUnsafeCert, preferIPVersion: preferIPVersion, forceHTTP2: forceHTTP2}
 	httpClientMu.Lock()
 	defer httpClientMu.Unlock()
 	if client := httpClients[key]; client != nil {
@@ -206,7 +216,7 @@ func getHTTPClient(timeout time.Duration, preferIPVersion string, forceHTTP2 boo
 	}
 	client := &http.Client{
 		Transport: buildTransportWithPreferenceAndHTTP2(timeout, &tls.Config{
-			InsecureSkipVerify: flags.IgnoreUnsafeCert,
+			InsecureSkipVerify: ignoreUnsafeCert,
 		}, preferIPVersion, forceHTTP2),
 		Timeout: timeout,
 	}
