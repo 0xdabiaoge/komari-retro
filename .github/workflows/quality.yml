@@ -7,6 +7,17 @@ on:
 permissions:
   contents: read
 jobs:
+  brotli-runtime:
+    name: 验证 Brotli 安全版本与运行库兼容性
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 构建并测试官方 Brotli 安全版本
+        run: |
+          mkdir -p /tmp/brotli-context
+          docker build --target brotli-build --file Dockerfile --tag komari-brotli-check /tmp/brotli-context
+          docker run --rm komari-brotli-check sh -ec 'dpkg -i /brotli-security.deb; ldconfig; curl --version | grep -F "brotli/1.0.10"; ctest --test-dir /build --output-on-failure'
+
   workflow-lint:
     name: 检查 GitHub Actions 工作流
     runs-on: ubuntu-latest
