@@ -1,6 +1,10 @@
 .git
+.codex
+toolchains
 komari-web/node_modules
 komari-web/.vite
+komari-next/node_modules
+komari-next/.next
 data
 *.log
 tmp
