@@ -83,6 +83,7 @@ export default function TerminalSession({
     let requestID: string | null = null,
       queuedSeq = 0,
       renderedSeq = 0;
+    let offeredSeq = 0, epoch = 0;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     let deadline = 0,
@@ -147,6 +148,7 @@ export default function TerminalSession({
     };
     const connect = () => {
       if (disposed) return;
+      offeredSeq = 0;
       status(attempts ? "reconnecting" : "connecting");
       const query = new URLSearchParams({ flow: "1" });
       if (requestID) query.set("request_id", requestID);
@@ -210,8 +212,9 @@ export default function TerminalSession({
             typeof message.data === "string"
           ) {
             const seq = message.seq!;
+            offeredSeq = Math.max(offeredSeq, seq);
             if (seq <= queuedSeq) {
-              control({ type: "ack", seq: renderedSeq });
+              control({ type: "ack", seq: Math.min(renderedSeq, offeredSeq) });
               return;
             }
             if (seq !== queuedSeq + 1 || message.data.length > 32768) {
@@ -226,10 +229,11 @@ export default function TerminalSession({
               c.charCodeAt(0),
             );
             queuedSeq = seq;
+            const writeEpoch = epoch;
             term.write(bytes, () => {
-              if (!disposed) {
+              if (!disposed && writeEpoch === epoch) {
                 renderedSeq = seq;
-                control({ type: "ack", seq });
+                control({ type: "ack", seq: Math.min(seq, offeredSeq) });
               }
             });
             return;
@@ -273,6 +277,7 @@ export default function TerminalSession({
       socket = null;
       previous?.close();
       if (ended) {
+        epoch++;
         requestID = null;
         queuedSeq = 0;
         renderedSeq = 0;

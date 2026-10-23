@@ -30,6 +30,7 @@ type TerminalSession struct {
 	expiring      bool
 	agentDeadline time.Time
 	resumeCapable bool
+	OnClose       func()
 }
 
 var TerminalSessionsMutex = &sync.Mutex{}
@@ -58,6 +59,9 @@ func closeTerminal(id string) {
 	}
 	if agent != nil {
 		_ = agent.Close()
+	}
+	if session != nil && session.OnClose != nil {
+		session.OnClose()
 	}
 }
 

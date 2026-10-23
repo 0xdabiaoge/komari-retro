@@ -92,6 +92,10 @@ func RequestTerminal(c *gin.Context) {
 		}
 		id = utils.GenerateRandomString(32)
 		s = &TerminalSession{UUID: uuid, UserUUID: c.GetString("uuid"), OwnerToken: owner, RequesterIp: c.ClientIP(), Done: make(chan struct{}), Authorized: authorized, flow: c.Query("flow") == "1", changed: make(chan struct{}), agentDeadline: time.Now().Add(5 * time.Minute)}
+		started := time.Now()
+		s.OnClose = func() {
+			auditlog.Log(s.RequesterIp, s.UserUUID, "terminal closed, duration:"+time.Since(started).String(), "terminal")
+		}
 		TerminalSessions[id] = s
 	}
 	TerminalSessionsMutex.Unlock()
@@ -130,6 +134,8 @@ func RequestTerminal(c *gin.Context) {
 	if !resuming {
 		go watchAuthorization(id, s, 2*time.Second)
 		auditlog.Log(s.RequesterIp, s.UserUUID, "open terminal", "terminal")
+	} else {
+		auditlog.Log(c.ClientIP(), s.UserUUID, "resume terminal", "terminal")
 	}
 	dispatchTerminal(id, s)
 	go writeBrowser(id, s, b)

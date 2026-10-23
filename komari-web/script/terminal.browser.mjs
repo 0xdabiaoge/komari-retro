@@ -33,6 +33,7 @@ const theme = {
 };
 let currentSocket,
   nextSeq = 0;
+let acknowledged = 0, futureAck = false;
 const context = await browser.newContext({
   viewport: { width: 1440, height: 900 },
   locale: "zh-CN",
@@ -82,25 +83,21 @@ await context.routeWebSocket("**/api/**", (ws) => {
   connections.push(u);
   currentSocket = ws;
   if (!u.searchParams.has("request_id")) nextSeq = 0;
-  ws.send(
-    JSON.stringify({
-      type: "session",
-      request_id: "retained-fixture-session",
-      ready: true,
-    }),
-  );
-  ws.send(
-    JSON.stringify({
-      type: "output",
-      seq: ++nextSeq,
-      data: Buffer.from(
-        "\x1b[32mKomari Retro 本地终端\x1b[0m\r\nfixture@node:~$ ",
-      ).toString("base64"),
-    }),
-  );
+  const replay = u.searchParams.has("request_id");
+  ws.send(JSON.stringify({ type: "session", request_id: "retained-fixture-session", ready: true }));
+  let offered = replay ? 1 : ++nextSeq;
+  const sendOutput = seq => ws.send(JSON.stringify({ type: "output", seq, data: Buffer.from("\x1b[32mKomari Retro 本地终端\x1b[0m\r\nfixture@node:~$ ").toString("base64") }));
+  sendOutput(offered);
   ws.onMessage((message) => {
-    if (typeof message !== "string")
-      inputs.push(Buffer.from(message).toString());
+    if (typeof message !== "string") inputs.push(Buffer.from(message).toString());
+    else {
+      const value = JSON.parse(message);
+      if (value.type === "ack") {
+        acknowledged = Math.max(acknowledged, value.seq);
+        if (replay && value.seq > offered) futureAck = true;
+        if (replay && value.seq === offered && offered < nextSeq) sendOutput(++offered);
+      }
+    }
   });
 });
 const page = await context.newPage();
@@ -154,6 +151,9 @@ try {
   const beforeCancel = inputs.length;
   await paste.getByRole("button", { name: "取消", exact: true }).click();
   assert.equal(inputs.length, beforeCancel);
+  for (let i = 0; i < 3; i++) currentSocket.send(JSON.stringify({ type: "output", seq: ++nextSeq, data: Buffer.from("retained output\r\n").toString("base64") }));
+  for (let i = 0; i < 30 && acknowledged < nextSeq; i++) await page.waitForTimeout(50);
+  assert.equal(acknowledged, nextSeq);
   currentSocket.close({ code: 1012, reason: "isolated reconnect test" });
   await page.waitForFunction(() =>
     document.querySelector(".km-connection-status.connected"),
@@ -164,6 +164,7 @@ try {
     connections.at(-1).searchParams.get("request_id"),
     "retained-fixture-session",
   );
+  assert.equal(futureAck, false, "replayed output acknowledged data not yet offered on this connection");
   await page.screenshot({
     path: new URL("desktop.png", output).pathname.replace(
       /^\/([A-Za-z]:)/,
