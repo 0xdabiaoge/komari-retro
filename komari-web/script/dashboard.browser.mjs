@@ -31,6 +31,8 @@ try {
  console.log('PASS 500-node dashboard, compact metrics, exact latency rankings and rendered traffic chart');
  const report={cpu:{usage:25},ram:{used:512,total:1024},network:{up:100,down:200,totalUp:1000,totalDown:2000},uptime:3600,updated_at:new Date().toISOString()};
  for(let first=1;first<=500;first+=50) {
+  // Deliberately retain the owner cookie: valid Agent protocol submissions
+  // must use Agent capacity even in a browser-authenticated context.
   await Promise.all(Array.from({length:50},async(_,offset)=>{
    const id=first+offset;
    const response=await context.request.post(f.base+'/api/clients/v2/rpc?token=fixture-token-'+id,{data:{jsonrpc:'2.0',id:'fixture-'+id,method:'agent.report',params:{report}}});

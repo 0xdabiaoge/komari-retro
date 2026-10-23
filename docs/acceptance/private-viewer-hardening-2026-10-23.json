@@ -21,16 +21,22 @@
     "go_vet": "PASS",
     "frontend_unit_tests": 22,
     "real_browser_acceptance_groups": 23,
-    "themes": ["default", "retro"],
+    "themes": [
+      "default",
+      "retro"
+    ],
     "audience_build_checks": "PASS for both independently compiled guest exports",
     "npm_audit": "0 advisories in both frontend projects",
     "govulncheck_go_1_27_3": "0 reachable vulnerabilities; 1 module-only advisory with no imported vulnerable package",
     "anonymous_websocket_rejection_burst": 256,
     "viewer_global_socket_budget": 128,
     "authenticated_agent_admission_simulation": 500,
-    "simulation_limit": "Admission-layer role simulation, not 500 real operating systems or a production load attack",
+    "simulation_limit": "500 protocol clients with synthetic metrics; not 500 real operating systems or a production load attack",
     "local_race_limit": "Windows Zig toolchain cannot link the synchronization imports required by the Go race runtime; Linux CI remains the race-test gate",
-    "production_ingress": "Verified direct IPv4/IPv6 origin denial, normal proxied access, protected credential logs and unchanged containers"
+    "production_ingress": "Verified direct IPv4/IPv6 origin denial, normal proxied access, protected credential logs and unchanged containers",
+    "authenticated_agent_websocket_connections": 500,
+    "agent_handshake_concurrency": 50,
+    "agent_report_concurrency": 50
   },
   "rollout": "Application fixes require a newly built release. Existing production application and Agent binaries were not replaced during this change.",
   "compatibility": "Existing global links remain valid and individually revoke through legacy settings; new links use independent grants. Legacy grant history is limited to the latest 24 hours. New tokens are shown once. Public-site mode intentionally exposes public data without a share; use private-site mode for scoped sharing.",

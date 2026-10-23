@@ -106,23 +106,8 @@ func RequestLimits() gin.HandlerFunc {
 // Verify only header/query credentials here: legacy JSON tokens must still be
 // read inside the bounded guest pool. Never trust a cookie's mere presence.
 func capacityRole(c *gin.Context) string {
-	if GetRole(c) == RoleAdmin || GetRole(c) == RoleClient {
-		return GetRole(c)
-	}
-	if header := c.GetHeader("Authorization"); header != "" && isApiKeyValid(header) {
-		return RoleAdmin
-	}
-	if token, _ := c.Cookie("session_token"); token != "" {
-		if _, err := accounts.GetUserBySession(token); err == nil {
-			return RoleAdmin
-		}
-	}
-	// The unguessable owner entrance keeps password login reachable under viewer load.
-	if token, _ := c.Cookie("admin_entrance_token"); token != "" {
-		entry, _ := config.GetAs[string](config.AdminPathKey)
-		if entry != "" && subtle.ConstantTimeCompare([]byte(token), []byte("/"+strings.Trim(entry, "/"))) == 1 {
-			return RoleAdmin
-		}
+	if GetRole(c) == RoleClient {
+		return RoleClient
 	}
 	token := c.Query("token")
 	if token == "" {
@@ -134,10 +119,36 @@ func capacityRole(c *gin.Context) string {
 	if token == "" {
 		token = c.GetHeader("X-Client-Token")
 	}
+	clientValid := false
 	if token != "" {
-		if _, err := clients.GetClientUUIDByToken(token); err == nil {
-			return RoleClient
+		_, err := clients.GetClientUUIDByToken(token)
+		clientValid = err == nil
+	}
+	// Protocol submissions may also carry a browser's owner cookie (for example
+	// an authenticated workbench or acceptance client). A verified Agent token
+	// on the dedicated Agent transport selects Agent capacity, never admin rights.
+	if strings.HasPrefix(c.Request.URL.Path, "/api/clients/") && clientValid {
+		return RoleClient
+	}
+	if GetRole(c) == RoleAdmin {
+		return RoleAdmin
+	}
+	if header := c.GetHeader("Authorization"); header != "" && isApiKeyValid(header) {
+		return RoleAdmin
+	}
+	if token, _ := c.Cookie("session_token"); token != "" {
+		if _, err := accounts.GetUserBySession(token); err == nil {
+			return RoleAdmin
 		}
+	}
+	if token, _ := c.Cookie("admin_entrance_token"); token != "" {
+		entry, _ := config.GetAs[string](config.AdminPathKey)
+		if entry != "" && subtle.ConstantTimeCompare([]byte(token), []byte("/"+strings.Trim(entry, "/"))) == 1 {
+			return RoleAdmin
+		}
+	}
+	if clientValid {
+		return RoleClient
 	}
 	return RoleGuest
 }
