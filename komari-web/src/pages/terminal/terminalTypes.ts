@@ -6,6 +6,7 @@ export interface TerminalClient {
 }
 
 export interface TerminalTab {
+  status?: "connecting" | "connected" | "reconnecting" | "disconnected" | "closed";
   id: string;
   uuid: string;
   title: string;

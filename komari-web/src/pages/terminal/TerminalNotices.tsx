@@ -18,13 +18,13 @@ const TerminalNotices = ({
 
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 top-12 z-30 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-16 z-30 flex items-center justify-center px-3">
         <motion.div
           initial={{ opacity: 0, y: -20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           hidden={!httpsCalloutOpen}
-          className="pointer-events-auto"
+          className="pointer-events-auto max-w-full"
         >
           <Callout.Root
             color="red"
@@ -35,8 +35,8 @@ const TerminalNotices = ({
               <TablerAlertTriangleFilled className="text-red-400" />
             </Callout.Icon>
             <Callout.Text className="font-medium">
-              <Flex align="center" justify="between" gap="3">
-                <span>{t("warn_https")}</span>
+              <Flex align="center" justify="between" gap="3" className="min-w-0">
+                <span className="min-w-0 whitespace-normal text-xs">{t("warn_https")}</span>
                 <IconButton
                   variant="soft"
                   color="red"

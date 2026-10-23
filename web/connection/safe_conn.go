@@ -39,9 +39,24 @@ func (sc *SafeConn) WriteJSON(v interface{}) error {
 	return sc.conn.WriteJSON(v)
 }
 
-func (sc *SafeConn) Close() error {
-	sc.mu.Lock()
+// Best-effort terminal shutdown notification. A stalled data writer must never
+// prevent revocation from closing the connection.
+func (sc *SafeConn) TryWriteJSON(v interface{}) {
+	if !sc.mu.TryLock() {
+		return
+	}
 	defer sc.mu.Unlock()
+	_ = sc.conn.SetWriteDeadline(time.Now().Add(time.Second))
+	_ = sc.conn.WriteJSON(v)
+}
+
+func (sc *SafeConn) WriteControl(kind int, data []byte, deadline time.Time) error {
+	return sc.conn.WriteControl(kind, data, deadline)
+}
+
+func (sc *SafeConn) Close() error {
+	// gorilla permits Close concurrently with reads/writes. Do not wait for
+	// the write mutex: cancellation must interrupt a blocked network write.
 	return sc.conn.Close()
 }
 func (sc *SafeConn) ReadMessage() (int, []byte, error) {

@@ -41,6 +41,7 @@ type terminalSession struct {
 	conn    *websocket.Conn
 	timer   *time.Timer
 	removed bool
+	changed chan struct{}
 }
 
 var (
@@ -62,6 +63,11 @@ func StartTerminal(conn *websocket.Conn, requestID string) {
 		_ = conn.Close()
 		return
 	}
+	// Advertise before exposing this socket to the PTY output goroutine.
+	if err := conn.WriteJSON(map[string]interface{}{"type": "capabilities", "terminalResume": true}); err != nil {
+		_ = conn.Close()
+		return
+	}
 
 	session, firstConnection, err := acquireSession(requestID, conn)
 	if err != nil {
@@ -72,6 +78,12 @@ func StartTerminal(conn *websocket.Conn, requestID string) {
 	if firstConnection {
 		go session.readOutput()
 	}
+	conn.SetCloseHandler(func(code int, _ string) error {
+		if code == 4001 {
+			closeSession(requestID, session)
+		}
+		return nil
+	})
 
 	session.handleInput(conn)
 	_ = conn.Close()
@@ -97,7 +109,7 @@ func acquireSession(requestID string, conn *websocket.Conn) (*terminalSession, b
 			sessionsMu.Unlock()
 			return nil, false, err
 		}
-		session = &terminalSession{id: requestID, term: impl.term}
+		session = &terminalSession{id: requestID, term: impl.term, changed: make(chan struct{})}
 
 		sessionsMu.Lock()
 		pendingSessions--
@@ -119,6 +131,10 @@ func acquireSession(requestID string, conn *websocket.Conn) (*terminalSession, b
 	}
 	oldConn := session.conn
 	session.conn = conn
+	if session.changed != nil {
+		close(session.changed)
+	}
+	session.changed = make(chan struct{})
 	session.mu.Unlock()
 	sessionsMu.Unlock()
 
@@ -176,19 +192,34 @@ func (s *terminalSession) readOutput() {
 	buf := make([]byte, 4096)
 	for {
 		n, err := s.term.Read(buf)
+		if n > 0 {
+			for {
+				s.mu.Lock()
+				conn, changed, removed := s.conn, s.changed, s.removed
+				s.mu.Unlock()
+				if removed {
+					return
+				}
+				if conn == nil {
+					<-changed
+					continue
+				}
+				_ = conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+				if writeErr := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); writeErr != nil {
+					s.detach(conn)
+				}
+				break
+			}
+		}
 		if err != nil {
+			s.mu.Lock()
+			conn := s.conn
+			s.mu.Unlock()
+			if conn != nil {
+				_ = conn.WriteJSON(map[string]string{"type": "exit"})
+			}
 			closeSession(s.id, s)
 			return
-		}
-
-		s.mu.Lock()
-		conn := s.conn
-		s.mu.Unlock()
-		if conn == nil {
-			continue
-		}
-		if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
-			s.detach(conn)
 		}
 	}
 }
@@ -224,6 +255,10 @@ func closeSession(requestID string, expected *terminalSession) {
 		return
 	}
 	session.removed = true
+	if session.changed != nil {
+		close(session.changed)
+	}
+	session.changed = make(chan struct{})
 	if session.timer != nil {
 		session.timer.Stop()
 		session.timer = nil

@@ -104,6 +104,7 @@ const TabButton = ({
             style={tabBackgroundStyle}
           />
 
+        <span className={`km-tab-status ${tab.status ?? "connecting"}`} aria-label={tab.status === "connected" ? "已连接" : tab.status === "closed" ? "会话已结束" : "连接中"} />
         <img
           src={getOSImage(client?.os || "")}
           alt=""

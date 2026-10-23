@@ -26,7 +26,7 @@ func EstablishConnection(c *gin.Context) {
 		return
 	}
 	raw.SetReadLimit(1 << 20)
-	raw.SetCloseHandler(func(int, string) error { closeTerminal(id); return nil })
+
 	agent := connection.NewSafeConn(raw)
 	TerminalSessionsMutex.Lock()
 	if TerminalSessions[id] != session || session.Agent != nil {
@@ -35,6 +35,11 @@ func EstablishConnection(c *gin.Context) {
 		return
 	}
 	session.Agent = agent
+	browser := session.Browser
+	signalLocked(session)
 	TerminalSessionsMutex.Unlock()
+	if browser != nil {
+		_ = browser.WriteJSON(gin.H{"type": "connected"})
+	}
 	go ForwardTerminal(id)
 }

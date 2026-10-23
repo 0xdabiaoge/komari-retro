@@ -22,10 +22,19 @@ const (
 
 // XtermJSSettings stores the admin-configurable xtermjs settings payload.
 type XtermJSSettings struct {
-	TerminalOptions       *TerminalOptions `json:"terminalOptions"`
-	TerminalPadding       *int             `json:"terminalPadding"`
-	TransparentBackground bool             `json:"transparentBackground"`
-	CustomCss             string           `json:"customCss"`
+	TerminalOptions       *TerminalOptions       `json:"terminalOptions"`
+	TerminalPadding       *int                   `json:"terminalPadding"`
+	TransparentBackground bool                   `json:"transparentBackground"`
+	CustomCss             string                 `json:"customCss"`
+	ThemeName             string                 `json:"themeName"`
+	SavedCommands         []SavedTerminalCommand `json:"savedCommands"`
+}
+
+type SavedTerminalCommand struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Command     string `json:"command"`
+	Description string `json:"description"`
 }
 
 // TerminalOptions stores the xterm.js terminal options.
@@ -125,6 +134,23 @@ func defaultXtermJSSettings() XtermJSSettings {
 
 func normalizeXtermJSSettings(input XtermJSSettings) (XtermJSSettings, error) {
 	normalized := defaultXtermJSSettings()
+	if len(input.SavedCommands) > 50 {
+		return XtermJSSettings{}, errors.New("最多保存 50 条常用命令")
+	}
+	seen := map[string]bool{}
+	for _, c := range input.SavedCommands {
+		c.ID = strings.TrimSpace(c.ID)
+		c.Name = strings.TrimSpace(c.Name)
+		if c.ID == "" || len(c.ID) > 64 || seen[c.ID] || c.Name == "" || len(c.Name) > 120 || len(c.Command) == 0 || len(c.Command) > 8192 || strings.ContainsRune(c.Command, 0) || len(c.Description) > 500 {
+			return XtermJSSettings{}, errors.New("常用命令格式无效或超过长度限制")
+		}
+		seen[c.ID] = true
+		normalized.SavedCommands = append(normalized.SavedCommands, c)
+	}
+	normalized.ThemeName = input.ThemeName
+	if normalized.ThemeName != "light" && normalized.ThemeName != "contrast" {
+		normalized.ThemeName = "dark"
+	}
 
 	if input.TerminalOptions != nil {
 		options := *input.TerminalOptions
@@ -140,12 +166,21 @@ func normalizeXtermJSSettings(input XtermJSSettings) (XtermJSSettings, error) {
 
 		if input.TerminalOptions.FontSize >= 1 {
 			options.FontSize = input.TerminalOptions.FontSize
+			if options.FontSize < 10 {
+				options.FontSize = 10
+			}
+			if options.FontSize > 32 {
+				options.FontSize = 32
+			}
 		} else {
 			options.FontSize = defaultXtermJSFontSize
 		}
 
 		if input.TerminalOptions.Scrollback != nil && *input.TerminalOptions.Scrollback >= 0 {
 			options.Scrollback = intPtr(*input.TerminalOptions.Scrollback)
+			if *options.Scrollback > 10000 {
+				options.Scrollback = intPtr(10000)
+			}
 		} else {
 			options.Scrollback = intPtr(defaultXtermJSScrollback)
 		}
@@ -161,6 +196,9 @@ func normalizeXtermJSSettings(input XtermJSSettings) (XtermJSSettings, error) {
 
 	if input.TerminalPadding != nil && *input.TerminalPadding >= 0 {
 		normalized.TerminalPadding = intPtr(*input.TerminalPadding)
+		if *normalized.TerminalPadding > 32 {
+			normalized.TerminalPadding = intPtr(32)
+		}
 	}
 	normalized.TransparentBackground = input.TransparentBackground
 	normalized.CustomCss = input.CustomCss

@@ -9,9 +9,14 @@ import FileManagerPanel from "./FileManagerPanel";
 import TerminalSession from "./TerminalSession";
 import { TerminalSearchBar } from "./TerminalSearchBar";
 import type { TerminalSessionApi } from "./TerminalSession";
+import type { TerminalStatus } from "./TerminalSession";
+import type { TerminalPreferences } from "./terminalPreferences";
 import type { TerminalTab } from "./terminalTypes";
 
 export interface TerminalWorkspaceProps {
+  onTerminalPath: (path: string) => void;
+  preferences: TerminalPreferences;
+  onStatusChange: (id: string, status: TerminalStatus) => void;
   containerRef: RefObject<HTMLDivElement | null>;
   isSidebarOpen: boolean;
   leftWidth: number;
@@ -54,6 +59,9 @@ const Divider = ({
 );
 
 const TerminalWorkspace = ({
+  onTerminalPath,
+  preferences,
+  onStatusChange,
   containerRef,
   isSidebarOpen,
   leftWidth,
@@ -115,6 +123,8 @@ const TerminalWorkspace = ({
                 key={tab.id}
                 uuid={tab.uuid}
                 active={tab.id === activeTabId}
+                preferences={preferences}
+                onStatusChange={(status) => onStatusChange(tab.id, status)}
                 disconnectMessage={disconnectMessage}
                 onApiChange={(api) => onApiChange(tab.id, api)}
               />
@@ -177,7 +187,7 @@ const TerminalWorkspace = ({
         }`}
       >
         <div className="min-h-0 flex-1 overflow-hidden">
-          <FileManagerPanel uuid={tabs.find((tab) => tab.id === activeTabId)?.uuid ?? null} />
+          <FileManagerPanel uuid={tabs.find((tab) => tab.id === activeTabId)?.uuid ?? null} onTerminalPath={onTerminalPath} />
         </div>
       </aside>
     </div>

@@ -73,7 +73,7 @@ export default defineConfig(({ mode }) => {
           for (const item of Object.values(bundle)) {
             const chunk = item as { type?: string; moduleIds?: string[] };
             for (const id of chunk.moduleIds || []) {
-              if (/\/src\/(?:pages\/admin|contexts\/AccountContext|components\/(?:Login|ChartTemplateAction)|utils\/loginRedirect)/.test(id.replaceAll("\\", "/"))) throw new Error(`Privileged module reached viewer bundle: ${id}`);
+              if (/\/src\/(?:pages\/(?:admin|terminal)|contexts\/AccountContext|components\/(?:Login|ChartTemplateAction)|utils\/loginRedirect)/.test(id.replaceAll("\\", "/"))) throw new Error(`Privileged module reached viewer bundle: ${id}`);
             }
           }
         },

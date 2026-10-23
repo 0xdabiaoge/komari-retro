@@ -1,0 +1,275 @@
+.km-workbench-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  background: #151b24;
+  border-bottom: 1px solid #2a3442;
+  color: #e2e8f0;
+  font-size: 13px;
+}
+.km-workbench-brand a {
+  color: #94a3b8;
+}
+.km-workbench-brand strong {
+  letter-spacing: 0.03em;
+}
+.km-workbench-brand strong span {
+  font-weight: 400;
+  color: #67e8f9;
+}
+.km-workbench-caption {
+  border-left: 1px solid #334155;
+  padding-left: 12px;
+  color: #94a3b8;
+}
+.km-workbench-server {
+  margin-left: auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #cbd5e1;
+}
+.km-workbench-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #151b24;
+  border-top: 1px solid #293241;
+  border-bottom: 1px solid #293241;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.km-workbench-tools button,
+.km-terminal-accessory button,
+.km-workbench-panel button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #354154;
+  border-radius: 6px;
+  background: #202a37;
+  color: #dbe5f1;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.km-workbench-tools button:hover,
+.km-terminal-accessory button:hover,
+.km-workbench-panel button:hover {
+  background: #304156;
+}
+.km-workbench-tools button:disabled,
+.km-terminal-accessory button:disabled,
+.km-workbench-panel button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.km-tools-spacer {
+  flex: 1;
+}
+.km-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  min-width: 78px;
+}
+.km-connection-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #64748b;
+}
+.km-connection-status.connected i {
+  background: #4ade80;
+}
+.km-connection-status.reconnecting i,
+.km-connection-status.connecting i {
+  background: #fbbf24;
+}
+.km-connection-status.closed i {
+  background: #fb7185;
+}
+.km-terminal-accessory {
+  order: 10;
+  display: none;
+  flex-shrink: 0;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 8px;
+  background: #151b24;
+  border-top: 1px solid #354154;
+  font-size: 12px;
+}
+.km-workbench-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0005;
+  z-index: 50;
+  display: flex;
+  justify-content: flex-end;
+}
+.km-workbench-panel {
+  width: min(420px, 100vw);
+  height: 100dvh;
+  overflow: auto;
+  background: #151b24;
+  border-left: 1px solid #354154;
+  padding: 20px;
+  color: #e2e8f0;
+  font-size: 13px;
+  box-shadow: -20px 0 60px #0005;
+}
+.km-workbench-panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.km-workbench-panel h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.km-workbench-panel h3 {
+  font-weight: 600;
+  margin: 20px 0 8px;
+}
+.km-workbench-panel p {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.km-workbench-panel label {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+}
+.km-workbench-panel input,
+.km-workbench-panel select,
+.km-workbench-panel textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #354154;
+  border-radius: 6px;
+  background: #0e141d;
+  color: #e2e8f0;
+  padding: 8px;
+}
+.km-workbench-panel .km-check-label {
+  display: flex;
+  align-items: center;
+}
+.km-check-label input {
+  width: auto;
+}
+.km-workbench-panel .km-primary {
+  background: #0e7490;
+  border-color: #0891b2;
+}
+.km-saved-command-list {
+  display: grid;
+  gap: 7px;
+  max-height: 230px;
+  overflow: auto;
+}
+.km-saved-command-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+.km-saved-command-list button[aria-pressed="true"] {
+  border-color: #22d3ee;
+}
+.km-saved-command-list small {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #94a3b8;
+}
+.km-command-preview pre {
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+  padding: 12px;
+  background: #080d14;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+.km-command-actions {
+  display: flex;
+  gap: 8px;
+}
+.km-workbench-panel :focus-visible,
+.km-workbench-tools :focus-visible,
+.km-terminal-accessory :focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 2px;
+}
+.km-page-terminal .km-terminal-shell {
+  height: 100dvh;
+  background: #101318;
+}
+.km-page-terminal .km-terminal-tabbar {
+  background: #151b24;
+}
+.km-terminal-body {
+  isolation: isolate;
+}
+@media (max-width: 700px) {
+  .km-workbench-brand {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .km-workbench-caption {
+    display: none;
+  }
+  .km-workbench-tools {
+    padding: 7px;
+    gap: 5px;
+  }
+  .km-tools-spacer {
+    display: none;
+  }
+  .km-terminal-accessory {
+    display: flex;
+  }
+  .km-terminal-body > .km-terminal-main {
+    width: 100% !important;
+  }
+  .km-terminal-body > aside:not(.hidden) {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(92%, 360px);
+    z-index: 6;
+    box-shadow: -10px 0 25px #0009;
+  }
+  .km-terminal-divider {
+    display: none;
+  }
+}
+.km-tab-status {
+  position: relative;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fbbf24;
+  flex-shrink: 0;
+}
+.km-tab-status.connected {
+  background: #4ade80;
+}
+.km-tab-status.closed,
+.km-tab-status.disconnected {
+  background: #fb7185;
+}

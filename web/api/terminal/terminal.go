@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"github.com/gorilla/websocket"
 	"sync"
 	"time"
 
@@ -8,13 +9,27 @@ import (
 )
 
 type TerminalSession struct {
-	UUID        string
-	UserUUID    string
-	Browser     *connection.SafeConn
-	Agent       *connection.SafeConn
-	RequesterIp string
-	Done        chan struct{}
-	Authorized  func() bool
+	UUID          string
+	UserUUID      string
+	Browser       *connection.SafeConn
+	Agent         *connection.SafeConn
+	RequesterIp   string
+	Done          chan struct{}
+	Authorized    func() bool
+	OwnerToken    string
+	flow          bool
+	changed       chan struct{}
+	expiry        *time.Timer
+	lastDispatch  time.Time
+	output        []outputChunk
+	outputBytes   int
+	nextSeq       uint64
+	sentSeq       uint64
+	ackedSeq      uint64
+	shellExited   bool
+	expiring      bool
+	agentDeadline time.Time
+	resumeCapable bool
 }
 
 var TerminalSessionsMutex = &sync.Mutex{}
@@ -26,6 +41,10 @@ func closeTerminal(id string) {
 	delete(TerminalSessions, id)
 	var browser, agent *connection.SafeConn
 	if session != nil {
+		if session.expiry != nil {
+			session.expiry.Stop()
+		}
+		signalLocked(session)
 		browser, agent = session.Browser, session.Agent
 		if session.Done != nil {
 			close(session.Done)
@@ -33,6 +52,8 @@ func closeTerminal(id string) {
 	}
 	TerminalSessionsMutex.Unlock()
 	if browser != nil {
+		browser.TryWriteJSON(map[string]string{"type": "closed", "message": "终端会话已结束，请新建连接。"})
+		_ = browser.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(4001, "Terminal session ended"), time.Now().Add(time.Second))
 		_ = browser.Close()
 	}
 	if agent != nil {
@@ -51,7 +72,8 @@ func revokeTerminal(id string, session *TerminalSession) {
 	// Explicitly terminate the retained PTY instead of retaining it as though
 	// this were only a transient network disconnect.
 	if agent != nil {
-		_ = agent.WriteJSON(map[string]string{"type": "close"})
+		agent.TryWriteJSON(map[string]string{"type": "close"})
+		_ = agent.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(4001, "Terminal permission revoked"), time.Now().Add(time.Second))
 	}
 	closeTerminal(id)
 }

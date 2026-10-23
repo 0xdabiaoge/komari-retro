@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Scissors,
   Search,
+  SquareTerminal,
   Trash2,
   Upload,
   X,
@@ -65,6 +66,7 @@ import { useRemoteFileUpload } from "./useRemoteFileUpload";
 
 interface FileManagerPanelProps {
   uuid: string | null;
+  onTerminalPath?: (path: string) => void;
 }
 
 type FileAction =
@@ -138,7 +140,7 @@ const fileIcon = (file: RemoteFileInfo) => {
   return <File size={17} className="text-[#a7a7a7]" />;
 };
 
-const FileManagerPanel = ({ uuid }: FileManagerPanelProps) => {
+const FileManagerPanel = ({ uuid, onTerminalPath }: FileManagerPanelProps) => {
   const { t } = useTranslation();
   const fileService = useRemoteFileService(uuid ?? "");
   const [currentPath, setCurrentPath] = useState("");
@@ -740,6 +742,7 @@ const FileManagerPanel = ({ uuid }: FileManagerPanelProps) => {
           className="h-7 min-w-0 flex-1 rounded-[4px] border border-[#3c3c3c] bg-[#1e1e1e] px-2 text-xs text-neutral-100 placeholder-neutral-500 outline-none focus:border-[#007acc]"
           aria-label={t("file_manager.path", "Path")}
         />
+        {onTerminalPath && <button type="button" className={toolbarButton} disabled={!currentPath} onClick={() => onTerminalPath(currentPath)} title="填入切换目录命令" aria-label="填入切换目录命令"><SquareTerminal size={16} /></button>}
         <button type="button" className={toolbarButton} onClick={() => void refresh()} title={t("common.refresh", "Refresh")}>
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         </button>

@@ -346,6 +346,7 @@ export const useTerminalPage = () => {
 
   const openClient = useCallback(
     (client: TerminalClient) => {
+      if (tabsRef.current.length >= 8) { toast.error("最多同时打开 8 个终端，请先关闭不使用的标签"); return; }
       const tab = createTab(client, undefined, t("terminal.server"));
       updateTabs([...tabsRef.current, tab]);
       setActiveTabId(tab.id);
@@ -356,6 +357,7 @@ export const useTerminalPage = () => {
 
   const duplicateTab = useCallback(
     (id: string) => {
+      if (tabsRef.current.length >= 8) { toast.error("最多同时打开 8 个终端，请先关闭不使用的标签"); return; }
       const source = tabsRef.current.find((item) => item.id === id);
       if (!source) {
         setServerMenuOpen(true);
@@ -677,7 +679,7 @@ export const useTerminalPage = () => {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (document.querySelector(".km-file-editor, .km-guide-content")) {
+      if (document.querySelector(".km-file-editor, .km-guide-content, .km-workbench-panel, .km-terminal-paste-overlay")) {
         return;
       }
       const ctrlShift =
@@ -788,9 +790,10 @@ export const useTerminalPage = () => {
     toggleFullscreen,
   ]);
 
-  const sessionsReady = authResolved;
+  const sessionsReady = authResolved && onboardingAuthenticated;
 
   return {
+    activeApi,
     onboardingAuthenticated,
     t,
     appearance,

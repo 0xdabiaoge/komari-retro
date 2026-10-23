@@ -8,11 +8,17 @@ import { useTerminalPage } from "./useTerminalPage";
 import { DEFAULT_TERMINAL_FONT_FAMILY } from "./terminalDefaults";
 import { lazy, Suspense, useState } from "react";
 import TerminalGuide from "@/components/onboarding/TerminalGuide";
+import WorkbenchTools from "./WorkbenchTools";
+import { useTerminalPreferences } from "./useTerminalPreferences";
+import type { TerminalStatus } from "./TerminalSession";
+import { directoryCommand } from "./terminalCommand";
+import { toast } from "sonner";
 
 const FileEditorDialog = lazy(() => import("./FileEditorDialog"));
 
 const TerminalPage = () => {
   const {
+    activeApi,
     onboardingAuthenticated,
     t,
     appearance,
@@ -64,6 +70,8 @@ const TerminalPage = () => {
 
   const [editorUuid, setEditorUuid] = useState<string | null>(null);
   const [workbenchMenuOpen, setWorkbenchMenuOpen] = useState(false);
+  const { preferences, ready, saving, save } = useTerminalPreferences();
+  const [statuses, setStatuses] = useState<Record<string, TerminalStatus>>({});
 
   return (
       <Theme
@@ -79,8 +87,9 @@ const TerminalPage = () => {
           className="km-terminal-shell flex h-screen w-screen min-w-0 flex-col bg-[#1e1e1e] text-[#cccccc]"
           style={appearance}
         >
+          <WorkbenchTools name={tabs.find(tab => tab.id === activeTabId)?.title ?? ""} status={activeTabId ? statuses[activeTabId] ?? "connecting" : "disconnected"} api={activeApi} preferences={preferences} saving={saving} save={save} onSearch={() => openSearch()} onFiles={() => setIsSidebarOpen(open => !open)} />
           <TerminalTabBar
-            tabs={tabs}
+            tabs={tabs.map(tab => ({ ...tab, status: statuses[tab.id] }))}
             clients={clients}
             clientsLoading={clientsLoading}
             activeTabId={activeTabId}
@@ -122,13 +131,16 @@ const TerminalPage = () => {
           />
 
           <TerminalWorkspace
+            onTerminalPath={(path) => { try { activeApi?.paste(directoryCommand(path)); } catch (error) { toast.error(error instanceof Error ? error.message : "目录无效"); } }}
+            preferences={preferences}
+            onStatusChange={(id, status) => setStatuses(current => current[id] === status ? current : { ...current, [id]: status })}
             containerRef={containerRef}
             isSidebarOpen={isSidebarOpen}
             leftWidth={leftWidth}
             tabs={tabs}
             clientsLoading={clientsLoading}
             activeTabId={activeTabId}
-            sessionsReady={sessionsReady}
+            sessionsReady={sessionsReady && ready}
             disconnectMessage={t("terminal.disconnect")}
             searchOpen={searchOpen}
             searchTerm={searchTerm}

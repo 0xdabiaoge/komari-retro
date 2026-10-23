@@ -99,3 +99,19 @@ func TestXtermjsPermission(t *testing.T) {
 		t.Error("admin must access admin:setXtermjsSettings")
 	}
 }
+
+func TestWorkbenchPreferencesBoundsAndCommands(t *testing.T) {
+	huge := 1000000
+	out, err := normalizeXtermJSSettings(XtermJSSettings{ThemeName: "light", TerminalOptions: &TerminalOptions{FontSize: 999, Scrollback: &huge}, TerminalPadding: &huge, SavedCommands: []SavedTerminalCommand{{ID: "one", Name: "检查", Command: "uptime", Description: "仅填入"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ThemeName != "light" || out.TerminalOptions.FontSize != 32 || *out.TerminalOptions.Scrollback != 10000 || *out.TerminalPadding != 32 || len(out.SavedCommands) != 1 {
+		t.Fatal("bounds or command persistence failed")
+	}
+	for _, commands := range [][]SavedTerminalCommand{{{ID: "same", Name: "A", Command: "a"}, {ID: "same", Name: "B", Command: "b"}}, {{ID: "bad", Name: "A", Command: "a\x00b"}}, make([]SavedTerminalCommand, 51)} {
+		if _, err := normalizeXtermJSSettings(XtermJSSettings{SavedCommands: commands}); err == nil {
+			t.Fatal("invalid commands accepted")
+		}
+	}
+}
