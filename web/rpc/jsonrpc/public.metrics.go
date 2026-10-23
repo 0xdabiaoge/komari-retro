@@ -38,9 +38,12 @@ var metricProjections = map[string]metricProjection{
 var metricAggregations = map[string]bool{"avg": true, "min": true, "max": true, "sum": true,
 	"first": true, "last": true, "stddev": true, "p70": true, "p95": true, "p99": true}
 
-func publicListMetricDefinitions(_ context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
+func publicListMetricDefinitions(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
 	hours, _ := config.GetAs[int]("record_preserve_time", 720)
 	days := math.Min(31, math.Max(0, float64(hours)/24))
+	if meta := rpc.MetaFromContext(ctx); meta != nil && meta.Permission != rpc.RoleAdmin && meta.Share != nil {
+		days = math.Min(days, float64(meta.Share.HistoryHours)/24)
+	}
 	keys := make([]string, 0, len(metricProjections))
 	for key := range metricProjections {
 		if key != "net.in" && key != "net.out" && key != "ping.latency" {
@@ -152,6 +155,11 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 	projection := metricProjections[key]
 	filter := ` r.time>=? AND r.time<? AND (?='' OR r.client=?) AND (? OR c.hidden=0)`
 	args := []any{models.FromTime(start), models.FromTime(end), entity, entity, isLoginFromCtx(ctx)}
+	if meta := rpc.MetaFromContext(ctx); meta != nil && meta.Permission != rpc.RoleAdmin && meta.Share != nil {
+		clause, values := meta.Share.SQLPredicate("r.client")
+		filter += clause
+		args = append(args, values...)
+	}
 	var source string
 	switch projection.source {
 	case "gpu":
@@ -172,8 +180,10 @@ func querySQLiteMetric(ctx context.Context, key, entity string, start, end time.
 		boundary := time.Now().Add(-4*time.Hour - time.Minute)
 		base := `SELECT r.client,r.time,r.` + projection.column + ` AS value,'' AS tags FROM %s r JOIN clients c ON c.uuid=r.client WHERE` + filter
 		source = fmt.Sprintf(base, "records") + ` AND r.time>=? UNION ALL ` + fmt.Sprintf(base, "records_long_term") + ` AND r.time<?`
+		baseArgs := append([]any(nil), args...)
 		args = append(args, models.FromTime(boundary))
-		args = append(args, models.FromTime(start), models.FromTime(end), entity, entity, isLoginFromCtx(ctx), models.FromTime(boundary))
+		args = append(args, baseArgs...)
+		args = append(args, models.FromTime(boundary))
 	}
 	expression := map[string]string{"avg": "AVG(value)", "min": "MIN(value)", "max": "MAX(value)", "sum": "SUM(value)",
 		"first": "MAX(CASE WHEN time_rank=1 THEN value END)", "last": "MAX(CASE WHEN reverse_rank=1 THEN value END)", "stddev": "AVG(value*value)-AVG(value)*AVG(value)"}[aggregation]

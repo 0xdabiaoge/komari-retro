@@ -6,6 +6,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/komari-monitor/komari/pkg/share"
 
 	"github.com/komari-monitor/komari/database/models"
 )
@@ -14,6 +15,7 @@ import (
 // 为了便于扩展，字段保持冗余：既保存结构体，也保存对应 UUID / Token。
 // 未来如需添加字段（如 IP、UserAgent、TraceID 等）直接在此结构体上扩展即可。
 type ContextMeta struct {
+	Share       *share.Grant
 	APIKey      bool
 	APIKeyScope string
 	// Permission 当前权限分组 guest/client/admin

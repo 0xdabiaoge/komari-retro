@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
+	"github.com/komari-monitor/komari/pkg/share"
 	"html"
 	"io/fs"
 	"net/http"
@@ -132,18 +133,28 @@ func registerAudienceAssets(r *gin.RouterGroup) {
 	})
 	r.GET("/viewer-bootstrap.js", func(c *gin.Context) {
 		audienceHeaders(c)
+		if privateSite() && !managementAudience(c) && !hasValidTempKey(c) {
+			c.Status(404)
+			return
+		}
+		audienceHeaders(c)
 		c.Data(200, "application/javascript; charset=utf-8", []byte(`if('serviceWorker'in navigator)navigator.serviceWorker.getRegistrations().then(list=>Promise.all(list.filter(item=>item.scope===location.origin+'/').map(item=>item.unregister()))).catch(()=>{});if('caches'in window)caches.keys().then(list=>Promise.all(list.filter(key=>key.startsWith('workbox-')).map(key=>caches.delete(key)))).catch(()=>{});`))
 	})
 }
 
 func issueViewerCookie(c *gin.Context, token string) {
-	permanent, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
-	if token != "" && token == permanent {
-		setAccessCookie(c, "temp_key", token, 30*86400, true)
+	grant := share.Validate(token)
+	if grant == nil {
 		return
 	}
-	expires, _ := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
-	if remaining := int(expires - time.Now().Unix()); remaining > 0 {
-		setAccessCookie(c, "temp_key", token, remaining, true)
+	maxAge := 30 * 86400
+	if grant.ExpiresAt > 0 {
+		remaining := int(grant.ExpiresAt - time.Now().Unix())
+		if remaining < maxAge {
+			maxAge = remaining
+		}
+	}
+	if maxAge > 0 {
+		setAccessCookie(c, "temp_key", token, maxAge, true)
 	}
 }

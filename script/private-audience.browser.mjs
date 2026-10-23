@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { testProfileAndTheme, testNodeManagement } from './admin-functional.browser.mjs';
 import { testBillingAndPingPresets } from './billing-ping-presets.browser.mjs';
+import { testViewerShares } from './viewer-share-security.browser.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('../komari-web/node_modules/playwright');
 const fixture = JSON.parse(await readFile(process.env.PRIVATE_AUDIENCE_FIXTURE, 'utf8'));
@@ -119,6 +120,7 @@ try {
   rows.push(...await testBillingAndPingPresets({owner,ownerContext,rpc,fixture,output}));
   rows.push(...await testProfileAndTheme({owner,ownerContext,rpc,fixture}));
   rows.push(...await testNodeManagement({owner,ownerContext,rpc,fixture}));
+  rows.push(...await testViewerShares({owner,ownerContext,rpc,fixture,browser,output}));
   for (const theme of ['default', 'retro']) {
     await rpc('admin:editSettings', { theme });
     const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 1000 } });
@@ -211,7 +213,7 @@ try {
     socket.onmessage = event => { clearTimeout(timer); socket.close(); resolve(JSON.parse(event.data).error?.code); };
     socket.onerror = () => { clearTimeout(timer); reject(new Error('viewer socket failed')); };
   }));
-  assert.equal(wsDenied, -32041);
+  assert.equal(wsDenied, -32601);
   rows.push({ case: 'owner-browser-share-tab-cannot-inherit-management', status: 'PASS' });
   const viewContext = await browser.newContext({ locale: 'en-US' });
   const viewPage = await viewContext.newPage();

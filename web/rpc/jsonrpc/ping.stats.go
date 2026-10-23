@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/komari-monitor/komari/pkg/rpc"
 	"math"
 	"sort"
 	"time"
@@ -68,6 +69,11 @@ func queryPingStats(ctx context.Context, entity string, start, end time.Time, ad
 	visibility := ""
 	if !admin {
 		visibility = " WHERE c.hidden=0"
+	}
+	if meta := rpc.MetaFromContext(ctx); !admin && meta != nil && meta.Share != nil {
+		clause, values := meta.Share.SQLPredicate("client")
+		filter += clause
+		args = append(args, values...)
 	}
 	// Aggregate before joining metadata. The covering index streams each value
 	// frequency in order; no global raw-row sort or repeated metadata lookup.

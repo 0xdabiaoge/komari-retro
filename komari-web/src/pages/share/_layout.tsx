@@ -1,5 +1,5 @@
 import { LiveDataProvider } from "@/contexts/LiveDataContext";
-import Footer from "@/components/Footer";
+import Footer from "@/guest/Footer";
 import ShareNavBar from "@/components/ShareNavBar";
 import { Outlet } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";

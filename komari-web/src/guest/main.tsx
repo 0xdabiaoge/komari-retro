@@ -22,7 +22,7 @@ function App() {
   const [color, setColor] = useLocalStorage<Colors>("color", THEME_DEFAULTS.color);
   const resolved = useSystemTheme(appearance);
   const value = useMemo(() => ({ appearance, setAppearance, color, setColor }), [appearance, setAppearance, color, setColor]);
-  const routes = useRoutes(["/", "/s/:token"].map(path => ({
+  const routes = useRoutes(["/", "/shared", "/s/:token"].map(path => ({
     path, element: <ShareLayout />, children: [{ index: true, element: <ShareIndex /> }, { path: "instance/:uuid", element: <Instance /> }],
   })));
   return <ThemeContext.Provider value={value}><Theme appearance={resolved} accentColor={color} scaling="110%" className="theme-root">

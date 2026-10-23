@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/komari-monitor/komari/pkg/share"
 	"io"
 	"net/http"
 	"strings"
@@ -65,6 +66,11 @@ func CallFromGin(c *gin.Context, method string, params any) *rpc.JsonRpcResponse
 }
 
 func serveWebSocket(c *gin.Context) {
+	release, ok := api.AdmitViewerSocket(c)
+	if !ok {
+		return
+	}
+	defer release()
 	_conn, err := api.UpgradeWebSocket(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Failed to upgrade to WebSocket." + err.Error()})
@@ -75,6 +81,7 @@ func serveWebSocket(c *gin.Context) {
 
 	_conn.SetReadLimit(1 << 20)
 	for {
+		_ = _conn.SetReadDeadline(time.Now().Add(api.ViewerSocketIdleTimeout))
 		var req rpc.JsonRpcRequest
 		if err := conn.ReadJSON(&req); err != nil {
 			var se *json.SyntaxError
@@ -93,14 +100,22 @@ func serveWebSocket(c *gin.Context) {
 		// 同步写：SafeConn 内部有锁，串行写避免响应乱序与并发竞态。
 		// Re-evaluate credentials for every message, including revocation/expiry.
 		meta := buildContextMeta(c, detectPermissionGroup(c))
+		private, privateErr := config.GetAs[bool](config.PrivateSiteKey, false)
+		lostAccess := meta.Permission == rpc.RoleGuest && (private || privateErr != nil) && !meta.TempShareValid && !meta.AdminEntranceValid
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 		response := Dispatch(ctx, meta, &req)
 		cancel()
 		if req.ID == nil {
+			if lostAccess {
+				return
+			}
 			continue
 		}
 		if err := conn.WriteJSON(response); err != nil {
 			break
+		}
+		if lostAccess {
+			return
 		}
 	}
 }
@@ -223,7 +238,8 @@ func buildContextMeta(c *gin.Context, permissionGroup string) *rpc.ContextMeta {
 	}
 	meta.RemoteIP = c.ClientIP()
 	meta.UserAgent = c.GetHeader("User-Agent")
-	meta.TempShareValid = hasTempShareAccess(c)
+	meta.Share = share.FromRequest(c.Request)
+	meta.TempShareValid = meta.Share != nil
 	meta.AdminEntranceValid = hasAdminEntranceAccess(c)
 	if meta.APIKey {
 		meta.User = nil
@@ -247,28 +263,4 @@ func hasAdminEntranceAccess(c *gin.Context) bool {
 }
 
 // hasTempShareAccess 校验 temp_key 是否为有效的临时分享访问许可（优先 Cookie，兼容 Query 与 Header）。
-func hasTempShareAccess(c *gin.Context) bool {
-	tempKey, err := c.Cookie("temp_key")
-	if err != nil || tempKey == "" {
-		tempKey = c.Query("temp_key")
-		if tempKey == "" {
-			tempKey = c.GetHeader("X-Temp-Key")
-		}
-	}
-	if tempKey == "" {
-		return false
-	}
-	permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
-	if permToken != "" && tempKey == permToken {
-		return true
-	}
-	expireAt, err := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
-	if err != nil {
-		return false
-	}
-	allowKey, err := config.GetAs[string](config.TemporyShareTokenKey, "")
-	if err != nil || allowKey == "" || tempKey != allowKey {
-		return false
-	}
-	return expireAt >= time.Now().Unix()
-}
+func hasTempShareAccess(c *gin.Context) bool { return share.FromRequest(c.Request) != nil }

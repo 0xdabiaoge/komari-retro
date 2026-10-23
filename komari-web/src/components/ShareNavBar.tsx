@@ -7,7 +7,7 @@ import { usePublicInfo } from "@/contexts/PublicInfoContext";
 const ShareNavBar = () => {
   const { publicInfo } = usePublicInfo();
   const { token } = useParams<{ token: string }>();
-  const homePath = token ? `/s/${token}` : "/";
+  const homePath = token ? `/s/${token}` : "/shared";
 
   return (
     <nav className="km-navbar nav-bar flex rounded-b-lg items-center gap-2 md:gap-3 max-h-16 justify-end min-w-full p-2 px-4">

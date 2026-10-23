@@ -19,7 +19,7 @@ func visiblePingTasks(ctx context.Context, input []models.PingTask) ([]models.Pi
 	}
 	visible := map[string]bool{}
 	for _, node := range nodes {
-		if !node.Hidden {
+		if !node.Hidden && shareAllows(ctx, node.UUID) {
 			visible[node.UUID] = true
 		}
 	}

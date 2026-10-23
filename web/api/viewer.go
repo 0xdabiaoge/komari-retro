@@ -16,7 +16,7 @@ func ViewerHandler(next http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "private, no-store, max-age=0")
 		w.Header().Set("Vary", "Cookie")
 		rel := strings.TrimPrefix(r.URL.Path, "/viewer-api")
-		allowed := rel == "/rpc2" || rel == "/public" || rel == "/nodes" || rel == "/version" || rel == "/clients" || rel == "/records/load" || rel == "/records/ping" || rel == "/task/ping" || (strings.HasPrefix(rel, "/recent/") && !strings.Contains(strings.TrimPrefix(rel, "/recent/"), "/"))
+		allowed := rel == "/rpc2" || rel == "/public" || rel == "/nodes" || rel == "/clients" || rel == "/records/load" || rel == "/records/ping" || rel == "/task/ping" || (strings.HasPrefix(rel, "/recent/") && !strings.Contains(strings.TrimPrefix(rel, "/recent/"), "/"))
 		if !allowed || strings.Contains(rel, "..") || strings.Contains(rel, "\\") || (r.Method != http.MethodGet && !(rel == "/rpc2" && r.Method == http.MethodPost)) {
 			http.NotFound(w, r)
 			return

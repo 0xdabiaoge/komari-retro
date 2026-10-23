@@ -53,6 +53,9 @@ func init() {
 	Allow("guest:*", RoleGuest)
 	Allow("rpc.*", RoleGuest) // 内部方法 rpc.ping/rpc.help 等（用 "." 分隔）
 	Allow("rpc:*", RoleGuest)
+	Allow("rpc.methods", RoleAdmin)
+	Allow("rpc.help", RoleAdmin)
+	Allow("rpc.version", RoleAdmin)
 	Allow("client:*", RoleClient)
 	Allow("admin:*", RoleAdmin)
 }

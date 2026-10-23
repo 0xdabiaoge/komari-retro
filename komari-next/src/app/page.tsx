@@ -14,6 +14,7 @@ export default function Page() {
   
   // Client-side routing for SPA behavior with static export
   const parts = pathname.split("/").filter(Boolean);
+  if (parts[0] === "shared") parts.shift();
   
   // Handle /instance/<uuid> routes
   if (parts[0] === "instance" && parts[1]) {

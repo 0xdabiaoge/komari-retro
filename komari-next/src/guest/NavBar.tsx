@@ -23,7 +23,7 @@ const NavBar = () => {
       <div className="container mx-auto flex h-16 md:h-20 items-center justify-between px-4">
         {/* Logo and Title */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <SpaLink href="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-all">
+          <SpaLink href="/shared" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-all">
             <BrandMark className="h-9 w-9 shrink-0" />
             <span className="flex min-w-0 flex-col leading-tight">
               <span className="truncate text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">

@@ -337,4 +337,6 @@ func TestSecurityRegressions(t *testing.T) {
 			t.Fatal("fresh request unexpectedly authorized")
 		}
 	})
+
+	t.Run("ViewerSecurityBoundary", checkViewerSecurityBoundary)
 }

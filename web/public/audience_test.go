@@ -64,11 +64,15 @@ func TestPrivateAudienceIsolation(t *testing.T) {
 	for _, theme := range []string{"default", "retro"} {
 		t.Run(theme, func(t *testing.T) {
 			_ = config.Set(config.ThemeKey, theme)
-			page := request("GET", "/s/"+share, "", "")
+			exchange := request("GET", "/s/"+share, "", "")
+			if exchange.Code != 303 || exchange.Header().Get("Location") != "/shared" {
+				t.Fatal("share URL was not cleaned")
+			}
+			page := request("GET", "/shared", viewer, "")
 			if page.Code != 200 || !strings.Contains(page.Body.String(), "/share-assets/"+theme+"/") || strings.Contains(page.Body.String(), canary) {
 				t.Fatalf("viewer document: %d", page.Code)
 			}
-			cookies := page.Result().Cookies()
+			cookies := exchange.Result().Cookies()
 			if len(cookies) != 1 || cookies[0].Name != "temp_key" || !cookies[0].HttpOnly || cookies[0].MaxAge > 30*86400 {
 				t.Fatal("viewer cookie flags")
 			}

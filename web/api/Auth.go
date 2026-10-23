@@ -5,10 +5,10 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
+	"github.com/komari-monitor/komari/pkg/share"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -197,7 +197,7 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 			return
 		}
 		if path == "/api/version" {
-			c.Next()
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 
@@ -223,34 +223,7 @@ func PrivateSiteMiddleware() gin.HandlerFunc {
 	}
 }
 
-func hasTempAccess(c *gin.Context) bool {
-	tempKey, err := c.Cookie("temp_key")
-	if err != nil || tempKey == "" {
-		tempKey = c.Query("temp_key")
-		if tempKey == "" {
-			tempKey = c.GetHeader("X-Temp-Key")
-		}
-	}
-	if tempKey == "" {
-		return false
-	}
-	permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
-	if permToken != "" && tempKey == permToken {
-		return true
-	}
-	expireAt, err := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
-	if err != nil {
-		return false
-	}
-	allowKey, err := config.GetAs[string](config.TemporyShareTokenKey, "")
-	if err != nil {
-		return false
-	}
-	if allowKey == "" || tempKey != allowKey {
-		return false
-	}
-	return expireAt >= time.Now().Unix()
-}
+func hasTempAccess(c *gin.Context) bool { return share.FromRequest(c.Request) != nil }
 
 func extractClientToken(c *gin.Context) string {
 	token := c.Query("token")

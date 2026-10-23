@@ -1,13 +1,18 @@
 package api
 
 import (
+	"crypto/subtle"
 	"github.com/gin-gonic/gin"
+	"github.com/komari-monitor/komari/database/accounts"
+	"github.com/komari-monitor/komari/database/clients"
+	"github.com/komari-monitor/komari/pkg/config"
 	"net/http"
 	"strings"
 	"time"
 )
 
 var requestSlots = make(chan struct{}, 16)
+var adminRequestSlots = make(chan struct{}, 8)
 var agentRequestSlots = make(chan struct{}, 32)
 var agentRequestWaiters = make(chan struct{}, 64)
 var largeUploadSlots = make(chan struct{}, 2)
@@ -34,8 +39,12 @@ func RequestLimits() gin.HandlerFunc {
 		if strings.HasPrefix(p, "/api/") && p != "/api/version" && !IsWebSocketUpgrade(c) {
 			// A reporting burst must not consume the administrator's capacity.
 			// The path selects a bounded admission pool, never authentication.
-			agentReport := p == "/api/clients/report" || p == "/api/clients/v2/rpc" || p == "/api/clients/uploadBasicInfo"
+			role := capacityRole(c)
+			agentReport := role == RoleClient
 			slots := requestSlots
+			if role == RoleAdmin {
+				slots = adminRequestSlots
+			}
 			if agentReport {
 				slots = agentRequestSlots
 			}
@@ -92,6 +101,45 @@ func RequestLimits() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+// Verify only header/query credentials here: legacy JSON tokens must still be
+// read inside the bounded guest pool. Never trust a cookie's mere presence.
+func capacityRole(c *gin.Context) string {
+	if GetRole(c) == RoleAdmin || GetRole(c) == RoleClient {
+		return GetRole(c)
+	}
+	if header := c.GetHeader("Authorization"); header != "" && isApiKeyValid(header) {
+		return RoleAdmin
+	}
+	if token, _ := c.Cookie("session_token"); token != "" {
+		if _, err := accounts.GetUserBySession(token); err == nil {
+			return RoleAdmin
+		}
+	}
+	// The unguessable owner entrance keeps password login reachable under viewer load.
+	if token, _ := c.Cookie("admin_entrance_token"); token != "" {
+		entry, _ := config.GetAs[string](config.AdminPathKey)
+		if entry != "" && subtle.ConstantTimeCompare([]byte(token), []byte("/"+strings.Trim(entry, "/"))) == 1 {
+			return RoleAdmin
+		}
+	}
+	token := c.Query("token")
+	if token == "" {
+		token = c.Query("Authorization")
+	}
+	if token == "" {
+		token = strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+	}
+	if token == "" {
+		token = c.GetHeader("X-Client-Token")
+	}
+	if token != "" {
+		if _, err := clients.GetClientUUIDByToken(token); err == nil {
+			return RoleClient
+		}
+	}
+	return RoleGuest
 }
 
 func rejectCapacity(c *gin.Context) {

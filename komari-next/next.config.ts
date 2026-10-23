@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   webpack(config, { webpack }) {
     if (guest) {
       const replacements: Record<string, string> = {
+        'components/Footer': 'Footer.tsx',
         'components/NavBar': 'NavBar.tsx', 'hooks/useThemeWriter': 'useThemeWriter.ts',
         'components/PWAInstallPrompt': 'PWA.tsx', 'components/PWAUpdatePrompt': 'PWA.tsx',
       };

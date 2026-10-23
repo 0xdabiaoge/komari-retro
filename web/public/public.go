@@ -2,6 +2,7 @@ package public
 
 import (
 	"embed"
+	"github.com/komari-monitor/komari/pkg/share"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/komari-monitor/komari/database/accounts"
@@ -320,6 +320,11 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 
 	// 1. Favicon 优先策略
 	r.GET("/favicon.ico", func(c *gin.Context) {
+		audienceHeaders(c)
+		if privateSite() && !managementAudience(c) && !hasValidTempKey(c) {
+			c.Status(404)
+			return
+		}
 		// 优先：./data/favicon.ico
 		localFavicon := filepath.Join(DataDir, FaviconFile)
 		if _, err := os.Stat(localFavicon); err == nil {
@@ -381,6 +386,30 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		}
 		cfg := getConfig()
 		currentTheme := cfg[config.ThemeKey].(string)
+		if token := c.Query("temp_key"); token != "" {
+			if share.Validate(token) == nil {
+				c.Status(404)
+				return
+			}
+			issueViewerCookie(c, token)
+			target := "/shared"
+			if strings.HasPrefix(reqPath, "/instance/") {
+				target = "/shared" + reqPath
+			}
+			if strings.HasPrefix(reqPath, "/shared/instance/") {
+				target = reqPath
+			}
+			c.Redirect(http.StatusSeeOther, target)
+			return
+		}
+		if reqPath == "/shared" || strings.HasPrefix(reqPath, "/shared/instance/") {
+			if privateSite() && !hasValidTempKey(c) {
+				c.Status(404)
+				return
+			}
+			serveGuestIndex(c, currentTheme)
+			return
+		}
 		if !managementAudience(c) {
 			ext := strings.ToLower(filepath.Ext(reqPath))
 			if ext == ".svg" || ext == ".png" || ext == ".webp" || ext == ".ico" || ext == ".woff" || ext == ".woff2" || reqPath == "/manifest.json" {
@@ -481,25 +510,10 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			parts := strings.Split(tokenPart, "/")
 			shareToken := parts[0]
 
-			permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
-			tempToken, _ := config.GetAs[string](config.TemporyShareTokenKey, "")
-			expireAt, _ := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
-			now := time.Now().Unix()
-
-			// 永久分享验证
-			if permToken != "" && shareToken == permToken {
-				setAccessCookie(c, "temp_key", shareToken, 30*86400, true)
-				serveGuestIndex(c, currentTheme)
-				return
-			}
-
-			// 限时分享验证
-			if tempToken != "" && shareToken == tempToken && expireAt >= now {
-				expireSeconds := int(expireAt - now)
-				if expireSeconds > 0 {
-					setAccessCookie(c, "temp_key", shareToken, expireSeconds, true)
-				}
-				serveGuestIndex(c, currentTheme)
+			if share.Validate(shareToken) != nil {
+				issueViewerCookie(c, shareToken)
+				audienceHeaders(c)
+				c.Redirect(http.StatusSeeOther, "/shared")
 				return
 			}
 
@@ -525,16 +539,15 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 			if token := c.Query("temp_key"); token != "" {
 				issueViewerCookie(c, token)
 			}
-			if reqPath == "/" {
-				tempKey, _ := c.Cookie("temp_key")
-				if tempKey == "" {
-					tempKey = c.Query("temp_key")
-				}
-				if tempKey != "" {
-					c.Redirect(http.StatusFound, "/s/"+tempKey)
-					return
-				}
+			if token := c.Query("temp_key"); token != "" {
+				c.Redirect(http.StatusSeeOther, c.Request.URL.Path)
+				return
 			}
+			if reqPath == "/" {
+				serveGuestIndex(c, currentTheme)
+				return
+			}
+
 			if strings.HasPrefix(reqPath, "/instance/") {
 				serveGuestIndex(c, currentTheme)
 				return
@@ -546,28 +559,7 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 	})
 }
 
-func hasValidTempKey(c *gin.Context) bool {
-	tempKey, _ := c.Cookie("temp_key")
-	if tempKey == "" {
-		tempKey = c.Query("temp_key")
-	}
-	if tempKey == "" {
-		return false
-	}
-	permToken, _ := config.GetAs[string](config.PermanentShareTokenKey, "")
-	if permToken != "" && tempKey == permToken {
-		return true
-	}
-	expireAt, err := config.GetAs[int64](config.TemporyShareTokenExpireAtKey, 0)
-	if err != nil {
-		return false
-	}
-	tempToken, err := config.GetAs[string](config.TemporyShareTokenKey, "")
-	if err != nil || tempToken == "" || tempKey != tempToken {
-		return false
-	}
-	return expireAt >= time.Now().Unix()
-}
+func hasValidTempKey(c *gin.Context) bool { return share.FromRequest(c.Request) != nil }
 
 // Both audiences use server-issued cookies; no viewer script rewrites them.
 func setAccessCookie(c *gin.Context, name, value string, maxAge int, httpOnly bool) {

@@ -29,6 +29,15 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 		group = rpc.RoleGuest
 	}
 
+	if group == rpc.RoleGuest {
+		switch req.Method {
+		case "rpc.methods", "rpc.help", "rpc.version", "public:getVersion", "common:getVersion", "getVersion":
+			return rpc.ErrorResponse(req.ID, rpc.MethodNotFound, "Method not found", nil)
+		}
+		if !guestMethodAllowed(req.Method) {
+			return rpc.ErrorResponse(req.ID, rpc.MethodNotFound, "Method not found", nil)
+		}
+	}
 	// 私有站点：未登录访客访问控制
 	if group == rpc.RoleGuest {
 		if privateSite, err := config.GetAs[bool](config.PrivateSiteKey, false); err != nil || privateSite {
@@ -41,7 +50,7 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 			} else {
 				// 2. 未持有有效凭据时，彻底屏蔽公开站点元信息，仅放行版本号及心跳
 				switch req.Method {
-				case "public:getVersion", "rpc.ping", "rpc:ping":
+				case "rpc.ping", "rpc:ping":
 					// 放行基础探测/心跳
 				default:
 					return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Not found", nil)
@@ -58,6 +67,12 @@ func Dispatch(ctx context.Context, meta *rpc.ContextMeta, req *rpc.JsonRpcReques
 		return rpc.ErrorResponse(req.ID, rpc.PermissionDenied, "Permission denied", nil)
 	}
 
+	ctx = rpc.NewContextWithMeta(ctx, meta)
+	if group == rpc.RoleGuest {
+		if err := checkShareRequest(ctx, req); err != nil {
+			return err.ResponseWithID(req.ID)
+		}
+	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	switch req.Method {

@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"github.com/komari-monitor/komari/pkg/config"
 	"log/slog"
 	"net/url"
 	"strings"
@@ -74,6 +75,14 @@ func safeLogQuery(values url.Values) string {
 }
 
 func safeLogPath(path string) string {
+	for _, key := range []string{config.AdminPathKey, config.AdminViewPathKey} {
+		entry, _ := config.GetAs[string](key)
+		entry = "/" + strings.Trim(strings.TrimSpace(entry), "/")
+		if entry != "/" && (path == entry || strings.HasPrefix(path, entry+"/")) {
+			return "/[private-entry]"
+		}
+	}
+
 	if strings.HasPrefix(path, "/s/") {
 		return "/s/[redacted]"
 	}

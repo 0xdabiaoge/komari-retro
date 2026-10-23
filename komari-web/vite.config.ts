@@ -67,7 +67,7 @@ export default defineConfig(({ mode }) => {
         enforce: "pre" as const,
         transform(code: string, id: string) {
           if (/\/i18n\/locales\/[^/]+\.json$/.test(id.replaceAll("\\", "/"))) return JSON.stringify(filterGuestLocales(JSON.parse(code)));
-          if (id.includes("/src/") && /\.tsx?$/.test(id)) return code.replaceAll("/api/", "/viewer-api/");
+          if (id.includes("/src/") && /\.tsx?$/.test(id)) return code.replaceAll("/api/", "/viewer-api/").replace(/(["'`])\/instance\//g, "$1/shared/instance/");
         },
         generateBundle(_options: unknown, bundle: Record<string, unknown>) {
           for (const item of Object.values(bundle)) {

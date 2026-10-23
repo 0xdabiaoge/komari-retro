@@ -67,14 +67,7 @@ const Footer = () => {
                 <Github className="h-4 w-4 group-hover:scale-110 transition-transform" />
                 <span className="font-medium">Komari Retro</span>
               </a>
-              <a
-                href="https://github.com/tonyliuzj/komari-next"
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary transition-colors"
-              >
-                Based on Komari Next 1.4.19 · MIT
-              </a>
+
             </div>
           </div>
 

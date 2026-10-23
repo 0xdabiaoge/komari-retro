@@ -2,6 +2,8 @@ package jsonrpc
 
 import (
 	"context"
+	"github.com/komari-monitor/komari/pkg/viewer"
+	"github.com/komari-monitor/komari/protocol/v1"
 	"strconv"
 	"time"
 
@@ -52,22 +54,26 @@ func publicGetNodesInformation(ctx context.Context, _ *rpc.JsonRpcRequest) (any,
 	if err != nil {
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to retrieve client information: "+err.Error(), nil)
 	}
-	isLogin := isLoginFromCtx(ctx)
-	j := 0
-	for i := 0; i < len(clientList); i++ {
-		if clientList[i].Hidden && !isLogin {
-			continue
+	if isLoginFromCtx(ctx) {
+		// Preserve the historical public-route contract even for an administrator;
+		// credential-bearing node details belong to dedicated admin methods.
+		for i := range clientList {
+			clientList[i].Token = ""
+			clientList[i].Remark = ""
+			clientList[i].Version = ""
+			clientList[i].IPv4 = ""
+			clientList[i].IPv6 = ""
 		}
-		clientList[i].IPv4 = ""
-		clientList[i].IPv6 = ""
-		clientList[i].Remark = ""
-		clientList[i].Version = ""
-		clientList[i].Token = ""
-		clientList[j] = clientList[i]
-		j++
+		return clientList, nil
 	}
-	clientList = clientList[:j]
-	return clientList, nil
+	policy := guestNodePolicy(ctx)
+	out := make([]map[string]any, 0, len(clientList))
+	for _, node := range clientList {
+		if !node.Hidden && shareAllows(ctx, node.UUID) {
+			out = append(out, viewer.Node(node, policy))
+		}
+	}
+	return out, nil
 }
 
 func publicGetPublicSettings(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -75,17 +81,10 @@ func publicGetPublicSettings(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *
 	if e != nil {
 		return nil, rpc.MakeError(rpc.InternalError, e.Error(), nil)
 	}
-	// 临时访问许可由 transport 层在 meta 标注；此处沿用原逻辑判断 temp_key。
-	if meta := rpc.MetaFromContext(ctx); meta != nil && meta.TempShareValid {
-		p["private_site"] = false
-		p["is_share_view"] = true
+	if !isLoginFromCtx(ctx) {
+		p = guestPublicSettings(ctx,p)
 	}
-	meta := rpc.MetaFromContext(ctx)
-	if !isLoginFromCtx(ctx) && (meta == nil || !meta.AdminEntranceValid) {
-		delete(p, "custom_head")
-		delete(p, "custom_body")
-		p["is_share_view"] = true
-	}
+
 	return p, nil
 }
 
@@ -119,24 +118,28 @@ func publicGetClientRecentRecords(ctx context.Context, req *rpc.JsonRpcRequest) 
 	if params.UUID == "" {
 		return nil, rpc.MakeError(rpc.InvalidParams, "UUID is required", nil)
 	}
-	if !isLoginFromCtx(ctx) && isHiddenClient(params.UUID) {
+	if !isLoginFromCtx(ctx) && isHiddenClient(ctx, params.UUID) {
 		return nil, rpc.MakeError(rpc.InvalidParams, "UUID is required", nil) // 防止未登录获取隐藏客户端
 	}
 	recs, _ := report_cache.Records.Get(params.UUID)
-	return recs, nil
+	if isLoginFromCtx(ctx) {
+		return recs, nil
+	}
+	reports, _ := recs.([]v1.Report)
+	out := make([]v1.ViewerReport, 0, len(reports))
+	for _, report := range reports {
+		out = append(out, v1.PublicReport(report))
+	}
+	return out, nil
 }
 
 // isHiddenClient 查询指定 uuid 是否为隐藏节点。
-func isHiddenClient(uuid string) bool {
-	var hiddenClients []models.Client
-	db := dbcore.GetDBInstance()
-	_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
-	for _, cli := range hiddenClients {
-		if cli.UUID == uuid {
-			return true
-		}
+func isHiddenClient(ctx context.Context, uuid string) bool {
+	if !shareAllows(ctx, uuid) {
+		return true
 	}
-	return false
+	var node models.Client
+	return dbcore.GetDBInstance().Select("uuid", "hidden").Where("uuid = ?", uuid).First(&node).Error != nil || node.Hidden
 }
 
 func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpcError) {
@@ -147,7 +150,7 @@ func publicGetRecordsByUUID(ctx context.Context, req *rpc.JsonRpcRequest) (any, 
 	}
 	req.BindParams(&params)
 	isLogin := isLoginFromCtx(ctx)
-	if !isLogin && params.UUID != "" && isHiddenClient(params.UUID) {
+	if !isLogin && params.UUID != "" && isHiddenClient(ctx, params.UUID) {
 		return nil, rpc.MakeError(rpc.InvalidParams, "UUID is required", nil)
 	}
 	if params.UUID == "" {
@@ -374,7 +377,7 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		total, loss, min, max int
 	})
 	for _, r := range recs {
-		if r.Client != "" && !isLogin && hiddenMap[r.Client] {
+		if r.Client != "" && !isLogin && (hiddenMap[r.Client] || !shareAllows(ctx, r.Client)) {
 			continue
 		}
 		rec := recordsResp{Time: r.Time.ToTime().Format(time.RFC3339), Value: r.Value, Client: r.Client, TaskId: r.TaskId}
@@ -397,7 +400,7 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	if len(clientStats) > 0 {
 		response.BasicInfo = make([]clientBasicInfo, 0, len(clientStats))
 		for client, stats := range clientStats {
-			if client != "" && !isLogin && hiddenMap[client] {
+			if client != "" && !isLogin && (hiddenMap[client] || !shareAllows(ctx, client)) {
 				continue
 			}
 			loss := float64(0)

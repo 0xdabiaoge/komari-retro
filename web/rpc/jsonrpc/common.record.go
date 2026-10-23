@@ -83,7 +83,7 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 			return nil, rpc.MakeError(rpc.InternalError, "Failed to get client info", err.Error())
 		}
 		for _, c := range cinfo {
-			if c.Hidden {
+			if c.Hidden || !shareAllows(ctx, c.UUID) {
 				hidden[c.UUID] = true
 			}
 		}
@@ -107,7 +107,7 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		if !isAdmin {
 			filtered := recs[:0]
 			for _, r := range recs {
-				if hidden[r.Client] {
+				if hidden[r.Client] || !shareAllows(ctx, r.Client) {
 					continue
 				}
 				filtered = append(filtered, r)
@@ -211,7 +211,7 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		if !isAdmin {
 			filtered := recs[:0]
 			for _, r := range recs {
-				if r.Client != "" && hidden[r.Client] {
+				if r.Client != "" && (hidden[r.Client] || !shareAllows(ctx, r.Client)) {
 					continue
 				}
 				filtered = append(filtered, r)
@@ -276,7 +276,7 @@ func getRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rpc.JsonRpc
 		if len(clientStats) > 0 {
 			response.BasicInfo = make([]ClientBasicInfo, 0, len(clientStats))
 			for client, st := range clientStats {
-				if client != "" && !isAdmin && hidden[client] {
+				if client != "" && !isAdmin && (hidden[client] || !shareAllows(ctx, client)) {
 					continue
 				}
 				loss := float64(0)
