@@ -62,7 +62,9 @@ func GetClients(c *gin.Context) {
 	if !isLogin {
 		var hiddenClients []models.Client
 		db := dbcore.GetDBInstance()
-		_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
+		if err := db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error; err != nil {
+			return
+		}
 		for _, cli := range hiddenClients {
 			hiddenMap[cli.UUID] = true
 		}

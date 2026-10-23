@@ -331,4 +331,25 @@ func checkViewerSecurityBoundary(t *testing.T) {
 			}
 		}
 	})
+	t.Run("visibility-storage-error-fails-closed", func(t *testing.T) {
+		_, fresh, err := share.Create(share.Grant{Name: "visibility-failure", Nodes: []string{"viewer-audit-allowed"}, HistoryHours: 1, MaxConnections: 2})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Exec("ALTER TABLE clients RENAME TO visibility_offline_clients").Error; err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := db.Exec("ALTER TABLE visibility_offline_clients RENAME TO clients").Error; err != nil {
+				t.Error(err)
+			}
+		}()
+		for _, prefix := range []string{"/api", "/viewer-api"} {
+			for _, method := range []string{"common:getNodeRecentStatus", "public:getClientRecentRecords", "public:getPingRecords"} {
+				if call(prefix, method, "temp_key="+fresh, map[string]any{"uuid": "viewer-audit-allowed", "hours": "1"})["error"] == nil {
+					t.Fatalf("visibility failure released data: %s", method)
+				}
+			}
+		}
+	})
 }

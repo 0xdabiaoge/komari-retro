@@ -269,7 +269,7 @@ func getPublicInfo(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *rpc.JsonRp
 		return nil, rpc.MakeError(rpc.InternalError, "Failed to get public info", err.Error())
 	}
 	if !isLoginFromCtx(ctx) {
-		info = guestPublicSettings(ctx,info)
+		info = guestPublicSettings(ctx, info)
 	}
 	return info, nil
 }
@@ -477,7 +477,9 @@ func getNodeRecentStatus(ctx context.Context, req *rpc.JsonRpcRequest) (any, *rp
 	if !isLogin {
 		var hiddenClients []models.Client
 		db := dbcore.GetDBInstance()
-		_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
+		if err := db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error; err != nil {
+			return nil, rpc.MakeError(rpc.InternalError, "Unable to verify node visibility", nil)
+		}
 		for _, cli := range hiddenClients {
 			hiddenMap[cli.UUID] = true
 		}

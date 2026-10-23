@@ -82,7 +82,7 @@ func publicGetPublicSettings(ctx context.Context, _ *rpc.JsonRpcRequest) (any, *
 		return nil, rpc.MakeError(rpc.InternalError, e.Error(), nil)
 	}
 	if !isLoginFromCtx(ctx) {
-		p = guestPublicSettings(ctx,p)
+		p = guestPublicSettings(ctx, p)
 	}
 
 	return p, nil
@@ -337,7 +337,9 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 	if !isLogin {
 		var hiddenClients []models.Client
 		db := dbcore.GetDBInstance()
-		_ = db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error
+		if err := db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error; err != nil {
+			return nil, rpc.MakeError(rpc.InternalError, "Unable to verify node visibility", nil)
+		}
 		for _, cli := range hiddenClients {
 			hiddenMap[cli.UUID] = true
 		}
