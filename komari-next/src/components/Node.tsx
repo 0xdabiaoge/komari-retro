@@ -13,6 +13,8 @@ import type { NodeBasicInfo } from "@/contexts/NodeListContext";
 import type { LiveData, Record } from "../types/LiveData";
 import { getOSImage, getOSName } from "@/utils";
 import { formatBytes } from "@/utils/unitHelper";
+import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { pingHistoryHours } from "@/lib/viewerHistory";
 import { useTheme } from "@/contexts/ThemeContext";
 import { type PingHistoryPoint, type PingStats, usePingStats } from "@/hooks/usePingStats";
 
@@ -186,7 +188,7 @@ function PingHistoryStrip({
   );
 }
 
-function PingQualityBars({ pingStats, t }: { pingStats: PingStats; t: TFunction }) {
+function PingQualityBars({ pingStats, t, hours }: { pingStats: PingStats; t: TFunction; hours: number }) {
   const historyPoints = pingStats.hasData && pingStats.history.length > 0
     ? pingStats.history
     : PING_HISTORY_PLACEHOLDER_POINTS;
@@ -205,7 +207,7 @@ function PingQualityBars({ pingStats, t }: { pingStats: PingStats; t: TFunction 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-muted-foreground">{t("nodeCard.pingStats")}</span>
+        <span className="text-muted-foreground">{t(hours > 0 ? "nodeCard.pingStats" : "nodeCard.pingNotShared", { hours })}</span>
         <span className="font-mono text-[11px] text-muted-foreground">
           {statusText}
         </span>
@@ -244,7 +246,9 @@ interface NodeProps {
 const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
   const [t] = useTranslation();
   const { guestDisplay, themeConfig } = useTheme();
-  const pingStats = usePingStats(basic.uuid, 24, pingStatsEnabled);
+  const { publicInfo } = usePublicInfo();
+  const historyHours = pingHistoryHours(publicInfo);
+  const pingStats = usePingStats(basic.uuid, historyHours, pingStatsEnabled);
   const showPrice = guestDisplay.showPrice;
   const showExpiredAt = guestDisplay.showExpiredAt;
 
@@ -349,7 +353,7 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
                   {live?.message && <Tips color="#CE282E">{live.message}</Tips>}
                   <MiniPingChartFloat
                     uuid={basic.uuid}
-                    hours={24}
+                    hours={historyHours}
                     trigger={
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary">
                         <TrendingUp className="h-4 w-4" />
@@ -574,7 +578,7 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
                   </div>
                 ) : (
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground text-xs">{t("nodeCard.pingStats")}</span>
+                    <span className="text-muted-foreground text-xs">{t(historyHours > 0 ? "nodeCard.pingStats" : "nodeCard.pingNotShared", { hours: historyHours })}</span>
                     {pingStats.hasData ? (
                       <div className="flex gap-3 font-mono text-xs text-muted-foreground">
                         <span>{pingStats.avgLoss.toFixed(1)}% {t("chart.lossRate")}</span>
@@ -665,10 +669,10 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
 
           {/* Ping Statistics */}
           {themeConfig.cardDesign === "quality-bars" ? (
-            <PingQualityBars pingStats={pingStats} t={t} />
+            <PingQualityBars pingStats={pingStats} t={t} hours={historyHours} />
           ) : (
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">{t("nodeCard.pingStats")}</span>
+              <span className="text-muted-foreground">{t(historyHours > 0 ? "nodeCard.pingStats" : "nodeCard.pingNotShared", { hours: historyHours })}</span>
               {pingStats.hasData ? (
                 <div className="flex gap-3 font-mono text-xs text-muted-foreground">
                   <span>{pingStats.avgLoss.toFixed(1)}% {t("chart.lossRate")}</span>

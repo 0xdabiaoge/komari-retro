@@ -12,6 +12,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useTranslation } from "react-i18next";
 import { cutPeakValues, interpolateNullsLinear } from "@/utils/RecordHelper";
 import Tips from "./ui/tips";
+import { usePublicInfo } from "@/contexts/PublicInfoContext";
+import { pingHistoryHours } from "@/lib/viewerHistory";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { fetchPingRecords, PING_RECORDS_AUTO_REFRESH_MS, type PingRecord, type PingTaskInfo } from "@/lib/pingRecords";
 // 移除旧 REST 类型，改用 RPC2 返回结构
@@ -39,7 +41,7 @@ const MiniPingChart = ({
   uuid,
   width = "100%",
   height = 300,
-  hours = 12,
+  hours: requestedHours = 12,
 }: MiniPingChartProps) => {
   const [remoteData, setRemoteData] = useState<PingRecord[] | null>(null);
   const [tasks, setTasks] = useState<PingTaskInfo[]>([]);
@@ -49,8 +51,10 @@ const MiniPingChart = ({
   const [t] = useTranslation();
   const [cutPeak, setCutPeak] = useState(false);
   const { call } = useRPC2Call();
+  const { publicInfo } = usePublicInfo();
+  const hours = pingHistoryHours(publicInfo, requestedHours);
   useEffect(() => {
-    if (!uuid.trim()) {
+    if (!uuid.trim() || hours <= 0) {
       setRemoteData(null);
       setTasks([]);
       setError(null);

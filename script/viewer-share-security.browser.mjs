@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 
 export async function testViewerShares({owner,ownerContext,rpc,fixture,browser,output}) {
+  const originalTheme=(await rpc('admin:getSettings')).theme;
+  await rpc('admin:editSettings',{theme:'retro'});
   await owner.goto(fixture.base+'/admin/settings/site');
   await owner.getByText('独立授权分享',{exact:true}).click();
   await owner.getByLabel('分享名称').fill('浏览器范围验收');
   await owner.getByText('Visitor Node',{exact:true}).last().click();
+  await owner.locator('label').filter({hasText:'历史范围'}).getByRole('combobox').click();
+  await owner.getByRole('option',{name:'最近 1 小时',exact:true}).click();
   await owner.getByRole('button',{name:'生成独立分享链接',exact:true}).click();
   const link=owner.getByRole('textbox',{name:'新分享链接'});
   await link.waitFor();
@@ -13,12 +17,22 @@ export async function testViewerShares({owner,ownerContext,rpc,fixture,browser,o
   const grants=await rpc('admin:listViewerShares');
   const grant=grants.find(item=>item.name==='浏览器范围验收');
   assert.ok(grant && grant.nodes.length===1 && grant.nodes[0]===fixture.node);
+  assert.equal(grant.history_hours,1);
   assert.ok(!JSON.stringify(grants).includes('token_hash'));
   const guestContext=await browser.newContext({locale:'zh-CN'});
   const guest=await guestContext.newPage();
+  const historyRequests=[];
+  const record=raw=>{try{const j=typeof raw==='string'?JSON.parse(raw):raw;if(j?.method==='common:getRecords'&&j.params?.type==='ping')historyRequests.push(j.params.hours);}catch{}};
+  guest.on('request',r=>{if(r.method()==='POST')record(r.postData());});
+  guest.on('websocket',ws=>ws.on('framesent',f=>record(String(f.payload))));
   await guest.goto(url);
   await guest.waitForURL(fixture.base+'/shared');
   await guest.getByText('Visitor Node',{exact:true}).first().waitFor();
+  await guest.getByText(/(?:延迟统计|Ping Stats).*[（(]1h[）)]/).first().waitFor();
+  assert.ok(!(await guest.locator('body').innerText()).includes('24h'));
+  for(let i=0;i<30&&!historyRequests.length;i++)await guest.waitForTimeout(100);
+  assert.ok(historyRequests.includes(1),'scoped card must load its authorized history');
+  assert.ok(historyRequests.every(hours=>hours<=1));
   assert.ok(!guest.url().includes('/s/'));
   assert.equal(await guest.locator('input[type=password]').count(),0);
   const cookie=(await guestContext.cookies()).find(c=>c.name==='temp_key');
@@ -34,5 +48,15 @@ export async function testViewerShares({owner,ownerContext,rpc,fixture,browser,o
   const revoked=await guestContext.request.post(fixture.base+'/viewer-api/rpc2',{data:{jsonrpc:'2.0',id:1,method:'common:getNodes',params:{}}}).then(r=>r.json());
   assert.ok(revoked.error);
   await guestContext.close();
-  return [{case:'independent-share-real-ui-create-scope-cookie-clean-url-revoke',status:'PASS'}];
+  const realtime=await rpc('admin:createViewerShare',{name:'实时范围验收',all_nodes:false,nodes:[fixture.node],history_hours:0,max_connections:2,show_price:false,show_expiry:false,expires_at:Math.floor(Date.now()/1000)+600});
+  const liveContext=await browser.newContext({locale:'zh-CN'}),live=await liveContext.newPage(),liveQueries=[];
+  const recordLive=raw=>{try{const j=typeof raw==='string'?JSON.parse(raw):raw;if(j?.method==='common:getRecords'&&j.params?.type==='ping')liveQueries.push(j);}catch{}};
+  live.on('request',r=>{if(r.method()==='POST')recordLive(r.postData());});
+  live.on('websocket',ws=>ws.on('framesent',f=>recordLive(String(f.payload))));
+  await live.goto(fixture.base+realtime.path);
+  await live.getByText(/未分享延迟历史|History not shared/).first().waitFor();
+  await live.waitForTimeout(1000);assert.deepEqual(liveQueries,[]);
+  await rpc('admin:revokeViewerShare',{id:realtime.grant.id});await liveContext.close();
+  await rpc('admin:editSettings',{theme:originalTheme});
+  return [{case:'independent-share-real-ui-create-scope-cookie-clean-url-revoke',status:'PASS'},{case:'short-share-card-loads-one-hour-and-realtime-share-skips-history',status:'PASS'}];
 }

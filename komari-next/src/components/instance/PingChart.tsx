@@ -125,7 +125,7 @@ const PingChart = ({ uuid }: { uuid: string }) => {
       setLoading(false);
       return;
     }
-    if (!hours) {
+    if (!publicInfo || !hours || (publicInfo.is_share_view && max_record_preserve_time <= 0)) {
       setRemoteData(null);
       setTasks([]);
       setError(null);
@@ -163,7 +163,7 @@ const PingChart = ({ uuid }: { uuid: string }) => {
       active = false;
       window.clearInterval(refreshTimer);
     };
-  }, [hours, uuid, call]);
+  }, [hours, uuid, call, publicInfo?.is_share_view, max_record_preserve_time]);
 
   const midData = useMemo(() => {
     const data = remoteData || [];

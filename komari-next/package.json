@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "node ./script/build-audience.mjs owner",
     "start": "next start",
+    "test": "node --test ../script/viewer-history.test.mjs",
     "lint": "eslint next.config.ts script/generate-brand-assets.mjs script/verify-theme-export.mjs src/components/BrandMark.tsx src/components/DashboardContent.tsx src/components/Footer.tsx src/components/NavBar.tsx src/components/ThemeSwitcher.tsx src/contexts/LiveDataContext.tsx src/contexts/ThemeContext.tsx src/utils/unitHelper.ts src/app/layout.tsx",
     "preview": "next start",
     "i18n:sync": "node ./script/i18n-sync.mjs",

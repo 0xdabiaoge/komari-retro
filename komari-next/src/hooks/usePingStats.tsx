@@ -80,9 +80,11 @@ export function usePingStats(uuid: string, hours: number = 24, enabled: boolean 
   const [stats, setStats] = useState<PingStats>(() => createEmptyStats());
 
   useEffect(() => {
-    if (!enabled) {
+    if (hours <= 0) {
+      setStats(createEmptyStats({ isLoaded: true }));
       return;
     }
+    if (!enabled) return;
 
     if (!uuid.trim()) {
       setStats(createEmptyStats({ isLoaded: true }));
