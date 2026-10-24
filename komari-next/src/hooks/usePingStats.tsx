@@ -16,6 +16,7 @@ export interface PingStats {
   hasData: boolean;
   isLoaded: boolean;
   isLoading: boolean;
+  error: boolean;
 }
 
 const HISTORY_BUCKET_COUNT = 28;
@@ -32,6 +33,7 @@ function createEmptyStats({
     hasData: false,
     isLoaded,
     isLoading,
+    error: false,
   };
 }
 
@@ -142,12 +144,11 @@ export function usePingStats(uuid: string, hours: number = 24, enabled: boolean 
           hasData: true,
           isLoaded: true,
           isLoading: false,
+          error: false,
         });
       } catch {
         if (!active) return;
-        if (!hasReceivedResponse) {
-          setStats(createEmptyStats({ isLoaded: true }));
-        }
+        setStats((previous) => ({ ...previous, isLoaded: true, isLoading: false, error: true }));
       }
     };
 

@@ -51,7 +51,11 @@ jobs:
         run: |
           python3 -m py_compile script/security-acceptance.py
           go test ./pkg/rpc -run='^$' -fuzz=FuzzParseRequests -fuzztime=10s -parallel=2
-      - run: go test -race ./...
+      - name: Linux 延迟历史完整一天与并发回归（race）
+        if: matrix.module == '.'
+        run: go test -race -count=1 -v ./web/rpc/jsonrpc -run '^TestSecurityRegressions/FullDayPingHistory$'
+      - name: Linux 全量 Go 竞态检测
+        run: go test -race -count=1 ./...
         working-directory: '${{ matrix.module }}'
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
         working-directory: '${{ matrix.module }}'

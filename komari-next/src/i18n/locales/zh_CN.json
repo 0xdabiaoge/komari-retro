@@ -352,6 +352,7 @@
     "networkTraffic": "网络/流量",
     "networkUploadSpeed": "上传速度",
     "noPingData": "无延迟数据",
+    "pingLoadFailed": "延迟数据加载失败，将自动重试",
     "offline": "离线",
     "online": "在线",
     "os": "操作系统",

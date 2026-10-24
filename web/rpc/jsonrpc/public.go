@@ -306,175 +306,30 @@ func publicGetPingRecords(ctx context.Context, req *rpc.JsonRpcRequest) (any, *r
 		TaskID string `json:"task_id"`
 		Hours  string `json:"hours"`
 	}
-	req.BindParams(&params)
+	if err := req.BindParams(&params); err != nil {
+		return nil, rpc.MakeError(rpc.InvalidParams, "Invalid parameters", nil)
+	}
 	if params.UUID == "" && params.TaskID == "" {
 		return nil, rpc.MakeError(rpc.InvalidParams, "UUID or task_id is required", nil)
 	}
-	isLogin := isLoginFromCtx(ctx)
-
-	type recordsResp struct {
-		TaskId uint   `json:"task_id,omitempty"`
-		Time   string `json:"time"`
-		Value  int    `json:"value"`
-		Client string `json:"client,omitempty"`
-	}
-	type clientBasicInfo struct {
-		Client string  `json:"client"`
-		Loss   float64 `json:"loss"`
-		Min    int     `json:"min"`
-		Max    int     `json:"max"`
-	}
-	type resp struct {
-		Count     int               `json:"count"`
-		BasicInfo []clientBasicInfo `json:"basic_info,omitempty"`
-		Records   []recordsResp     `json:"records"`
-		Tasks     []map[string]any  `json:"tasks,omitempty"`
-	}
-
-	hiddenMap := map[string]bool{}
-	response := &resp{Count: 0, Records: []recordsResp{}}
-
-	if !isLogin {
-		var hiddenClients []models.Client
-		db := dbcore.GetDBInstance()
-		if err := db.Select("uuid").Where("hidden = ?", true).Find(&hiddenClients).Error; err != nil {
-			return nil, rpc.MakeError(rpc.InternalError, "Unable to verify node visibility", nil)
-		}
-		for _, cli := range hiddenClients {
-			hiddenMap[cli.UUID] = true
-		}
-		if params.UUID != "" && hiddenMap[params.UUID] {
-			return response, nil // 对尝试获取隐藏 uuid 返回空
+	hours := 4
+	if params.Hours != "" {
+		var err error
+		hours, err = strconv.Atoi(params.Hours)
+		if err != nil || hours < 1 || hours > 31*24 {
+			return nil, rpc.MakeError(rpc.InvalidParams, "Hours must be between 1 and 744", nil)
 		}
 	}
-
-	hours := params.Hours
-	if hours == "" {
-		hours = "4"
-	}
-	hoursInt, err := strconv.Atoi(hours)
-	if hoursInt < 1 || hoursInt > 31*24 {
-		return nil, rpc.MakeError(rpc.InvalidParams, "Hours must be between 1 and 744", nil)
-	}
-	if err != nil {
-		hoursInt = 4
-	}
-	endTime := time.Now()
-	startTime := endTime.Add(-time.Duration(hoursInt) * time.Hour)
-
-	taskId := -1
+	taskID := -1
 	if params.TaskID != "" {
-		taskId, err = strconv.Atoi(params.TaskID)
-		if err != nil {
+		var err error
+		taskID, err = strconv.Atoi(params.TaskID)
+		if err != nil || taskID < 0 {
 			return nil, rpc.MakeError(rpc.InvalidParams, "Invalid task_id parameter", nil)
 		}
 	}
-
-	recs, err := tasks.GetPingRecords(params.UUID, taskId, startTime, endTime)
-	if err != nil {
-		return nil, rpc.MakeError(rpc.InternalError, "Failed to fetch ping records: "+err.Error(), nil)
-	}
-
-	clientStats := make(map[string]struct {
-		total, loss, min, max int
-	})
-	for _, r := range recs {
-		if r.Client != "" && !isLogin && (hiddenMap[r.Client] || !shareAllows(ctx, r.Client)) {
-			continue
-		}
-		rec := recordsResp{Time: r.Time.ToTime().Format(time.RFC3339), Value: r.Value, Client: r.Client, TaskId: r.TaskId}
-		stats := clientStats[r.Client]
-		stats.total++
-		if r.Value < 0 {
-			stats.loss++
-		} else {
-			if stats.min == 0 || r.Value < stats.min {
-				stats.min = r.Value
-			}
-			if r.Value > stats.max {
-				stats.max = r.Value
-			}
-		}
-		clientStats[r.Client] = stats
-		response.Records = append(response.Records, rec)
-	}
-
-	if len(clientStats) > 0 {
-		response.BasicInfo = make([]clientBasicInfo, 0, len(clientStats))
-		for client, stats := range clientStats {
-			if client != "" && !isLogin && (hiddenMap[client] || !shareAllows(ctx, client)) {
-				continue
-			}
-			loss := float64(0)
-			if stats.total > 0 {
-				loss = float64(stats.loss) / float64(stats.total) * 100
-			}
-			response.BasicInfo = append(response.BasicInfo, clientBasicInfo{Client: client, Loss: loss, Min: stats.min, Max: stats.max})
-		}
-	}
-
-	if params.UUID != "" || taskId != -1 {
-		pingTasks, err := tasks.GetAllPingTasks()
-		if err != nil {
-			return nil, rpc.MakeError(rpc.InternalError, "Failed to fetch ping tasks: "+err.Error(), nil)
-		}
-		pingTasks, err = visiblePingTasks(ctx, pingTasks)
-		if err != nil {
-			return nil, rpc.MakeError(rpc.InternalError, "Failed to filter public ping tasks", nil)
-		}
-		tasksList := make([]map[string]any, 0, len(pingTasks))
-		for _, t := range pingTasks {
-			if taskId != -1 && t.Id != uint(taskId) {
-				continue
-			}
-			if params.UUID != "" && !t.AppliesToClient(params.UUID) {
-				continue
-			}
-			totalCount, lossCount, minLatency, maxLatency, sumLatency, validCount := 0, 0, 0, 0, 0, 0
-			for _, r := range recs {
-				if r.TaskId != t.Id {
-					continue
-				}
-				if params.UUID != "" && r.Client != params.UUID {
-					continue
-				}
-				totalCount++
-				if r.Value < 0 {
-					lossCount++
-				} else {
-					validCount++
-					sumLatency += r.Value
-					if minLatency == 0 || r.Value < minLatency {
-						minLatency = r.Value
-					}
-					if r.Value > maxLatency {
-						maxLatency = r.Value
-					}
-				}
-			}
-			lossRate := float64(0)
-			if totalCount > 0 {
-				lossRate = float64(lossCount) / float64(totalCount) * 100
-			}
-			avgLatency := 0
-			if validCount > 0 {
-				avgLatency = sumLatency / validCount
-			}
-			taskInfo := map[string]any{
-				"id": t.Id, "name": t.Name, "type": t.Type, "interval": t.Interval,
-				"default_on": t.DefaultOn, "loss": lossRate, "min": minLatency,
-				"max": maxLatency, "avg": avgLatency, "total": totalCount,
-			}
-			if params.UUID == "" && taskId != -1 {
-				taskInfo["clients"] = t.Clients
-			}
-			tasksList = append(tasksList, taskInfo)
-		}
-		response.Tasks = tasksList
-	}
-
-	response.Count = len(response.Records)
-	return response, nil
+	end := time.Now()
+	return boundedPingHistory(ctx, params.UUID, taskID, end.Add(-time.Duration(hours)*time.Hour), end, 4000)
 }
 
 type MetricPointItem struct {

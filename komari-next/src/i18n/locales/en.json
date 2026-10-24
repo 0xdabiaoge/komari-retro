@@ -352,6 +352,7 @@
     "networkTraffic": "Network/Traffic",
     "networkUploadSpeed": "Upload Speed",
     "noPingData": "No ping data",
+    "pingLoadFailed": "Latency data failed to load; retrying automatically",
     "offline": "Offline",
     "online": "Online",
     "pingStats": "Ping Stats ({{hours}}h)",

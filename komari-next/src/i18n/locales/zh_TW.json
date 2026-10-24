@@ -352,6 +352,7 @@
     "networkTraffic": "網路/流量",
     "networkUploadSpeed": "上傳速度",
     "noPingData": "無延遲資料",
+    "pingLoadFailed": "延遲資料載入失敗，將自動重試",
     "offline": "離線",
     "online": "在線",
     "pingStats": "延遲統計（{{hours}}h）",

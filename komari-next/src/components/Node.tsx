@@ -192,11 +192,13 @@ function PingQualityBars({ pingStats, t, hours }: { pingStats: PingStats; t: TFu
   const historyPoints = pingStats.hasData && pingStats.history.length > 0
     ? pingStats.history
     : PING_HISTORY_PLACEHOLDER_POINTS;
-  const statusText = pingStats.hasData
-    ? `${pingStats.avgVolatility.toFixed(1)} ${t("chart.volatility")}`
-    : pingStats.isLoaded
-      ? t("nodeCard.noPingData")
-      : "--";
+  const statusText = pingStats.error
+    ? t("nodeCard.pingLoadFailed")
+    : pingStats.hasData
+      ? `${pingStats.avgVolatility.toFixed(1)} ${t("chart.volatility")}`
+      : pingStats.isLoaded
+        ? t("nodeCard.noPingData")
+        : "--";
   const latencyValue = pingStats.hasData
     ? `${Math.round(pingStats.avgLatency)} ms`
     : "-- ms";
@@ -579,7 +581,9 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
                 ) : (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground text-xs">{t(historyHours > 0 ? "nodeCard.pingStats" : "nodeCard.pingNotShared", { hours: historyHours })}</span>
-                    {pingStats.hasData ? (
+                    {pingStats.error ? (
+                      <span role="status" className="text-xs text-amber-600">{t("nodeCard.pingLoadFailed")}</span>
+                    ) : pingStats.hasData ? (
                       <div className="flex gap-3 font-mono text-xs text-muted-foreground">
                         <span>{pingStats.avgLoss.toFixed(1)}% {t("chart.lossRate")}</span>
                         <span>{pingStats.avgVolatility.toFixed(1)} {t("chart.volatility")}</span>
@@ -673,7 +677,9 @@ const Node = ({ basic, live, online, pingStatsEnabled = false }: NodeProps) => {
           ) : (
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">{t(historyHours > 0 ? "nodeCard.pingStats" : "nodeCard.pingNotShared", { hours: historyHours })}</span>
-              {pingStats.hasData ? (
+              {pingStats.error ? (
+                <span role="status" className="text-xs text-amber-600">{t("nodeCard.pingLoadFailed")}</span>
+              ) : pingStats.hasData ? (
                 <div className="flex gap-3 font-mono text-xs text-muted-foreground">
                   <span>{pingStats.avgLoss.toFixed(1)}% {t("chart.lossRate")}</span>
                   <span>{pingStats.avgVolatility.toFixed(1)} {t("chart.volatility")}</span>
