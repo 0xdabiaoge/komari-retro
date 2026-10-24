@@ -107,6 +107,7 @@ jobs:
         run: |
           go build -o /tmp/komari-audience .
           python3 script/private-audience-fixture.py /tmp/komari-audience
+          python3 script/latency-history-fixture.py /tmp/komari-audience
           python3 script/dashboard-acceptance.py /tmp/komari-audience
           (cd komari-agent && go build -o /tmp/komari-terminal-agent .)
           python3 script/terminal-real-fixture.py /tmp/komari-audience /tmp/komari-terminal-agent

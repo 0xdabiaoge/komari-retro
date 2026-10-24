@@ -520,7 +520,7 @@ const PingChart = ({ uuid }: { uuid: string }) => {
             {t("common.none")}
           </div>
         ) : (
-          <ChartContainer config={chartConfig}>
+          <ChartContainer config={chartConfig} className="h-[320px] w-full aspect-auto sm:h-[380px]">
             <LineChart
               data={chartData}
               accessibilityLayer
@@ -554,7 +554,11 @@ const PingChart = ({ uuid }: { uuid: string }) => {
                   />
                 }
               />
-              <ChartLegend onClick={handleLegendClick} />
+              <ChartLegend
+                onClick={handleLegendClick}
+                height={72}
+                wrapperStyle={{ maxHeight: 72, overflowY: "auto" }}
+              />
               {(() => {
                 return tasks.map((task, idx) => {
                   const connect = false;

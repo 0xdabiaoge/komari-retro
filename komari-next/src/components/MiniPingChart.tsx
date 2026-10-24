@@ -257,7 +257,7 @@ const MiniPingChart = ({
         !error && (
           <ChartContainer
             config={chartConfig}
-            className="w-full min-w-0 max-w-full overflow-visible"
+            className="w-full min-w-0 max-w-full aspect-auto overflow-visible"
             style={{ height: typeof height === 'number' ? `${height - 80}px` : '220px' }}
           >
             <LineChart
@@ -292,6 +292,8 @@ const MiniPingChart = ({
               />
               <ChartLegend
                 onClick={handleLegendClick}
+                height={72}
+                wrapperStyle={{ maxHeight: 72, overflowY: "auto" }}
                 content={
                   <ChartLegendContent className="flex-wrap justify-start gap-x-3 gap-y-2 text-xs" />
                 }
